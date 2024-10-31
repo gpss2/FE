@@ -67,10 +67,10 @@ const Profile = () => {
               <Avatar src={ProfileImg} alt={ProfileImg} sx={{ width: 95, height: 95 }} />
               <Box>
                 <Typography variant="subtitle2" color="textPrimary" fontWeight={600}>
-                  Mathew Anderson
+                  관리자
                 </Typography>
                 <Typography variant="subtitle2" color="textSecondary">
-                  Designer
+                  admin
                 </Typography>
                 <Typography
                   variant="subtitle2"
@@ -80,7 +80,7 @@ const Profile = () => {
                   gap={1}
                 >
                   <IconMail width={15} height={15} />
-                  info@modernize.com
+                  admin@example.com
                 </Typography>
               </Box>
             </Stack>
