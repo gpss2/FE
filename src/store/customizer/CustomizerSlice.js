@@ -11,7 +11,7 @@ const initialState = {
   isCollapse: false, // to make sidebar Mini by default
   isSidebarHover: false,
   isMobileSidebar: false,
-  isHorizontal: false,
+  isHorizontal: true,
   isLanguage: 'en',
   isCardShadow: true,
   borderRadius: 7,

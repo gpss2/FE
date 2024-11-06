@@ -55,7 +55,7 @@ const FullLayout = () => {
         {/* ------------------------------------------- */}
         {/* PageContent */}
         {/* ------------------------------------------- */}
-        {customizer.isHorizontal ? <Navigation /> : ''}
+        {/* {customizer.isHorizontal ? <Navigation /> : ''} */}
         <Container
           sx={{
             maxWidth: customizer.isLayout === 'boxed' ? 'lg' : '100%!important',

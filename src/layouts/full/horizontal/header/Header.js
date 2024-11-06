@@ -9,7 +9,7 @@ import Cart from 'src/layouts/full/vertical/header/Cart';
 import Profile from 'src/layouts/full/vertical/header/Profile';
 import Search from 'src/layouts/full/vertical/header/Search';
 import Language from 'src/layouts/full/vertical/header/Language';
-import Navigation from 'src/layouts/full/vertical/header/Navigation';
+import Navigation from 'src/layouts/full/horizontal/navbar/Navbar';
 import Logo from 'src/layouts/full/shared/logo/Logo';
 
 const Header = () => {
@@ -39,7 +39,7 @@ const Header = () => {
         }}
       >
         <Box sx={{ width: lgDown ? '45px' : 'auto', overflow: 'hidden' }}>
-          <Logo />
+        <h1 style={{ fontSize:'24px', color: '#333fff', fontFamily: 'Galmuri9, sans-serif', fontWeight: 700 }}>GPSS II beta</h1>
         </Box>
         {/* ------------------------------------------- */}
         {/* Toggle Button Sidebar */}
@@ -58,7 +58,7 @@ const Header = () => {
         {/* ------------------------------------------- */}
         {/* Search Dropdown */}
         {/* ------------------------------------------- */}
-        <Search />
+        {/* <Search /> */}
         {lgUp ? (
           <>
             <Navigation />
@@ -74,7 +74,7 @@ const Header = () => {
           {/* ------------------------------------------- */}
           {/* End Ecommerce Dropdown */}
           {/* ------------------------------------------- */}
-          <Notifications />
+          {/* <Notifications /> */}
           <Profile />
         </Stack>
       </ToolbarStyled>

@@ -82,7 +82,7 @@ const Orders = () => {
                     {/* Left Table */}
                     <Grid item lg={7} xs={12} mt={3}>
                         <ParentCard title="수주 목록 관리">
-                            <Box sx={{ height: 400, width: '100%' }}>
+                            <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                                 <DataGrid
                                     rows={rowsLeft}
                                     columns={columnsLeft}
@@ -145,7 +145,7 @@ const Orders = () => {
                     {/* Right Table */}
                     <Grid item lg={5} xs={12} mt={3}>
                         <ParentCard title="수주처 코드 관리">
-                            <Box sx={{ height: 400, width: '100%' }}>
+                            <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                                 <DataGrid
                                     rows={rowsRight}
                                     columns={columnsRight}
