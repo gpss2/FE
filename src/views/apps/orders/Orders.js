@@ -80,7 +80,7 @@ const Orders = () => {
             <PageContainer title="수주 목록 입력">
                 <Grid container spacing={2}>
                     {/* Left Table */}
-                    <Grid item lg={7} xs={12} mt={3}>
+                    <Grid item lg={9} xs={12} mt={3}>
                         <ParentCard title="수주 목록 관리">
                             <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                                 <DataGrid
@@ -143,7 +143,7 @@ const Orders = () => {
                     </Grid>
 
                     {/* Right Table */}
-                    <Grid item lg={5} xs={12} mt={3}>
+                    <Grid item lg={3} xs={12} mt={3}>
                         <ParentCard title="수주처 코드 관리">
                             <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                                 <DataGrid

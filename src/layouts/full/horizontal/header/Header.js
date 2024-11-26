@@ -35,7 +35,7 @@ const Header = () => {
     <AppBarStyled position="sticky" color="default" elevation={8}>
       <ToolbarStyled
         sx={{
-          maxWidth: customizer.isLayout === 'boxed' ? 'lg' : '100%!important',
+          maxWidth: customizer.isLayout === 'boxed' ? '100%!important' : '100%!important',
         }}
       >
         <Box sx={{ width: lgDown ? '45px' : 'auto', overflow: 'hidden' }}>

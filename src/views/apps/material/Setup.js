@@ -31,8 +31,8 @@ const columnsRight = [
 
 const Setup = () => {
     return (
-        <div>
-            <PageContainer title="자재표준 셋업">
+        <div className='main'>
+                        <PageContainer title="자재표준 셋업">
                 <Grid container spacing={2}>
                     {/* Left Table */}
                     <Grid item lg={5} xs={12} mt={3}>
