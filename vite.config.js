@@ -36,9 +36,19 @@ export default defineConfig({
     },
   },
 
-  // plugins: [react(),svgr({
-  //   exportAsDefault: true
-  // })],
+  server: {
+    proxy: {
+      // 프록시 설정
+      '/api': {
+        target: 'https://gpss.taewonkim.store',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''), // '/api' 접두사를 제거합니다.
+      },
+    },
+  },
 
-  plugins: [svgr(), react()],
+  plugins: [
+    svgr(),
+    react(),
+  ],
 });

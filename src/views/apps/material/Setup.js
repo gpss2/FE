@@ -10,17 +10,22 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 
-// Axios 설정: 헤더에 토큰 추가
 axios.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = token;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
+    (config) => {
+      const rawToken = localStorage.getItem('authToken');
+      if (rawToken) {
+        // "bearer " 접두사를 제거하거나 그대로 사용
+        const token = rawToken.startsWith('bearer ')
+          ? rawToken.split(' ')[1] // "bearer " 제거 후 토큰만 추출
+          : rawToken;
+  
+        // Authorization 헤더에 토큰 추가
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
 
 axios.interceptors.response.use(
   (response) => response,
