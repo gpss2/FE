@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom';
 
 axios.interceptors.request.use(
     (config) => {
-      const rawToken = localStorage.getItem('authToken');
+      const rawToken = localStorage.getItem('token');
       if (rawToken) {
         // "bearer " 접두사를 제거하거나 그대로 사용
         const token = rawToken.startsWith('bearer ')
