@@ -11,21 +11,15 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 
 axios.interceptors.request.use(
-    (config) => {
-      const rawToken = localStorage.getItem('token');
-      if (rawToken) {
-        // "bearer " 접두사를 제거하거나 그대로 사용
-        const token = rawToken.startsWith('bearer ')
-          ? rawToken.split(' ')[1] // "bearer " 제거 후 토큰만 추출
-          : rawToken;
-  
-        // Authorization 헤더에 토큰 추가
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error)
-  );
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 axios.interceptors.response.use(
   (response) => response,
@@ -98,13 +92,13 @@ const Setup = () => {
       if (currentRow.id) {
         // Update existing row
         await axios.put(
-          currentTable === 'left' ? '/api/item/material' : '/api/item/specific',
+          `/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${currentRow.id}`,
           currentRow
         );
       } else {
         // Add new row
         await axios.post(
-          currentTable === 'left' ? '/api/item/material' : '/api/item/specific',
+          `/api/item/${currentTable === 'left' ? 'material' : 'specific'}`,
           currentRow
         );
       }
@@ -115,25 +109,28 @@ const Setup = () => {
       console.error('Error saving row:', error);
     }
   };
-
+  
   const handleDelete = async (table, id) => {
+    console.log("삭제 요청")
+    if (!id) {
+      console.error('No ID provided for deletion.');
+      return;
+    }
+  
     try {
-      await axios.delete(
-        `${table === 'left' ? '/api/item/material' : '/api/item/specific'}/${id}`
-      );
+      await axios.delete(`/api/item/${table === 'left' ? 'material' : 'specific'}/${id}`);
       fetchLeftTableData();
       fetchRightTableData();
     } catch (error) {
       console.error('Error deleting row:', error);
     }
   };
-
   const handleInputChange = (field, value) => {
     setCurrentRow({ ...currentRow, [field]: value });
   };
 
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token');
     if (!token) {
       navigate('/auth/login');
       return;
@@ -178,7 +175,7 @@ const Setup = () => {
                 </IconButton>
                 <IconButton
                   color="warning"
-                  onClick={() => handleDelete('left', currentRow.id)}
+                  onClick={() => handleDelete('left', currentRow?.id)}
                   sx={{ border: '1px solid', borderColor: 'warning.main', borderRadius: 1 }}
                 >
                   <DeleteIcon />
@@ -219,7 +216,7 @@ const Setup = () => {
                 </IconButton>
                 <IconButton
                   color="warning"
-                  onClick={() => handleDelete('right', currentRow.id)}
+                  onClick={() => handleDelete('right', currentRow?.id)}
                   sx={{ border: '1px solid', borderColor: 'warning.main', borderRadius: 1 }}
                 >
                   <DeleteIcon />

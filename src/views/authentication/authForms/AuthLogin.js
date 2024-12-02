@@ -29,7 +29,7 @@ const AuthLogin = ({ title, subtitle, subtext }) => {
       const { access_token, token_type } = response.data;
 
       // Store the token in local storage
-      localStorage.setItem('token', `${token_type} ${access_token}`);
+      localStorage.setItem('token', `${access_token}`);
       // Redirect to home page or desired route
       window.location.href = '/';
     } catch (error) {

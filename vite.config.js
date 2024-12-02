@@ -42,8 +42,9 @@ export default defineConfig({
       '/api': {
         target: 'https://gpss.taewonkim.store',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''), // '/api' 접두사를 제거합니다.
+        // rewrite: (path) => path.replace(/^\/api/, ''), // 제거
       },
+
     },
   },
 
