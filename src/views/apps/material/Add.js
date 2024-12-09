@@ -94,7 +94,7 @@ const Add = () => {
                                     onRowClick={(params) => handleOpenModal(params.row)}
                                     sx={{
                                         '& .MuiDataGrid-columnHeaders': {
-                                            height: 30,
+                                            height: 60,
                                             backgroundColor: '#f0f0f0',
                                             color: '#333',
                                         },
