@@ -1,11 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Grid, IconButton, Stack, Dialog, DialogActions, DialogContent, DialogTitle, Button, TextField } from '@mui/material';
-import PrintIcon from '@mui/icons-material/Print';
+import {
+  Box,
+  Grid,
+  IconButton,
+  Stack,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TextField,
+} from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
@@ -18,26 +26,25 @@ axios.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // 토큰이 유효하지 않으면 로그인 페이지로 리다이렉트
       window.location.href = '/auth/login';
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 const columnsLeft = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'materialCode', headerName: '자재코드', width: 150 },
-  { field: 'materialType', headerName: '자재타입', width: 150 },
-  { field: 'thickness', headerName: '자재길이 (mm)', width: 130 },
-  { field: 'weight', headerName: '단중 (Kg/m)', width: 130 },
+  // { field: 'id', headerName: 'ID', width: 70 },
+  { field: 'materialCode', headerName: '자재코드', flex: 1 },
+  { field: 'materialType', headerName: '자재타입', flex: 1 },
+  { field: 'thickness', headerName: '자재길이 (mm)', flex: 1 },
+  { field: 'weight', headerName: '단중 (Kg/m)', flex: 1 },
 ];
 
 const columnsRight = [
@@ -58,6 +65,38 @@ const Setup = () => {
   const [currentTable, setCurrentTable] = useState('left');
   const navigate = useNavigate();
 
+  const generateMaterialCode = (materialType, materialLength) => {
+    if (!materialType || !materialLength) return ''; // 빈 값 처리
+
+    const type = materialType.trim();
+    const length = materialLength.toString().trim();
+    const code = type.split('*');
+
+    // 첫 번째 부분 처리
+    const letters = code[0].match(/[A-Za-z]+/g)?.join('') || ''; // 알파벳 추출
+    const numberPart = code[0].match(/[0-9]+/g)?.join('') || '0'; // 숫자만 추출
+    const paddedFirst = `${letters}${numberPart.padStart(3, '0')}`; // 정수부만 3자리 패딩
+
+    // 두 번째 부분 처리
+    let paddedSecond = '';
+    if (code[1]) {
+      const [integerPart, decimalPart] = code[1].split('.'); // 정수부와 소수부 분리
+      const leftPadded = (integerPart || '0').padStart(3, '0'); // 정수부 왼쪽 3자리 패딩
+      const rightPadded = decimalPart || (code[2] ? '0' : ''); // 오른쪽 패딩은 소수부가 없으면 '0'
+      paddedSecond = code[2]
+        ? `${leftPadded}${rightPadded.padEnd(1, '0')}` // 오른쪽 1자리 패딩
+        : `${leftPadded}${rightPadded}`; // 소수부만 붙임
+    }
+
+    // 세 번째 부분 처리
+    let paddedThird = '';
+    if (code[2]) {
+      paddedThird = code[2].padEnd(2, '0'); // 세 번째 부분 2자리 오른쪽 패딩
+    }
+
+    // 결과 조합
+    return `${paddedFirst}${paddedSecond}${paddedThird}-${length}`;
+  };
   const fetchLeftTableData = async () => {
     try {
       const response = await axios.get('/api/item/material');
@@ -84,22 +123,22 @@ const Setup = () => {
 
   const handleCloseModal = () => {
     setModalOpen(false);
-    setCurrentRow({});
+    setTimeout(() => {
+      setCurrentRow({}); // 모달 닫힌 후 상태 초기화
+    }, 300);
   };
 
   const handleSave = async () => {
     try {
       if (currentRow.id) {
-        // Update existing row
         await axios.put(
           `/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${currentRow.id}`,
-          currentRow
+          currentRow,
         );
       } else {
-        // Add new row
         await axios.post(
           `/api/item/${currentTable === 'left' ? 'material' : 'specific'}`,
-          currentRow
+          currentRow,
         );
       }
       fetchLeftTableData();
@@ -109,30 +148,19 @@ const Setup = () => {
       console.error('Error saving row:', error);
     }
   };
-  
-  const handleDelete = async (table, id) => {
-    if (!id) {
-      console.error('No ID provided for deletion.');
-      return;
-    }
-  
-    try {
-      await axios.delete(`/api/item/${table === 'left' ? 'material' : 'specific'}/${id}`);
-      // 테이블 데이터 다시 가져오기
-      if (table === 'left') {
-        await fetchLeftTableData();
-      } else {
-        await fetchRightTableData();
-      }
-      console.log(`Row with ID ${id} deleted successfully.`);
-    } catch (error) {
-      console.error('Error deleting row:', error);
-      alert('삭제 중 오류가 발생했습니다.');
-    }
-  };
-  
+
   const handleInputChange = (field, value) => {
-    setCurrentRow({ ...currentRow, [field]: value });
+    const updatedRow = { ...currentRow, [field]: value };
+
+    if (field === 'materialType' || field === 'thickness') {
+      const generatedCode = generateMaterialCode(
+        updatedRow.materialType || '',
+        updatedRow.thickness || '',
+      );
+      updatedRow.materialCode = generatedCode; // 자재코드 자동 생성
+    }
+
+    setCurrentRow(updatedRow);
   };
 
   useEffect(() => {
@@ -149,7 +177,6 @@ const Setup = () => {
     <div className="main">
       <PageContainer title="자재표준 셋업">
         <Grid container spacing={2}>
-          {/* Left Table */}
           <Grid item lg={5} xs={12} mt={3}>
             <ParentCard title="자재개요 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
@@ -159,7 +186,6 @@ const Setup = () => {
                   pageSize={5}
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
-                  checkboxSelection
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal('left', params.row)}
                   sx={{
@@ -171,7 +197,7 @@ const Setup = () => {
                   }}
                 />
               </Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
+              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
                 <IconButton
                   color="primary"
                   onClick={() => handleOpenModal('left')}
@@ -179,18 +205,10 @@ const Setup = () => {
                 >
                   <AddIcon />
                 </IconButton>
-                <IconButton
-                  color="warning"
-                  onClick={() => handleDelete('left', currentRow?.id)}
-                  sx={{ border: '1px solid', borderColor: 'warning.main', borderRadius: 1 }}
-                >
-                  <DeleteIcon />
-                </IconButton>
               </Stack>
             </ParentCard>
           </Grid>
 
-          {/* Right Table */}
           <Grid item lg={7} xs={12} mt={3}>
             <ParentCard title="제작사양 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
@@ -198,7 +216,6 @@ const Setup = () => {
                   rows={rightTableData}
                   columns={columnsRight}
                   pageSize={5}
-                  checkboxSelection
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
                   rowHeight={30}
@@ -212,7 +229,7 @@ const Setup = () => {
                   }}
                 />
               </Box>
-              <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
+              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
                 <IconButton
                   color="primary"
                   onClick={() => handleOpenModal('right')}
@@ -220,22 +237,14 @@ const Setup = () => {
                 >
                   <AddIcon />
                 </IconButton>
-                <IconButton
-                  color="warning"
-                  onClick={() => handleDelete('right', currentRow?.id)}
-                  sx={{ border: '1px solid', borderColor: 'warning.main', borderRadius: 1 }}
-                >
-                  <DeleteIcon />
-                </IconButton>
               </Stack>
             </ParentCard>
           </Grid>
         </Grid>
       </PageContainer>
 
-      {/* Modal */}
       <Dialog open={modalOpen} onClose={handleCloseModal}>
-        <DialogTitle>{currentRow.id ? 'Edit Row' : 'Add Row'}</DialogTitle>
+        <DialogTitle>{currentRow.id ? '편집' : '추가'}</DialogTitle>
         <DialogContent>
           {currentTable === 'left' ? (
             <>
@@ -243,8 +252,8 @@ const Setup = () => {
                 margin="dense"
                 label="자재코드"
                 fullWidth
+                disabled
                 value={currentRow.materialCode || ''}
-                onChange={(e) => handleInputChange('materialCode', e.target.value)}
               />
               <TextField
                 margin="dense"
@@ -314,18 +323,37 @@ const Setup = () => {
                 label="물량 두께 (mm)"
                 type="number"
                 fullWidth
-                value={currentRow.bladeThickness || 5}
+                value={currentRow.bladeThickness || ''}
                 onChange={(e) => handleInputChange('bladeThickness', e.target.value)}
               />
             </>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal} color="secondary">
-            취소
-          </Button>
+          {currentRow.id && (
+            <Button
+              onClick={async () => {
+                try {
+                  await axios.delete(
+                    `/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${
+                      currentRow.id
+                    }`,
+                  );
+                  currentTable === 'left' ? fetchLeftTableData() : fetchRightTableData();
+                  handleCloseModal();
+                  alert('삭제되었습니다.');
+                } catch (error) {
+                  console.error('Error deleting row:', error);
+                  alert('삭제 중 오류가 발생했습니다.');
+                }
+              }}
+              color="warning"
+            >
+              삭제
+            </Button>
+          )}
           <Button onClick={handleSave} color="primary">
-            저장
+            {currentRow.id ? '수정' : '추가'}
           </Button>
         </DialogActions>
       </Dialog>

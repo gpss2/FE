@@ -20,7 +20,7 @@
     "@mui/material": "^5.10.12",
     "@mui/system": "^5.14.12",
     "@mui/utils": "^5.14.12",
-    "@mui/x-data-grid": "^7.22.0",
+    "@mui/x-data-grid": "^7.23.1",
     "@mui/x-date-pickers": "^5.0.6",
     "@mui/x-tree-view": "^6.17.0",
     "@reduxjs/toolkit": "^1.8.3",
