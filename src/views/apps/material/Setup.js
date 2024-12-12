@@ -12,6 +12,8 @@ import {
   DialogTitle,
   Button,
   TextField,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
@@ -40,7 +42,6 @@ axios.interceptors.response.use(
 );
 
 const columnsLeft = [
-  // { field: 'id', headerName: 'ID', width: 70 },
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
   { field: 'materialType', headerName: '자재타입', flex: 1 },
   { field: 'thickness', headerName: '자재길이 (mm)', flex: 1 },
@@ -48,13 +49,12 @@ const columnsLeft = [
 ];
 
 const columnsRight = [
-  { field: 'id', headerName: 'ID', width: 70 },
-  { field: 'systemCode', headerName: '사양 코드', width: 150 },
-  { field: 'bbCode', headerName: 'BB코드', width: 150 },
-  { field: 'cbCode', headerName: 'CB코드', width: 150 },
-  { field: 'bWidth', headerName: 'B 피치 (mm)', width: 130 },
-  { field: 'cWidth', headerName: 'C 피치 (mm)', width: 130 },
-  { field: 'bladeThickness', headerName: '물량 두께 (mm)', width: 130 },
+  { field: 'systemCode', headerName: '사양 코드', flex: 1 },
+  { field: 'bbCode', headerName: 'BB코드', flex: 1 },
+  { field: 'cbCode', headerName: 'CB코드', flex: 1 },
+  { field: 'bWidth', headerName: 'B 피치 (mm)', flex: 1 },
+  { field: 'cWidth', headerName: 'C 피치 (mm)', flex: 1 },
+  { field: 'bladeThickness', headerName: '톱날 두께 (mm)', flex: 1 },
 ];
 
 const Setup = () => {
@@ -65,38 +65,22 @@ const Setup = () => {
   const [currentTable, setCurrentTable] = useState('left');
   const navigate = useNavigate();
 
-  const generateMaterialCode = (materialType, materialLength) => {
-    if (!materialType || !materialLength) return ''; // 빈 값 처리
+  const generateSystemCode = (bbCode, cbCode, bWidth, cWidth, bladeThickness) => {
+    if (!bbCode) return '';
 
-    const type = materialType.trim();
-    const length = materialLength.toString().trim();
-    const code = type.split('*');
+    const filteredRows = rightTableData.filter(
+      (row) =>
+        row.bbCode === bbCode &&
+        (row.cbCode !== cbCode ||
+          row.bWidth !== bWidth ||
+          row.cWidth !== cWidth ||
+          row.bladeThickness !== bladeThickness),
+    );
 
-    // 첫 번째 부분 처리
-    const letters = code[0].match(/[A-Za-z]+/g)?.join('') || ''; // 알파벳 추출
-    const numberPart = code[0].match(/[0-9]+/g)?.join('') || '0'; // 숫자만 추출
-    const paddedFirst = `${letters}${numberPart.padStart(3, '0')}`; // 정수부만 3자리 패딩
-
-    // 두 번째 부분 처리
-    let paddedSecond = '';
-    if (code[1]) {
-      const [integerPart, decimalPart] = code[1].split('.'); // 정수부와 소수부 분리
-      const leftPadded = (integerPart || '0').padStart(3, '0'); // 정수부 왼쪽 3자리 패딩
-      const rightPadded = decimalPart || (code[2] ? '0' : ''); // 오른쪽 패딩은 소수부가 없으면 '0'
-      paddedSecond = code[2]
-        ? `${leftPadded}${rightPadded.padEnd(1, '0')}` // 오른쪽 1자리 패딩
-        : `${leftPadded}${rightPadded}`; // 소수부만 붙임
-    }
-
-    // 세 번째 부분 처리
-    let paddedThird = '';
-    if (code[2]) {
-      paddedThird = code[2].padEnd(2, '0'); // 세 번째 부분 2자리 오른쪽 패딩
-    }
-
-    // 결과 조합
-    return `${paddedFirst}${paddedSecond}${paddedThird}-${length}`;
+    const nextSerialNumber = (filteredRows.length + 1).toString().padStart(3, '0');
+    return `MS-${bbCode.split('-')[0]}-${nextSerialNumber}`;
   };
+
   const fetchLeftTableData = async () => {
     try {
       const response = await axios.get('/api/item/material');
@@ -124,7 +108,7 @@ const Setup = () => {
   const handleCloseModal = () => {
     setModalOpen(false);
     setTimeout(() => {
-      setCurrentRow({}); // 모달 닫힌 후 상태 초기화
+      setCurrentRow({});
     }, 300);
   };
 
@@ -152,12 +136,21 @@ const Setup = () => {
   const handleInputChange = (field, value) => {
     const updatedRow = { ...currentRow, [field]: value };
 
-    if (field === 'materialType' || field === 'thickness') {
-      const generatedCode = generateMaterialCode(
-        updatedRow.materialType || '',
-        updatedRow.thickness || '',
+    if (
+      field === 'bbCode' ||
+      field === 'cbCode' ||
+      field === 'bWidth' ||
+      field === 'cWidth' ||
+      field === 'bladeThickness'
+    ) {
+      const generatedCode = generateSystemCode(
+        updatedRow.bbCode || '',
+        updatedRow.cbCode || '',
+        updatedRow.bWidth || '',
+        updatedRow.cWidth || '',
+        updatedRow.bladeThickness || '',
       );
-      updatedRow.materialCode = generatedCode; // 자재코드 자동 생성
+      updatedRow.systemCode = generatedCode;
     }
 
     setCurrentRow(updatedRow);
@@ -188,21 +181,10 @@ const Setup = () => {
                   pagination
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal('left', params.row)}
-                  sx={{
-                    '& .MuiDataGrid-columnHeaders': {
-                      height: 60,
-                      backgroundColor: '#f0f0f0',
-                      color: '#333',
-                    },
-                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
-                <IconButton
-                  color="primary"
-                  onClick={() => handleOpenModal('left')}
-                  sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1 }}
-                >
+                <IconButton color="primary" onClick={() => handleOpenModal('left')}>
                   <AddIcon />
                 </IconButton>
               </Stack>
@@ -220,21 +202,10 @@ const Setup = () => {
                   pagination
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal('right', params.row)}
-                  sx={{
-                    '& .MuiDataGrid-columnHeaders': {
-                      height: 60,
-                      backgroundColor: '#f0f0f0',
-                      color: '#333',
-                    },
-                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
-                <IconButton
-                  color="primary"
-                  onClick={() => handleOpenModal('right')}
-                  sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1 }}
-                >
+                <IconButton color="primary" onClick={() => handleOpenModal('right')}>
                   <AddIcon />
                 </IconButton>
               </Stack>
@@ -243,7 +214,7 @@ const Setup = () => {
         </Grid>
       </PageContainer>
 
-      <Dialog open={modalOpen} onClose={handleCloseModal}>
+      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="md">
         <DialogTitle>{currentRow.id ? '편집' : '추가'}</DialogTitle>
         <DialogContent>
           {currentTable === 'left' ? (
@@ -281,27 +252,44 @@ const Setup = () => {
             </>
           ) : (
             <>
-              <TextField
-                margin="dense"
-                label="사양 코드"
-                fullWidth
-                value={currentRow.systemCode || ''}
-                onChange={(e) => handleInputChange('systemCode', e.target.value)}
-              />
-              <TextField
-                margin="dense"
-                label="BB코드"
-                fullWidth
-                value={currentRow.bbCode || ''}
-                onChange={(e) => handleInputChange('bbCode', e.target.value)}
-              />
-              <TextField
-                margin="dense"
-                label="CB코드"
-                fullWidth
-                value={currentRow.cbCode || ''}
-                onChange={(e) => handleInputChange('cbCode', e.target.value)}
-              />
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <Select
+                    margin="dense"
+                    fullWidth
+                    value={currentRow.bbCode || ''}
+                    onChange={(e) => handleInputChange('bbCode', e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>
+                      BB 코드 선택
+                    </MenuItem>
+                    {leftTableData.map((row) => (
+                      <MenuItem key={row.materialCode} value={row.materialCode}>
+                        {row.materialCode}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </Grid>
+                <Grid item xs={6}>
+                  <Select
+                    margin="dense"
+                    fullWidth
+                    value={currentRow.cbCode || ''}
+                    onChange={(e) => handleInputChange('cbCode', e.target.value)}
+                    displayEmpty
+                  >
+                    <MenuItem value="" disabled>
+                      CB 코드 선택
+                    </MenuItem>
+                    {leftTableData.map((row) => (
+                      <MenuItem key={row.materialCode} value={row.materialCode}>
+                        {row.materialCode}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </Grid>
+              </Grid>
               <TextField
                 margin="dense"
                 label="B 피치 (mm)"
@@ -320,11 +308,18 @@ const Setup = () => {
               />
               <TextField
                 margin="dense"
-                label="물량 두께 (mm)"
+                label="톱날 두께 (mm)"
                 type="number"
                 fullWidth
                 value={currentRow.bladeThickness || ''}
                 onChange={(e) => handleInputChange('bladeThickness', e.target.value)}
+              />
+              <TextField
+                margin="dense"
+                label="사양 코드"
+                fullWidth
+                disabled
+                value={currentRow.systemCode || ''}
               />
             </>
           )}
