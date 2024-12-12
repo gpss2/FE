@@ -59,8 +59,10 @@ const Add = () => {
 
   const handleCloseModal = () => {
     setModalOpen(false);
-    setCurrentRow({});
     setIsEditing(false);
+    setTimeout(() => {
+      setCurrentRow({});
+    }, 300);
   };
 
   const handleSave = async () => {
