@@ -111,7 +111,6 @@ const Setup = () => {
   };
   
   const handleDelete = async (table, id) => {
-    console.log("삭제 요청")
     if (!id) {
       console.error('No ID provided for deletion.');
       return;
@@ -119,12 +118,19 @@ const Setup = () => {
   
     try {
       await axios.delete(`/api/item/${table === 'left' ? 'material' : 'specific'}/${id}`);
-      fetchLeftTableData();
-      fetchRightTableData();
+      // 테이블 데이터 다시 가져오기
+      if (table === 'left') {
+        await fetchLeftTableData();
+      } else {
+        await fetchRightTableData();
+      }
+      console.log(`Row with ID ${id} deleted successfully.`);
     } catch (error) {
       console.error('Error deleting row:', error);
+      alert('삭제 중 오류가 발생했습니다.');
     }
   };
+  
   const handleInputChange = (field, value) => {
     setCurrentRow({ ...currentRow, [field]: value });
   };
