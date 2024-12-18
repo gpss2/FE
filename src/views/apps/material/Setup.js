@@ -19,6 +19,7 @@ import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
+import SearchableSelect from '../../../components/shared/SearchableSelect';
 
 axios.interceptors.request.use(
   (config) => {
@@ -174,12 +175,13 @@ const Setup = () => {
             <ParentCard title="자재개요 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                 <DataGrid
+                  columnHeaderHeight={30}
+                  rowHeight={30}
                   rows={leftTableData}
                   columns={columnsLeft}
                   pageSize={5}
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
-                  rowHeight={30}
                   onRowClick={(params) => handleOpenModal('left', params.row)}
                 />
               </Box>
@@ -200,6 +202,7 @@ const Setup = () => {
                   pageSize={5}
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
+                  columnHeaderHeight={30}
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal('right', params.row)}
                 />
@@ -254,40 +257,20 @@ const Setup = () => {
             <>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <Select
-                    margin="dense"
-                    fullWidth
+                  <SearchableSelect
+                    label="BB 코드 선택"
+                    options={leftTableData.map((row) => row.materialCode)}
                     value={currentRow.bbCode || ''}
                     onChange={(e) => handleInputChange('bbCode', e.target.value)}
-                    displayEmpty
-                  >
-                    <MenuItem value="" disabled>
-                      BB 코드 선택
-                    </MenuItem>
-                    {leftTableData.map((row) => (
-                      <MenuItem key={row.materialCode} value={row.materialCode}>
-                        {row.materialCode}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  />
                 </Grid>
                 <Grid item xs={6}>
-                  <Select
-                    margin="dense"
-                    fullWidth
+                  <SearchableSelect
+                    label="CB 코드 선택"
+                    options={leftTableData.map((row) => row.materialCode)}
                     value={currentRow.cbCode || ''}
                     onChange={(e) => handleInputChange('cbCode', e.target.value)}
-                    displayEmpty
-                  >
-                    <MenuItem value="" disabled>
-                      CB 코드 선택
-                    </MenuItem>
-                    {leftTableData.map((row) => (
-                      <MenuItem key={row.materialCode} value={row.materialCode}>
-                        {row.materialCode}
-                      </MenuItem>
-                    ))}
-                  </Select>
+                  />
                 </Grid>
               </Grid>
               <TextField

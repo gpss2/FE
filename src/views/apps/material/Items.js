@@ -19,22 +19,22 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import SearchableSelect from '../../../components/shared/SearchableSelect';
 
 const columns = [
-  { field: 'id', headerName: 'ID', width: 50 },
-  { field: 'itemName', headerName: '품명', width: 150 },
-  { field: 'systemCode', headerName: '사양코드', width: 150 },
-  { field: 'endBar', headerName: 'End-bar', width: 150 },
-  { field: 'itemType', headerName: '품목종류', width: 100 },
-  { field: 'width', headerName: '폭(mm)', width: 100 },
-  { field: 'length', headerName: '길이(mm)', width: 100 },
-  { field: 'cbCount', headerName: 'CB수', width: 70 },
-  { field: 'lep', headerName: 'LEP(mm)', width: 100 },
-  { field: 'rep', headerName: 'REP(mm)', width: 100 },
-  { field: 'weight', headerName: '중량(kg)', width: 100 },
-  { field: 'neWeight', headerName: 'NE중량(kg)', width: 100 },
+  { field: 'id', headerName: 'ID', flex: 1 },
+  { field: 'itemName', headerName: '품명', flex: 1 },
+  { field: 'systemCode', headerName: '사양코드', flex: 1 },
+  { field: 'endBar', headerName: 'End-bar', flex: 1 },
+  { field: 'itemType', headerName: '품목종류', flex: 1 },
+  { field: 'width', headerName: '폭(mm)', flex: 1 },
+  { field: 'length', headerName: '길이(mm)', flex: 1 },
+  { field: 'cbCount', headerName: 'CB수', flex: 1 },
+  { field: 'lep', headerName: 'LEP(mm)', flex: 1 },
+  { field: 'rep', headerName: 'REP(mm)', flex: 1 },
+  { field: 'weight', headerName: '중량(kg)', flex: 1 },
+  { field: 'neWeight', headerName: 'NE중량(kg)', flex: 1 },
 ];
-
 const itemTypeOptions = ['R', 'C', 'Angle 대', 'Angle 소', 'EndBar', 'GB', '각 Pipe', '특수 Type'];
 
 const Items = () => {
@@ -145,15 +145,9 @@ const Items = () => {
                   pageSize={10}
                   rowsPerPageOptions={[10, 20, 30]}
                   pagination
+                  columnHeaderHeight={30}
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal(params.row)}
-                  sx={{
-                    '& .MuiDataGrid-columnHeaders': {
-                      height: 60,
-                      backgroundColor: '#f0f0f0',
-                      color: '#333',
-                    },
-                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
@@ -188,42 +182,23 @@ const Items = () => {
           />
           <Grid container spacing={2}>
             <Grid item xs={6}>
-              <Select
-                margin="dense"
-                fullWidth
+              <SearchableSelect
+                label="사양코드 선택"
+                options={specificCodes.map((row) => row.systemCode)}
                 value={currentRow.systemCode || ''}
                 onChange={(e) => handleInputChange('systemCode', e.target.value)}
-                displayEmpty
-              >
-                <MenuItem value="" disabled>
-                  사양코드 선택
-                </MenuItem>
-                {specificCodes.map((row) => (
-                  <MenuItem key={row.systemCode} value={row.systemCode}>
-                    {row.systemCode}
-                  </MenuItem>
-                ))}
-              </Select>
+              />
             </Grid>
             <Grid item xs={6}>
-              <Select
-                margin="dense"
-                fullWidth
+              <SearchableSelect
+                label="End-bar 선택"
+                options={endBars.map((row) => row.materialCode)}
                 value={currentRow.endBar || ''}
                 onChange={(e) => handleInputChange('endBar', e.target.value)}
-                displayEmpty
-              >
-                <MenuItem value="" disabled>
-                  End-bar 선택
-                </MenuItem>
-                {endBars.map((row) => (
-                  <MenuItem key={row.materialCode} value={row.materialCode}>
-                    {row.materialCode}
-                  </MenuItem>
-                ))}
-              </Select>
+              />
             </Grid>
           </Grid>
+          <br />
           <Select
             margin="dense"
             fullWidth

@@ -14,7 +14,7 @@ const ParentCard = ({ title, children, footer }) => {
       <CardHeader title={title} />
       <Divider />
 
-      <CardContent>{children}</CardContent>
+      <CardContent sx={{ paddingTop: '0px' }}>{children}</CardContent>
       {footer ? (
         <>
           <Divider />

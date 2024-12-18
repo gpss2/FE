@@ -113,15 +113,9 @@ const Add = () => {
                   pageSize={10}
                   rowsPerPageOptions={[10, 20, 30]}
                   pagination
+                  columnHeaderHeight={30}
                   rowHeight={30}
                   onRowClick={(params) => handleOpenModal(params.row)}
-                  sx={{
-                    '& .MuiDataGrid-columnHeaders': {
-                      height: 60,
-                      backgroundColor: '#f0f0f0',
-                      color: '#333',
-                    },
-                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
