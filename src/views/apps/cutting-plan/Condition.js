@@ -112,7 +112,7 @@ const Condition = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주별 품목명세 입력 화면">
-              <Box sx={{ height: 300, width: '100%' }}>
+              <Box sx={{ height: 250, width: '100%' }}>
                 <DataGrid
                   columnHeaderHeight={30}
                   rowHeight={30}
