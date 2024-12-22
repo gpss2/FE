@@ -1,213 +1,252 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { DataGrid } from '@mui/x-data-grid';
+import {
+  Box,
+  Grid,
+  IconButton,
+  Stack,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Button,
+  TextField,
+} from '@mui/material';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
-import { Grid, Box, Button, Stack, IconButton } from '@mui/material';
-import { DataGrid } from '@mui/x-data-grid';
-import PrintIcon from '@mui/icons-material/Print';
-import DeleteIcon from '@mui/icons-material/Delete';
-import SaveIcon from '@mui/icons-material/Save';
-import AddIcon from '@mui/icons-material/Add';
-const columnsLeft = [
-    { field: 'taskNumber', headerName: '태스크번호', width: 130 },
-    { field: 'orderNumber', headerName: '수주번호', width: 130 },
-    { field: 'surfaceTreatment', headerName: '표면처리', width: 100 },
-    { field: 'coatingThickness', headerName: '도금 두께', width: 100 },
-    { field: 'remarks', headerName: '특기사항', width: 100 },
-    { field: 'category', headerName: '구분', width: 100 },
-    { field: 'orderDate', headerName: '수주일자', width: 100 },
-    { field: 'customerCode', headerName: '수주처 코드', width: 100 },
-    { field: 'deliveryDate', headerName: '납기일자', width: 100 },
-];
 
-const rowsLeft = [
-    { id: 1, taskNumber: '19990915-T18', orderNumber: '199908-080Y', surfaceTreatment: 'GALV', coatingThickness: 53.0, remarks: 'none', category: '토목', orderDate: '1999/08/27', customerCode: 'SHI', deliveryDate: '1999/08/31' },
-    { id: 2, taskNumber: '19991006-T09', orderNumber: '199910-013Y', surfaceTreatment: 'GALV', coatingThickness: 53.0, remarks: 'none', category: '플랜트', orderDate: '1999/10/05', customerCode: 'DL', deliveryDate: '1999/10/15' },
-    { id: 3, taskNumber: '19991023-T11', orderNumber: '199910-039K', surfaceTreatment: 'GALV', coatingThickness: 85.0, remarks: 'none', category: '플랜트', orderDate: '1999/10/13', customerCode: 'KH', deliveryDate: '1999/10/22' },
-    { id: 4, taskNumber: '19991023-T04', orderNumber: '19991020-468', surfaceTreatment: 'GALV', coatingThickness: 53.0, remarks: 'none', category: '일본토목', orderDate: '1999/10/20', customerCode: 'JK', deliveryDate: '1999/11/05' },
-    { id: 5, taskNumber: '20230324-T01', orderNumber: '2303-029.030', surfaceTreatment: 'GALV', coatingThickness: 75.0, remarks: '없음', category: '플랜트', orderDate: '2023/03/23', customerCode: '상상인', deliveryDate: '2023/04/27' },
-    { id: 6, taskNumber: '19991102-T08', orderNumber: '991101-498', surfaceTreatment: 'GALV', coatingThickness: 53.0, remarks: 'none', category: '플랜트', orderDate: '1999/11/01', customerCode: 'HWM', deliveryDate: '1999/11/12' },
-    { id: 7, taskNumber: '20190123-T01', orderNumber: 'A1901-017', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/01/23', customerCode: 'DTS KI', deliveryDate: '2019/02/15' },
-    { id: 8, taskNumber: '20190307-T02', orderNumber: 'A1903-097', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/03/07', customerCode: 'ISHIDA', deliveryDate: '2019/03/28' },
-    { id: 9, taskNumber: '20190313-T03', orderNumber: 'A1903-104', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/03/13', customerCode: 'Doosa', deliveryDate: '2019/03/29' },
-    { id: 10, taskNumber: '20190510-T01', orderNumber: 'A1905-186', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/05/10', customerCode: 'DTS KI', deliveryDate: '2019/05/30' },
-    { id: 11, taskNumber: '20190628-T04', orderNumber: 'A1906-301', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/06/28', customerCode: 'PSS', deliveryDate: '2019/07/20' },
-    { id: 12, taskNumber: '20190821-T01', orderNumber: 'A1908-321', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/08/21', customerCode: 'SJD', deliveryDate: '2019/08/30' },
-    { id: 13, taskNumber: '20190823-T04', orderNumber: 'A1908-338', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/08/23', customerCode: 'SJD', deliveryDate: '2019/09/06' },
-    { id: 14, taskNumber: '20191008-T03', orderNumber: 'A1910-421', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2019/10/08', customerCode: 'DTS KI', deliveryDate: '2019/10/28' },
-    { id: 15, taskNumber: '20200325-T01', orderNumber: 'A2003-097', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/03/25', customerCode: 'NEPEA', deliveryDate: '2020/04/17' },
-    { id: 16, taskNumber: '20200414-T03', orderNumber: 'A2009-325', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/04/14', customerCode: 'PSV', deliveryDate: '2020/05/06' },
-    { id: 17, taskNumber: '20200516-T01', orderNumber: 'A2005-345', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/05/16', customerCode: 'PSS', deliveryDate: '2020/06/10' },
-    { id: 18, taskNumber: '20200915-T02', orderNumber: 'A2009-346', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/09/15', customerCode: 'PSS', deliveryDate: '2020/09/30' },
-    { id: 19, taskNumber: '20200916-T01', orderNumber: 'A2009-347', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/09/16', customerCode: 'PSS', deliveryDate: '2020/10/05' },
-    { id: 20, taskNumber: '20201006-T02', orderNumber: 'A2010-348', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/10/06', customerCode: 'PSS', deliveryDate: '2020/10/25' },
-    { id: 21, taskNumber: '20201008-T03', orderNumber: 'A2010-349', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/10/08', customerCode: 'PSS', deliveryDate: '2020/10/29' },
-    { id: 22, taskNumber: '20201009-T01', orderNumber: 'A2010-350', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/10/09', customerCode: 'PSS', deliveryDate: '2020/11/05' },
-    { id: 23, taskNumber: '20201010-T01', orderNumber: 'A2010-351', surfaceTreatment: 'GALV', coatingThickness: 86.0, remarks: '없음', category: '플랜트', orderDate: '2020/10/10', customerCode: 'PSS', deliveryDate: '2020/11/06' },
-    { id: 24, taskNumber: '20210707-T02', orderNumber: 'A2107-000', surfaceTreatment: 'GALV', coatingThickness: 75.0, remarks: '없음', category: '플랜트', orderDate: '2021/07/07', customerCode: '카타르', deliveryDate: '2021/08/25' },
-];
-
-
-const columnsRight = [
-    { field: 'customerCode', headerName: '수주처 코드', width: 100 },
-    { field: 'customerName', headerName: '수주처명', flex: 1 },
-];
-
-const rowsRight = [
-    { id: 1, customerCode: 'TOYO', customerName: 'TOYO KANETSU' },
-    { id: 2, customerCode: '(유)부강', customerName: '(유)부강' },
-    { id: 3, customerCode: '(유)엠텍', customerName: '(유)엠텍' },
-    { id: 4, customerCode: '(유)유심', customerName: '(유)유심' },
-    { id: 5, customerCode: '(유)태신', customerName: '(유)태신' },
-    { id: 6, customerCode: '(주)KHPT', customerName: '(주)KHPT' },
-    { id: 7, customerCode: '(주)거흥', customerName: '(주)거흥산업' },
-    { id: 8, customerCode: '(주)달성', customerName: '(주)달성' },
-    { id: 9, customerCode: '(주)도고', customerName: '(주)도고산업' },
-    { id: 10, customerCode: '(주)보성', customerName: '(주)보성' },
-    { id: 11, customerCode: '(주)삼탑', customerName: '(주)삼탑엔지니어링' },
-    { id: 12, customerCode: '(주)석영', customerName: '(주)석영' },
-    { id: 13, customerCode: '(주)성현', customerName: '(주)성현' },
-    { id: 14, customerCode: '(주)세양', customerName: '(주)세양기업' },
-    { id: 15, customerCode: '(주)에이', customerName: '(주)에이테크' },
-    { id: 16, customerCode: '(주)우신', customerName: '(주)우신시스템' },
-    { id: 17, customerCode: '(주)우영', customerName: '(주)우영미엔지' },
-    { id: 18, customerCode: '(주)웰크', customerName: '(주)웰크로강업' },
-    { id: 19, customerCode: '(주)유림', customerName: '(주)유림미엔씨' },
+const columns = [
+  { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
+  { field: 'orderNumber', headerName: '수주번호', flex: 1 },
+  { field: 'surfaceTreatment', headerName: '표면처리', flex: 1 },
+  { field: 'coatingThickness', headerName: '도금 두께', flex: 1 },
+  { field: 'remarks', headerName: '특기사항', flex: 1 },
+  { field: 'category', headerName: '구분', flex: 1 },
+  { field: 'orderDate', headerName: '수주일자', flex: 1 },
+  { field: 'customerCode', headerName: '수주처', flex: 1 },
+  { field: 'deliveryDate', headerName: '납기일자', flex: 1 },
 ];
 
 const Orders = () => {
-    return (
-        <div>
-            <PageContainer title="수주 목록 입력">
-                <Grid container spacing={2}>
-                    {/* Left Table */}
-                    <Grid item lg={9} xs={12} mt={3}>
-                        <ParentCard title="수주 목록 관리">
-                            <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                                <DataGrid
-                                    rows={rowsLeft}
-                                    columns={columnsLeft}
-                                    pageSize={5}
-                                    rowsPerPageOptions={[5, 10, 20]}
-                                    pagination
-                                    checkboxSelection
-                                    rowHeight={30}
-                                    sx={{
-                                        '& .MuiDataGrid-columnHeaders': {
-                                            height: 30,
-                                        },
-                                    }}
-                                />
-                            </Box>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-                                {/* 프린트 버튼 */}
-                                <Stack direction="row" spacing={1}>
-                                    <IconButton color="primary" aria-label="print"
-                                        sx={{
-                                            border: '1px solid',
-                                            borderColor: 'primary.main',
-                                            borderRadius: 1,
-                                        }}>
-                                        <PrintIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        color="primary"
-                                        aria-label="add"
-                                        sx={{
-                                            border: '1px solid',
-                                            borderColor: 'primary.main',
-                                            borderRadius: 1,
-                                        }}
-                                    >
-                                        <AddIcon />
-                                    </IconButton>
-                                </Stack>
-                                {/* 삭제 및 저장 버튼 */}
-                                <Stack direction="row" spacing={1}>
-                                    <IconButton color="warning" aria-label="delete" sx={{
-                                        border: '1px solid',
-                                        borderColor: 'primary.warning',
-                                        borderRadius: 1,
-                                    }}>
-                                        <DeleteIcon />
-                                    </IconButton>
-                                    <IconButton color="primary" aria-label="save" sx={{
-                                        border: '1px solid',
-                                        borderColor: 'primary.main',
-                                        borderRadius: 1,
-                                    }}>
-                                        <SaveIcon />
-                                    </IconButton>
-                                </Stack>
-                            </Stack>
-                        </ParentCard>
-                    </Grid>
+  const [data, setData] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [currentRow, setCurrentRow] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [dailyTaskCount, setDailyTaskCount] = useState(0);
 
-                    {/* Right Table */}
-                    <Grid item lg={3} xs={12} mt={3}>
-                        <ParentCard title="수주처 코드 관리">
-                            <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                                <DataGrid
-                                    rows={rowsRight}
-                                    columns={columnsRight}
-                                    pageSize={5}
-                                    checkboxSelection
-                                    rowsPerPageOptions={[5, 10, 20]}
-                                    pagination
-                                    rowHeight={30}
-                                    sx={{
-                                        '& .MuiDataGrid-columnHeaders': {
-                                            height: 30,
-                                        },
-                                    }}
-                                />
+  // 데이터 로드
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('/api/order/list');
+      setData(response.data.table);
+      updateDailyTaskCount(response.data.table);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+  };
 
-                            </Box>
-                            <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
-                                {/* 추가 버튼 */}
-                                <IconButton
-                                    color="primary"
-                                    aria-label="add"
-                                    sx={{
-                                        border: '1px solid',
-                                        borderColor: 'primary.main',
-                                        borderRadius: 1,
-                                    }}
-                                >
-                                    <AddIcon />
-                                </IconButton>
+  // 오늘 날짜의 테스크 번호 생성
+  const generateTaskNumber = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const nextTaskNumber = dailyTaskCount + 1;
+    return `${year}${month}${day}-T-${String(nextTaskNumber).padStart(2, '0')}`;
+  };
 
-                                {/* 삭제 및 저장 버튼 */}
-                                <Stack direction="row" spacing={1}>
-                                    <IconButton
-                                        color="warning"
-                                        aria-label="delete"
-                                        sx={{
-                                            border: '1px solid',
-                                            borderColor: 'warning.main', // warning.main으로 수정
-                                            borderRadius: 1,
-                                        }}
-                                    >
-                                        <DeleteIcon />
-                                    </IconButton>
-                                    <IconButton
-                                        color="primary"
-                                        aria-label="save"
-                                        sx={{
-                                            border: '1px solid',
-                                            borderColor: 'primary.main',
-                                            borderRadius: 1,
-                                        }}
-                                    >
-                                        <SaveIcon />
-                                    </IconButton>
-                                </Stack>
-                            </Stack>
-                        </ParentCard>
-                    </Grid>
-                </Grid>
-            </PageContainer>
-        </div>
-    );
+  // 오늘 날짜 기준 테스크 번호 카운트 갱신
+  const updateDailyTaskCount = (rows) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayTasks = rows.filter((row) => row.orderDate.startsWith(today));
+    setDailyTaskCount(todayTasks.length);
+  };
+
+  const handleOpenModal = (row = {}) => {
+    if (!row.id) {
+      // 새 수주일 경우 자동으로 테스크 번호 생성
+      row.taskNumber = generateTaskNumber();
+    }
+    setCurrentRow(row);
+    setIsEditing(!!row.id);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setCurrentRow({});
+    setIsEditing(false);
+  };
+
+  const handleSave = async () => {
+    try {
+      if (isEditing) {
+        await axios.put(`/api/order/list/${currentRow.id}`, currentRow);
+      } else {
+        await axios.post('/api/order/list', currentRow);
+      }
+      fetchData();
+      handleCloseModal();
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      if (currentRow.id) {
+        await axios.delete(`/api/order/list/${currentRow.id}`);
+        fetchData();
+        handleCloseModal();
+      }
+    } catch (error) {
+      console.error('Error deleting data:', error);
+    }
+  };
+
+  const handleInputChange = (field, value) => {
+    setCurrentRow((prev) => ({ ...prev, [field]: value }));
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  return (
+    <div>
+      <PageContainer title="수주 목록 입력">
+        <Grid container spacing={2}>
+          <Grid item xs={12} mt={3}>
+            <ParentCard title="수주 목록 관리">
+              <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
+                <DataGrid
+                  rows={data}
+                  columns={columns}
+                  pageSize={10}
+                  rowsPerPageOptions={[10, 20, 30]}
+                  pagination
+                  columnHeaderHeight={30}
+                  rowHeight={30}
+                  onRowClick={(params) => handleOpenModal(params.row)}
+                />
+              </Box>
+              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
+                <IconButton
+                  color="primary"
+                  aria-label="add"
+                  onClick={() => handleOpenModal()}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'primary.main',
+                    borderRadius: 1,
+                  }}
+                >
+                  <AddIcon />
+                </IconButton>
+              </Stack>
+            </ParentCard>
+          </Grid>
+        </Grid>
+      </PageContainer>
+
+      {/* Modal */}
+      <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="md">
+        <DialogTitle>{isEditing ? 'Edit Order' : 'Add Order'}</DialogTitle>
+        <DialogContent>
+          <TextField
+            margin="dense"
+            label="태스크번호"
+            fullWidth
+            value={currentRow.taskNumber || ''}
+            disabled // 테스크 번호는 자동 생성
+          />
+          <TextField
+            margin="dense"
+            label="수주번호"
+            fullWidth
+            value={currentRow.orderNumber || ''}
+            onChange={(e) => handleInputChange('orderNumber', e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="표면처리"
+            fullWidth
+            value={currentRow.surfaceTreatment || ''}
+            onChange={(e) => handleInputChange('surfaceTreatment', e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="도금 두께"
+            type="number"
+            fullWidth
+            value={currentRow.coatingThickness || ''}
+            onChange={(e) => handleInputChange('coatingThickness', parseFloat(e.target.value))}
+          />
+          <TextField
+            margin="dense"
+            label="특이사항"
+            fullWidth
+            value={currentRow.remarks || ''}
+            onChange={(e) => handleInputChange('remarks', e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="구분"
+            fullWidth
+            value={currentRow.category || ''}
+            onChange={(e) => handleInputChange('category', e.target.value)}
+          />
+          <Grid container spacing={2}>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="수주일자"
+                fullWidth
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={currentRow.orderDate || ''}
+                onChange={(e) => handleInputChange('orderDate', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="납기일자"
+                fullWidth
+                type="date"
+                InputLabelProps={{ shrink: true }}
+                value={currentRow.deliveryDate || ''}
+                onChange={(e) => handleInputChange('deliveryDate', e.target.value)}
+              />
+            </Grid>
+          </Grid>
+          <TextField
+            margin="dense"
+            label="수주처"
+            fullWidth
+            value={currentRow.customerCode || ''}
+            onChange={(e) => handleInputChange('customerCode', e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          {isEditing && (
+            <Button onClick={handleDelete} color="warning">
+              삭제
+            </Button>
+          )}
+          <Button onClick={handleCloseModal} color="secondary">
+            취소
+          </Button>
+          <Button onClick={handleSave} color="primary">
+            저장
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </div>
+  );
 };
 
 export default Orders;

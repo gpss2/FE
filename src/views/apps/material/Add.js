@@ -18,6 +18,7 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import SearchableSelect from '../../../components/shared/SearchableSelect';
 
 const columns = [
   { field: 'id', headerName: 'ID', width: 70 },
@@ -141,22 +142,13 @@ const Add = () => {
       <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
         <DialogTitle>{isEditing ? 'Edit Row' : 'Add Row'}</DialogTitle>
         <DialogContent>
-          <Select
-            margin="dense"
-            fullWidth
+          <SearchableSelect
+            label="자재코드 선택"
+            options={materialCodes.map((row) => row.materialCode)}
             value={currentRow.materialCode || ''}
             onChange={(e) => handleInputChange('materialCode', e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value="" disabled>
-              자재코드 선택
-            </MenuItem>
-            {materialCodes.map((row) => (
-              <MenuItem key={row.materialCode} value={row.materialCode}>
-                {row.materialCode}
-              </MenuItem>
-            ))}
-          </Select>
+          />
+
           <TextField
             margin="dense"
             label="입고수량 (PCS)"
