@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Grid, Stack } from '@mui/material';
+import { Box, Grid } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
@@ -10,24 +10,29 @@ const topLeftColumns = [
   { field: 'type', headerName: '구분', flex: 1 },
   { field: 'orderDate', headerName: '수주일자', flex: 1 },
   { field: 'deliveryDate', headerName: '납기일자', flex: 1 },
-  { field: 'customerCode', headerName: '수주처', flex: 1 },
-  { field: 'totalQuantity', headerName: '총수량', flex: 1 },
-  { field: 'totalWeight', headerName: '총중량(Kg)', flex: 1 },
+  { field: 'customerCode', headerName: '수주\n처명', flex: 1 },
+  { field: 'totalQuantity', headerName: '총\n수량', flex: 1 },
+  { field: 'totalWeight', headerName: '총중량\n(Kg)', flex: 1 },
 ];
 
 const topRightColumns = [
   { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
-  { field: 'percentage', headerName: '짝수 비율(%)', flex: 1 },
+  { field: 'percentage', headerName: '짝수\n비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
-  { field: 'compressionSetting', headerName: '압접 본수 설정', flex: 1 },
-  { field: 'baseLength', headerName: '기본 로스', flex: 1 },
-  { field: 'plusLAdjustment', headerName: '+L 공차', flex: 1 },
-  { field: 'minusLAdjustment', headerName: '-L 공차', flex: 1 },
-  { field: 'plusWAdjustment', headerName: '+W 공차', flex: 1 },
-  { field: 'minusWAdjustment', headerName: '-W 공차', flex: 1 },
-  { field: 'effectiveWidthLength', headerName: '폭묶음 길이비(%)', flex: 1 },
-  { field: 'iofdLimit', headerName: 'IOFD 탐색제한(mm)', flex: 1 },
+  { field: 'compressionSetting', headerName: '압접\n본수\n설정', flex: 1 },
+  { field: 'baseLength', headerName: '기본\n로스', flex: 1 },
+  { field: 'plusLAdjustment', headerName: '+L\n공차', flex: 1 },
+  { field: 'minusLAdjustment', headerName: '-L\n공차', flex: 1 },
+  { field: 'plusWAdjustment', headerName: '+W\n공차', flex: 1 },
+  { field: 'minusWAdjustment', headerName: '-W\n공차', flex: 1 },
+  {
+    field: 'effectiveWidthLength',
+    headerName: '폭묶음 길이비(%)',
+    flex: 1,
+    headerClassName: 'multi-line-header',
+  },
+  { field: 'iofdLimit', headerName: 'IOFD\n탐색제한\n(mm)', flex: 1 },
 ];
 
 const bottomColumns = [
@@ -58,8 +63,15 @@ const Start = () => {
                   columns={topLeftColumns}
                   pageSize={5}
                   rowsPerPageOptions={[5, 10]}
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={45}
                   rowHeight={30}
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                  }}
                 />
               </Box>
             </ParentCard>
@@ -72,8 +84,15 @@ const Start = () => {
                   columns={topRightColumns}
                   pageSize={5}
                   rowsPerPageOptions={[5, 10]}
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={60}
                   rowHeight={30}
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                  }}
                 />
               </Box>
             </ParentCard>
