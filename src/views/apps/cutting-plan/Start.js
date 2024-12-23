@@ -10,18 +10,24 @@ const topLeftColumns = [
   { field: 'type', headerName: '구분', flex: 1 },
   { field: 'orderDate', headerName: '수주일자', flex: 1 },
   { field: 'deliveryDate', headerName: '납기일자', flex: 1 },
+  { field: 'customerCode', headerName: '수주처', flex: 1 },
   { field: 'totalQuantity', headerName: '총수량', flex: 1 },
   { field: 'totalWeight', headerName: '총중량(Kg)', flex: 1 },
 ];
 
 const topRightColumns = [
   { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
-  { field: 'percentage', headerName: '조정 비율(%)', flex: 1 },
+  { field: 'percentage', headerName: '짝수 비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
-  { field: 'baseLength', headerName: '기본길이(mm)', flex: 1 },
-  { field: 'widthAdjustment', headerName: '+W조차', flex: 1 },
-  { field: 'totalLength', headerName: '폭유효길이(mm)', flex: 1 },
+  { field: 'compressionSetting', headerName: '압접 본수 설정', flex: 1 },
+  { field: 'baseLength', headerName: '기본 로스', flex: 1 },
+  { field: 'plusLAdjustment', headerName: '+L 공차', flex: 1 },
+  { field: 'minusLAdjustment', headerName: '-L 공차', flex: 1 },
+  { field: 'plusWAdjustment', headerName: '+W 공차', flex: 1 },
+  { field: 'minusWAdjustment', headerName: '-W 공차', flex: 1 },
+  { field: 'effectiveWidthLength', headerName: '폭묶음 길이비(%)', flex: 1 },
+  { field: 'iofdLimit', headerName: 'IOFD 탐색제한(mm)', flex: 1 },
 ];
 
 const bottomColumns = [
@@ -40,12 +46,13 @@ const bottomColumns = [
 const Start = () => {
   return (
     <div>
-      <PageContainer title="절단 계획 생성 대장">
+      <PageContainer title="절단 계획 생성 대상">
+        <br />
         <Grid container spacing={2}>
           {/* 상단 4:6 테이블 */}
           <Grid item xs={5}>
             <ParentCard title="절단계획 생성 대장">
-              <Box sx={{ height: 300, width: '100%' }}>
+              <Box sx={{ height: 200, width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topLeftColumns}
@@ -58,8 +65,8 @@ const Start = () => {
             </ParentCard>
           </Grid>
           <Grid item xs={7}>
-            <ParentCard title="그룹별 조정값">
-              <Box sx={{ height: 300, width: '100%' }}>
+            <ParentCard title="그룹별 계획조건 개별지정 - 태스크 :">
+              <Box sx={{ height: 200, width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topRightColumns}
@@ -74,8 +81,8 @@ const Start = () => {
 
           {/* 하단 3개의 테이블 */}
           <Grid item xs={12}>
-            <ParentCard title="절단 계획 결과: 그룹별 사용자재">
-              <Box sx={{ height: '50vh', width: '100%' }}>
+            <ParentCard title="절단 계획 결과: 그룹별 사용자재 - 태스크">
+              <Box sx={{ height: 300, width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={bottomColumns}

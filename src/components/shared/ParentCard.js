@@ -11,18 +11,16 @@ const ParentCard = ({ title, children, footer }) => {
       elevation={customizer.isCardShadow ? 9 : 0}
       variant={!customizer.isCardShadow ? 'outlined' : undefined}
     >
-      <CardHeader title={title} />
+      <CardHeader title={<Box sx={{ fontSize: '0.9rem', fontWeight: 'bold' }}>{title}</Box>} />
       <Divider />
 
       <CardContent sx={{ paddingTop: '0px' }}>{children}</CardContent>
       {footer ? (
         <>
           <Divider />
-          <Box p={3}>{footer}</Box>
+          <Box p={1}>{footer}</Box>
         </>
-      ) : (
-        ''
-      )}
+      ) : null}
     </Card>
   );
 };
