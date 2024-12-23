@@ -1,11 +1,12 @@
 import React from 'react';
-import { Box, Grid } from '@mui/material';
+import { Box, Button, Grid } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import { Stack } from '@mui/system';
 
 const topLeftColumns = [
-  { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
+  { field: 'taskNumber', headerName: '태스크\n번호', flex: 1 },
   { field: 'orderNumber', headerName: '수주번호', flex: 1 },
   { field: 'type', headerName: '구분', flex: 1 },
   { field: 'orderDate', headerName: '수주일자', flex: 1 },
@@ -51,18 +52,16 @@ const bottomColumns = [
 const Start = () => {
   return (
     <div>
-      <PageContainer title="절단 계획 생성 대상">
+      <PageContainer title="절단 계획 생성">
         <br />
         <Grid container spacing={2}>
           {/* 상단 4:6 테이블 */}
           <Grid item xs={5}>
-            <ParentCard title="절단계획 생성 대장">
+            <ParentCard title="절단계획 생성 대상">
               <Box sx={{ height: 200, width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topLeftColumns}
-                  pageSize={5}
-                  rowsPerPageOptions={[5, 10]}
                   columnHeaderHeight={45}
                   rowHeight={30}
                   sx={{
@@ -71,19 +70,23 @@ const Start = () => {
                       textAlign: 'center', // 중앙 정렬
                       lineHeight: '1.2', // 줄 간격 조정
                     },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
                   }}
                 />
               </Box>
+              <Stack direction="row" justifyContent="flex-start">
+                <Button>계획 생성</Button>
+              </Stack>
             </ParentCard>
           </Grid>
           <Grid item xs={7}>
             <ParentCard title="그룹별 계획조건 개별지정 - 태스크 :">
-              <Box sx={{ height: 200, width: '100%' }}>
+              <Box sx={{ height: 235, width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topRightColumns}
-                  pageSize={5}
-                  rowsPerPageOptions={[5, 10]}
                   columnHeaderHeight={60}
                   rowHeight={30}
                   sx={{
@@ -91,6 +94,9 @@ const Start = () => {
                       whiteSpace: 'pre-wrap', // 줄바꿈 허용
                       textAlign: 'center', // 중앙 정렬
                       lineHeight: '1.2', // 줄 간격 조정
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
                     },
                   }}
                 />
@@ -105,12 +111,19 @@ const Start = () => {
                 <DataGrid
                   rows={[]}
                   columns={bottomColumns}
-                  pageSize={5}
-                  rowsPerPageOptions={[5, 10]}
                   columnHeaderHeight={30}
                   rowHeight={30}
+                  sx={{
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
+                  }}
                 />
               </Box>
+              <Stack direction="row" justifyContent="flex-end" spacing={2}>
+                <Button>상세 품목배치(작업지시폼)</Button>
+                <Button>품목배치 자세히</Button>
+              </Stack>
             </ParentCard>
           </Grid>
         </Grid>

@@ -34,100 +34,13 @@ const bottomColumns = [
   { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
 ];
 
-const dummyTopData = [
-  {
-    id: 1,
-    orderNumber: 'KP2005-022A',
-    taskList: 'MS-F032050-044 / MS-F032050-610',
-    type: '플랜트',
-    orderDate: '2020/05/22',
-    clientName: '(주)부광',
-    deliveryDate: '2020/06/08',
-    totalQuantity: 66,
-    totalWeight: 599.1,
-    taskNumber: '20200522-T02',
-  },
-  {
-    id: 2,
-    orderNumber: 'KP2005-022B',
-    taskList: 'MS-F032050-050 / MS-F032050-620',
-    type: '플랜트',
-    orderDate: '2020/05/21',
-    clientName: '(주)부광',
-    deliveryDate: '2020/06/08',
-    totalQuantity: 44,
-    totalWeight: 443.2,
-    taskNumber: '20200521-T02',
-  },
-];
-
-const dummyBottomData = {
-  1: [
-    {
-      id: 1,
-      itemId: 'KP2005-022A-0021',
-      drawingNumber: '02',
-      itemNumber: '01',
-      itemType: 'R',
-      itemName: 'Steel Grating',
-      specCode: 'MS-F032050-044',
-      endBar: 'F032050-610',
-      width: 785,
-      length: 2760,
-      cbCount: 27,
-      lep: 66.0,
-      rep: 94.0,
-      quantity: 1,
-      weight: 101.5,
-      groupNumber: '20200522-G002',
-    },
-    {
-      id: 2,
-      itemId: 'KP2005-022A-0022',
-      drawingNumber: '02',
-      itemNumber: '02',
-      itemType: 'R',
-      itemName: 'Steel Grating',
-      specCode: 'MS-F032050-044',
-      endBar: 'F032050-610',
-      width: 995,
-      length: 2851,
-      cbCount: 22,
-      lep: 85.0,
-      rep: 85.0,
-      quantity: 1,
-      weight: 132.0,
-      groupNumber: '20200522-G002',
-    },
-  ],
-  2: [
-    {
-      id: 1,
-      itemId: 'KP2005-022B-0021',
-      drawingNumber: '01',
-      itemNumber: '01',
-      itemType: 'R',
-      itemName: 'Steel Grating B',
-      specCode: 'MS-F032050-050',
-      endBar: 'F032050-620',
-      width: 500,
-      length: 2000,
-      cbCount: 20,
-      lep: 60.0,
-      rep: 70.0,
-      quantity: 1,
-      weight: 80.0,
-      groupNumber: '20200521-G001',
-    },
-  ],
-};
-
 const Range = () => {
   const [bottomData, setBottomData] = useState([]);
 
   const handleRowClick = (params) => {
     const selectedOrderId = params.id;
-    setBottomData(dummyBottomData[selectedOrderId] || []);
+    // 데이터 로드 로직 추가 가능
+    setBottomData([]); // 데이터 초기화 또는 API 연동 시 업데이트
   };
 
   const handleMerge = () => {
@@ -149,13 +62,22 @@ const Range = () => {
             <ParentCard title="태스크범위 지정 화면">
               <Box sx={{ height: 200, width: '100%' }}>
                 <DataGrid
-                  rows={dummyTopData}
+                  rows={[]} // 더미 데이터 제거
                   columns={topColumns}
-                  pageSize={5}
-                  onRowClick={handleRowClick}
                   columnHeaderHeight={30}
                   rowHeight={30}
-                  rowsPerPageOptions={[5, 10]}
+                  disableSelectionOnClick
+                  onRowClick={handleRowClick}
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
+                  }}
                 />
               </Box>
             </ParentCard>
@@ -165,15 +87,23 @@ const Range = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="그룹범위 지정 화면">
-              <Box sx={{ height: 250, width: '100%', padding: '0px' }}>
+              <Box sx={{ height: 250, width: '100%' }}>
                 <DataGrid
-                  rows={bottomData}
+                  rows={bottomData} // 초기 데이터 비움
                   columns={bottomColumns}
-                  pageSize={5}
-                  checkboxSelection // 체크박스 추가
                   columnHeaderHeight={30}
                   rowHeight={30}
-                  rowsPerPageOptions={[5, 10]}
+                  checkboxSelection
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
+                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>

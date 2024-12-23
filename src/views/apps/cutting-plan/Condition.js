@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Grid, IconButton, Stack, Button } from '@mui/material';
-import UploadFileIcon from '@mui/icons-material/UploadFile'; // 엑셀 업로드 아이콘
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import PageContainer from '../../../components/container/PageContainer';
@@ -43,7 +43,6 @@ const Condition = () => {
   const [selectedOrderId, setSelectedOrderId] = useState(null);
 
   useEffect(() => {
-    // 상단 테이블 데이터 가져오기
     axios
       .get('/api/order/list')
       .then((response) => {
@@ -56,7 +55,6 @@ const Condition = () => {
     const orderId = params.id;
     setSelectedOrderId(orderId);
 
-    // 하단 테이블 데이터 가져오기
     axios
       .get(`/api/orders/list/${orderId}`)
       .then((response) => {
@@ -72,7 +70,6 @@ const Condition = () => {
     const formData = new FormData();
     formData.append('file', file);
 
-    // 엑셀 파일 업로드 API 호출
     axios
       .post('/api/upload/excel', formData, {
         headers: {
@@ -80,7 +77,6 @@ const Condition = () => {
         },
       })
       .then((response) => {
-        // 업로드 후 하단 테이블 갱신
         setBottomData(response.data.items || []);
       })
       .catch((error) => console.error('Error uploading file:', error));
@@ -97,12 +93,20 @@ const Condition = () => {
                 <DataGrid
                   rows={topData}
                   columns={topColumns}
-                  pageSize={5}
                   columnHeaderHeight={30}
                   rowHeight={30}
-                  rowsPerPageOptions={[5, 10]}
                   onRowClick={handleRowClick}
-                  disableSelectionOnClick // 한 번에 하나의 행만 선택
+                  disableSelectionOnClick
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
+                  }}
                 />
               </Box>
             </ParentCard>
@@ -114,18 +118,25 @@ const Condition = () => {
             <ParentCard title="수주별 품목명세 입력 화면">
               <Box sx={{ height: 250, width: '100%' }}>
                 <DataGrid
-                  columnHeaderHeight={30}
-                  rowHeight={30}
                   rows={bottomData}
                   columns={bottomColumns}
-                  pageSize={5}
-                  checkboxSelection // 체크박스 추가
-                  rowsPerPageOptions={[5, 10]}
+                  columnHeaderHeight={30}
+                  rowHeight={30}
+                  checkboxSelection
+                  sx={{
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap', // 줄바꿈 허용
+                      textAlign: 'center', // 중앙 정렬
+                      lineHeight: '1.2', // 줄 간격 조정
+                    },
+                    '& .MuiDataGrid-footerContainer': {
+                      display: 'none', // 페이지네이션 숨기기
+                    },
+                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="space-between" alignItems="center" mt={2}>
                 <Stack direction="row" spacing={1}>
-                  {/* 엑셀 업로드 버튼 */}
                   <Button
                     variant="contained"
                     component="label"
