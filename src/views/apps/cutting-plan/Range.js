@@ -147,7 +147,7 @@ const Range = () => {
           {/* 상단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="태스크범위 지정 화면">
-              <Box sx={{ height: 300, width: '100%' }}>
+              <Box sx={{ height: 200, width: '100%' }}>
                 <DataGrid
                   rows={dummyTopData}
                   columns={topColumns}
@@ -165,7 +165,7 @@ const Range = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="그룹범위 지정 화면">
-              <Box sx={{ height: 400, width: '100%', padding: '0px' }}>
+              <Box sx={{ height: 250, width: '100%', padding: '0px' }}>
                 <DataGrid
                   rows={bottomData}
                   columns={bottomColumns}
