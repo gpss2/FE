@@ -186,7 +186,15 @@ const Setup = () => {
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
-                <IconButton color="primary" onClick={() => handleOpenModal('left')}>
+                <IconButton
+                  color="primary"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'primary.main',
+                    borderRadius: 1,
+                  }}
+                  onClick={() => handleOpenModal('left')}
+                >
                   <AddIcon />
                 </IconButton>
               </Stack>
@@ -208,7 +216,15 @@ const Setup = () => {
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
-                <IconButton color="primary" onClick={() => handleOpenModal('right')}>
+                <IconButton
+                  color="primary"
+                  sx={{
+                    border: '1px solid',
+                    borderColor: 'primary.main',
+                    borderRadius: 1,
+                  }}
+                  onClick={() => handleOpenModal('right')}
+                >
                   <AddIcon />
                 </IconButton>
               </Stack>
