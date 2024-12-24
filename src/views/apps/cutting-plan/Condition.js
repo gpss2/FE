@@ -7,6 +7,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import AddIcon from '@mui/icons-material/Add';
 
 const topColumns = [
   { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
@@ -155,17 +156,6 @@ const Condition = () => {
                 </Stack>
                 <Stack direction="row" spacing={1}>
                   <IconButton
-                    color="warning"
-                    aria-label="delete"
-                    sx={{
-                      border: '1px solid',
-                      borderColor: 'warning.main',
-                      borderRadius: 1,
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                  <IconButton
                     color="primary"
                     aria-label="save"
                     sx={{
@@ -174,7 +164,7 @@ const Condition = () => {
                       borderRadius: 1,
                     }}
                   >
-                    <SaveIcon />
+                    <AddIcon />
                   </IconButton>
                 </Stack>
               </Stack>

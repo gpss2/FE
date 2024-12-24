@@ -14,13 +14,11 @@ import {
   IconTicket,
   IconApps,
   IconChartDonut3,
-
 } from '@tabler/icons';
 
 import { uniqueId } from 'lodash';
 
 const Menuitems = [
-
   {
     id: uniqueId(),
     title: '자재',
@@ -73,7 +71,6 @@ const Menuitems = [
         title: '조건 입력',
         icon: IconPoint,
         href: '/apps/cutting-plan/cond',
-
       },
       {
         id: uniqueId(),
@@ -87,14 +84,13 @@ const Menuitems = [
         icon: IconPoint,
         href: '/apps/cutting-plan/start',
       },
-      {
-        id: uniqueId(),
-        title: '작업중인 계획 보기',
-        icon: IconPoint,
-        href: '/apps/cutting-plan/work',
-      },
-    ]
-
+      // {
+      //   id: uniqueId(),
+      //   title: '작업중인 계획 보기',
+      //   icon: IconPoint,
+      //   href: '/apps/cutting-plan/work',
+      // },
+    ],
   },
 ];
 export default Menuitems;
