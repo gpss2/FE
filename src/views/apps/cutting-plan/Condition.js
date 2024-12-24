@@ -90,7 +90,7 @@ const Condition = () => {
           {/* 상단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주 선택">
-              <Box sx={{ height: 200, width: '100%' }}>
+              <Box sx={{ height: '30vh', width: '100%' }}>
                 <DataGrid
                   rows={topData}
                   columns={topColumns}
@@ -117,11 +117,11 @@ const Condition = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주별 품목명세 입력 화면">
-              <Box sx={{ height: 250, width: '100%' }}>
+              <Box sx={{ height: '30vh', width: '100%' }}>
                 <DataGrid
                   rows={bottomData}
                   columns={bottomColumns}
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={45}
                   rowHeight={30}
                   checkboxSelection
                   sx={{
