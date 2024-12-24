@@ -29,7 +29,11 @@ const Header = () => {
       minHeight: customizer.TopbarHeight,
     },
   }));
-  const ToolbarStyled = styled(Toolbar)(({theme}) => ({ margin: '0 auto', width: '100%', color: `${theme.palette.text.secondary} !important`, }));
+  const ToolbarStyled = styled(Toolbar)(({ theme }) => ({
+    margin: '0 auto',
+    width: '100%',
+    color: `${theme.palette.text.secondary} !important`,
+  }));
 
   return (
     <AppBarStyled position="sticky" color="default" elevation={8}>
@@ -39,7 +43,16 @@ const Header = () => {
         }}
       >
         <Box sx={{ width: lgDown ? '45px' : 'auto', overflow: 'hidden' }}>
-        <h1 style={{ fontSize:'24px', color: '#333fff', fontFamily: 'Galmuri9, sans-serif', fontWeight: 700 }}>GPSS II beta</h1>
+          <h1
+            style={{
+              fontSize: '24px',
+              color: '#333fff',
+              fontFamily: 'Galmuri9, sans-serif',
+              fontWeight: 700,
+            }}
+          >
+            GPSS II
+          </h1>
         </Box>
         {/* ------------------------------------------- */}
         {/* Toggle Button Sidebar */}

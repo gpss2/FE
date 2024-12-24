@@ -86,7 +86,7 @@ const Range = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="그룹범위 지정 화면">
-              <Box sx={{ height: 'calc(40vh - 120px)', width: '100%' }}>
+              <Box sx={{ height: 'calc(40vh - 220px)', width: '100%' }}>
                 <DataGrid
                   rows={bottomData} // 초기 데이터 비움
                   columns={bottomColumns}
