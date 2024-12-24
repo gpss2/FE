@@ -58,7 +58,7 @@ const Start = () => {
           {/* 상단 4:6 테이블 */}
           <Grid item xs={5}>
             <ParentCard title="절단계획 생성 대상">
-              <Box sx={{ height: 200, width: '100%' }}>
+              <Box sx={{ height: 'calc(30vh - 32px)', width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topLeftColumns}
@@ -83,7 +83,7 @@ const Start = () => {
           </Grid>
           <Grid item xs={7}>
             <ParentCard title="그룹별 계획조건 개별지정 - 태스크 :">
-              <Box sx={{ height: 235, width: '100%' }}>
+              <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={topRightColumns}
@@ -107,7 +107,7 @@ const Start = () => {
           {/* 하단 3개의 테이블 */}
           <Grid item xs={12}>
             <ParentCard title="절단 계획 결과: 그룹별 사용자재 - 태스크">
-              <Box sx={{ height: 250, width: '100%' }}>
+              <Box sx={{ height: 'calc(40vh - 120px)', width: '100%' }}>
                 <DataGrid
                   rows={[]}
                   columns={bottomColumns}

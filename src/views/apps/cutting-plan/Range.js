@@ -57,10 +57,9 @@ const Range = () => {
     <div>
       <PageContainer title="계획 범위 지정">
         <Grid container spacing={2}>
-          {/* 상단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="태스크범위 지정 화면">
-              <Box sx={{ height: 200, width: '100%' }}>
+              <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
                 <DataGrid
                   rows={[]} // 더미 데이터 제거
                   columns={topColumns}
@@ -87,7 +86,7 @@ const Range = () => {
           {/* 하단 테이블 */}
           <Grid item xs={12} mt={3}>
             <ParentCard title="그룹범위 지정 화면">
-              <Box sx={{ height: 250, width: '100%' }}>
+              <Box sx={{ height: 'calc(40vh - 120px)', width: '100%' }}>
                 <DataGrid
                   rows={bottomData} // 초기 데이터 비움
                   columns={bottomColumns}
