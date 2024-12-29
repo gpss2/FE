@@ -41,8 +41,13 @@ const Orders = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get('/api/order/list');
-      setData(response.data.table);
-      updateDailyTaskCount(response.data.table);
+      const processedData = response.data.table.map((row) => ({
+        ...row,
+        orderDate: row.orderDate.split('T')[0], // T 제거 후 YYYY-MM-DD 형식으로 변환
+        deliveryDate: row.deliveryDate.split('T')[0], // T 제거 후 YYYY-MM-DD 형식으로 변환
+      }));
+      setData(processedData);
+      updateDailyTaskCount(processedData);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
