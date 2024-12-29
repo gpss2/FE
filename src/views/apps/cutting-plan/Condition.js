@@ -243,7 +243,7 @@ const Condition = () => {
                 selectedOrderNumber ? ` - ${selectedOrderNumber}` : ''
               }`}
             >
-              <Box sx={{ height: 'calc(40vh - 220px)', width: '100%' }}>
+              <Box sx={{ height: 'calc(40vh)', width: '100%' }}>
                 <DataGrid
                   rows={bottomData}
                   columns={bottomColumns}
