@@ -8,6 +8,7 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 // 모달 스타일
 const modalStyle = {
@@ -79,6 +80,33 @@ const Condition = () => {
     weight_kg: '',
     neWeight_kg: '',
   });
+  const handleAddModalOpen = () => {
+    // 하단 테이블 데이터가 있는지 확인
+    const lastData = bottomData[bottomData.length - 1];
+    const nextDrawingNumber = lastData
+      ? String(Number(lastData.drawingNumber)).padStart(2, '0')
+      : '01';
+    const nextOrderNumber = lastData ? String(Number(lastData.orderNumber) + 1) : '1';
+
+    // 새로운 데이터의 초기값 설정
+    setNewData({
+      drawingNumber: nextDrawingNumber,
+      orderNumber: nextOrderNumber,
+      itemType: 'R',
+      itemName: 'Steel Grating',
+      specCode: '',
+      endBar: '',
+      width_mm: '',
+      length_mm: '',
+      cbCount: '',
+      lep_mm: '',
+      rep_mm: '',
+      quantity: '',
+      weight_kg: '',
+      neWeight_kg: '',
+    });
+    setAddModalOpen(true);
+  };
   const fetchMeterialCode = async () => {
     try {
       const response = await axios.get('/api/item/material');
@@ -102,37 +130,55 @@ const Condition = () => {
       navigate('/auth/login');
       return;
     }
+    fetchTopData();
     fetchMeterialCode();
     fetchSpecCode();
-    axios
-      .get('/api/order/list')
-      .then((response) => {
-        const processedData = response.data.table.map((row) => ({
-          ...row,
-          deliveryDate: row.deliveryDate.split('T')[0],
-        }));
-        setTopData(processedData);
-      })
-      .catch((error) => console.error('Error fetching orders:', error));
   }, [navigate]);
 
-  const fetchBottomData = (orderId) => {
-    axios
-      .get(`/api/plan/order-details/${orderId}`)
-      .then((response) => {
-        setBottomData(response.data.table);
-      })
-      .catch((error) => console.error('Error fetching order details:', error));
+  const fetchTopData = async () => {
+    try {
+      const response = await axios.get('/api/order/list');
+      const processedData = response.data.table.map((row) => ({
+        ...row,
+        deliveryDate: row.deliveryDate.split('T')[0],
+      }));
+      setTopData(processedData);
+    } catch (error) {
+      console.error('Error fetching top data:', error);
+    }
   };
-
+  const fetchBottomData = async (orderId) => {
+    try {
+      const response = await axios.get(`/api/plan/order-details/${orderId}`);
+      const processedData = response.data.table.map((row, index) => ({
+        ...row,
+        orderNumber: index + 1, // 1부터 시작하는 번호
+      }));
+      setBottomData(processedData);
+    } catch (error) {
+      console.error('Error fetching bottom data:', error);
+    }
+  };
   const handleRowClick = (params) => {
     const orderId = params.id;
-    const orderNumber = params.row.orderNumber;
+    const orderNumber = params.row.taskNumber;
     setSelectedOrderId(orderId);
     setSelectedOrderNumber(orderNumber);
     fetchBottomData(orderId);
   };
+  const handleProcessRowUpdate = async (newRow, oldRow) => {
+    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow; // 변경 없을 경우
 
+    try {
+      await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, newRow);
+      await fetchBottomData(selectedOrderId); // 업데이트 후 하단 데이터 갱신
+      await fetchTopData(); // 업데이트 후 상단 데이터 갱신
+      return newRow;
+    } catch (error) {
+      console.error('Error updating row:', error);
+      return oldRow;
+    }
+  };
   const handleCellDoubleClick = (params) => {
     const { field, row } = params;
 
@@ -171,12 +217,31 @@ const Condition = () => {
     axios
       .delete(`/api/plan/order-details/${selectedOrderId}/${selectedDetailId}`)
       .then(() => {
+        fetchBottomData();
         setBottomData((prev) => prev.filter((row) => row.id !== selectedDetailId));
         setSelectedDetailId(null);
       })
       .catch((error) => console.error('Error deleting row:', error));
   };
+  const handleFileUpload = async (event) => {
+    if (!selectedOrderId) return;
+    const file = event.target.files[0];
+    if (!file) return;
 
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      await axios.post(`/api/plan/order-details/${selectedOrderId}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      await fetchBottomData(selectedOrderId); // 업로드 후 하단 데이터 갱신
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    }
+  };
   const handleAddModalClose = () => {
     setAddModalOpen(false);
     setNewData({
@@ -203,6 +268,7 @@ const Condition = () => {
       .then((response) => {
         setBottomData((prev) => [...prev, response.data]);
         setAddModalOpen(false);
+        fetchBottomData(selectedOrderId);
       })
       .catch((error) => console.error('Error adding new row:', error));
   };
@@ -240,7 +306,7 @@ const Condition = () => {
           <Grid item xs={12} mt={3}>
             <ParentCard
               title={`수주별 품목명세 입력 화면${
-                selectedOrderNumber ? ` - ${selectedOrderNumber}` : ''
+                selectedOrderNumber ? ` : ${selectedOrderNumber}` : ''
               }`}
             >
               <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
@@ -249,6 +315,7 @@ const Condition = () => {
                   columns={bottomColumns}
                   columnHeaderHeight={45}
                   rowHeight={30}
+                  processRowUpdate={handleProcessRowUpdate}
                   disableSelectionOnClick
                   getRowId={(row) => row.id}
                   onRowClick={(params) => setSelectedDetailId(params.id)}
@@ -269,8 +336,18 @@ const Condition = () => {
               <Stack direction="row" justifyContent="flex-end" mb={1} spacing={2}>
                 <Button
                   variant="contained"
+                  component="label"
+                  startIcon={<UploadFileIcon />}
+                  disabled={!selectedOrderId}
+                >
+                  CSV 업로드
+                  <input type="file" accept=".csv" hidden onChange={handleFileUpload} />
+                </Button>
+                <Button
+                  variant="contained"
                   startIcon={<AddIcon />}
-                  onClick={() => setAddModalOpen(true)}
+                  disabled={!selectedOrderId}
+                  onClick={handleAddModalOpen}
                 >
                   추가
                 </Button>
@@ -343,6 +420,7 @@ const Condition = () => {
             <TextField
               fullWidth
               label="품목번호"
+              disabled
               value={newData.orderNumber}
               onChange={(e) => setNewData((prev) => ({ ...prev, orderNumber: e.target.value }))}
             />
