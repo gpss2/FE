@@ -12,8 +12,6 @@ import {
   DialogTitle,
   Button,
   TextField,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
@@ -66,9 +64,12 @@ const Setup = () => {
   const [currentTable, setCurrentTable] = useState('left');
   const navigate = useNavigate();
 
+  const generateMaterialCode = (materialType, thickness) => {
+    return `${materialType}_${thickness}`;
+  };
+
   const generateSystemCode = (bbCode, cbCode, bWidth, cWidth, bladeThickness) => {
     if (!bbCode) return '';
-
     const filteredRows = rightTableData.filter(
       (row) =>
         row.bbCode === bbCode &&
@@ -137,21 +138,29 @@ const Setup = () => {
   const handleInputChange = (field, value) => {
     const updatedRow = { ...currentRow, [field]: value };
 
-    if (
-      field === 'bbCode' ||
-      field === 'cbCode' ||
-      field === 'bWidth' ||
-      field === 'cWidth' ||
-      field === 'bladeThickness'
-    ) {
-      const generatedCode = generateSystemCode(
-        updatedRow.bbCode || '',
-        updatedRow.cbCode || '',
-        updatedRow.bWidth || '',
-        updatedRow.cWidth || '',
-        updatedRow.bladeThickness || '',
-      );
-      updatedRow.systemCode = generatedCode;
+    if (currentTable === 'left') {
+      if (field === 'materialType' || field === 'thickness') {
+        updatedRow.materialCode = generateMaterialCode(
+          updatedRow.materialType || '',
+          updatedRow.thickness || '',
+        );
+      }
+    } else {
+      if (
+        field === 'bbCode' ||
+        field === 'cbCode' ||
+        field === 'bWidth' ||
+        field === 'cWidth' ||
+        field === 'bladeThickness'
+      ) {
+        updatedRow.systemCode = generateSystemCode(
+          updatedRow.bbCode || '',
+          updatedRow.cbCode || '',
+          updatedRow.bWidth || '',
+          updatedRow.cWidth || '',
+          updatedRow.bladeThickness || '',
+        );
+      }
     }
 
     setCurrentRow(updatedRow);
