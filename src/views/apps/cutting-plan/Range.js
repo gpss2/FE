@@ -185,7 +185,7 @@ const Range = () => {
       <Grid container spacing={2}>
         <Grid item xs={12} mt={3}>
           <ParentCard title="그룹범위 지정 화면">
-            <Box sx={{ height: 'calc(40vh - 220px)', width: '100%' }}>
+            <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
               <DataGrid
                 rows={bottomData}
                 columns={bottomColumns}

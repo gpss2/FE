@@ -160,7 +160,7 @@ const Start = () => {
       <Grid container spacing={2} mt={3}>
         <Grid item xs={12}>
           <ParentCard title="절단 계획 결과: 그룹별 사용자재">
-            <Box sx={{ height: 'calc(40vh - 220px)', width: '100%' }}>
+            <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
               <DataGrid
                 rows={bottomData}
                 columns={bottomColumns}
