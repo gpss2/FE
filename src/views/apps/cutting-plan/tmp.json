@@ -1,0 +1,144 @@
+{
+  "order_id": 8,
+  "group_id": "G-E4CE932B",
+  "result": {
+    "table": [
+      {
+        "panelNumber": 1,
+        "qty": 1,
+        "gratings": 6,
+        "loss": 10,
+        "gratings_data": [
+          {
+            "id": 33,
+            "option": "even",
+            "width_mm": 395,
+            "length_mm": 1060,
+            "lep_mm": 50,
+            "rep_mm": 50,
+            "leftCut": 15,
+            "rightCut": 1075,
+            "leftWeld": 65,
+            "rightWeld": 965
+          },
+          {
+            "id": 34,
+            "option": "even",
+            "width_mm": 425,
+            "length_mm": 1025,
+            "lep_mm": 42,
+            "rep_mm": 42,
+            "leftCut": 1075,
+            "rightCut": 2100,
+            "leftWeld": 1117,
+            "rightWeld": 2017
+          },
+          {
+            "id": 37,
+            "option": "even",
+            "width_mm": 446,
+            "length_mm": 1010,
+            "lep_mm": 55,
+            "rep_mm": 55,
+            "leftCut": 2100,
+            "rightCut": 3110,
+            "leftWeld": 2155,
+            "rightWeld": 3055
+          },
+          {
+            "id": 29,
+            "option": "even",
+            "width_mm": 395,
+            "length_mm": 1000,
+            "lep_mm": 50,
+            "rep_mm": 50,
+            "leftCut": 3110,
+            "rightCut": 4110,
+            "leftWeld": 3160,
+            "rightWeld": 4060
+          },
+          {
+            "id": 30,
+            "option": "even",
+            "width_mm": 395,
+            "length_mm": 1000,
+            "lep_mm": 50,
+            "rep_mm": 50,
+            "leftCut": 4110,
+            "rightCut": 5110,
+            "leftWeld": 4160,
+            "rightWeld": 5060
+          },
+          {
+            "id": 36,
+            "option": "even",
+            "width_mm": 425,
+            "length_mm": 985,
+            "lep_mm": 42,
+            "rep_mm": 42,
+            "leftCut": 5110,
+            "rightCut": 6095,
+            "leftWeld": 5152,
+            "rightWeld": 6052
+          }
+        ]
+      },
+      {
+        "panelNumber": 2,
+        "qty": 1,
+        "gratings": 4,
+        "loss": 2455,
+        "gratings_data": [
+          {
+            "id": 35,
+            "option": "even",
+            "width_mm": 425,
+            "length_mm": 1025,
+            "lep_mm": 42,
+            "rep_mm": 42,
+            "leftCut": 15,
+            "rightCut": 1040,
+            "leftWeld": 57,
+            "rightWeld": 957
+          },
+          {
+            "id": 31,
+            "option": "even",
+            "width_mm": 431,
+            "length_mm": 1010,
+            "lep_mm": 55,
+            "rep_mm": 55,
+            "leftCut": 1040,
+            "rightCut": 2050,
+            "leftWeld": 1095,
+            "rightWeld": 1995
+          },
+          {
+            "id": 32,
+            "option": "even",
+            "width_mm": 501,
+            "length_mm": 1000,
+            "lep_mm": 50,
+            "rep_mm": 50,
+            "leftCut": 2050,
+            "rightCut": 3050,
+            "leftWeld": 2100,
+            "rightWeld": 3000
+          },
+          {
+            "id": 28,
+            "option": "even",
+            "width_mm": 501,
+            "length_mm": 600,
+            "lep_mm": 50,
+            "rep_mm": 50,
+            "leftCut": 3050,
+            "rightCut": 3650,
+            "leftWeld": 3100,
+            "rightWeld": 3600
+          }
+        ]
+      }
+    ]
+  }
+}

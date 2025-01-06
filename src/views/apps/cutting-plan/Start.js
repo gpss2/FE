@@ -75,16 +75,20 @@ const Start = () => {
   }, []);
   const handleShowDetails = () => {
     if (selectedGroup?.result?.table) {
+      console.log(selectedGroup);
+      const groupNumber = selectedGroup.groupNumber;
       console.log(selectedGroup.result.table);
       const details = selectedGroup.result.table.flatMap((item) =>
         item.gratings_data.map((detail) => ({
           id: detail.id,
+          groupNumber: groupNumber,
           width_mm: detail.width_mm,
           length_mm: detail.length_mm,
           lep_mm: detail.lep_mm,
           rep_mm: detail.rep_mm,
         })),
       );
+
       setSelectedGroupData(details);
       setOpenDialog(true);
     }
@@ -296,7 +300,9 @@ const Start = () => {
         </Grid>
       </Grid>
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="md">
-        <DialogTitle>상세 품목 배치</DialogTitle>
+        <DialogTitle>
+          상세 품목 배치(그룹번호: {selectedGroup && selectedGroup.groupNumber})
+        </DialogTitle>
         <DialogContent>
           {/* selectedGroup이 존재하고 데이터가 올바른 경우에만 렌더링 */}
           {selectedGroup && selectedGroup.result?.table?.length > 0 ? (
