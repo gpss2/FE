@@ -299,40 +299,76 @@ const Start = () => {
           </ParentCard>
         </Grid>
       </Grid>
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="md">
+      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="lg">
         <DialogTitle>
-          상세 품목 배치(그룹번호: {selectedGroup && selectedGroup.groupNumber})
+          절단계획 상세 - 품목배치 리스트(그룹번호: {selectedGroup && selectedGroup.groupNumber})
         </DialogTitle>
         <DialogContent>
-          {/* selectedGroup이 존재하고 데이터가 올바른 경우에만 렌더링 */}
           {selectedGroup && selectedGroup.result?.table?.length > 0 ? (
-            selectedGroup.result.table.map((panel) => (
-              <Box key={panel.panelNumber} mb={3}>
-                <h3>판 번호: {panel.panelNumber}</h3>
-                <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th>품목 번호</th>
-                      <th>LEP (mm)</th>
-                      <th>REP (mm)</th>
-                      <th>폭 (mm)</th>
-                      <th>길이 (mm)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {panel.gratings_data.map((grating) => (
-                      <tr key={grating.id}>
+            <table
+              border="1"
+              style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}
+            >
+              <thead>
+                <tr style={{ borderBottom: '2px solid black' }}>
+                  <th>판 번호</th>
+                  <th>판수량</th>
+                  <th>L 절단 번호</th>
+                  <th>수주 번호</th>
+                  <th>수주처명</th>
+                  <th>도면번호</th>
+                  <th>품목 번호</th>
+                  <th>폭 (mm)</th>
+                  <th>길이 (mm)</th>
+                  <th>LEP (mm)</th>
+                  <th>REP (mm)</th>
+                  <th>L 절단 수량</th>
+                  <th>품목 수량</th>
+                </tr>
+              </thead>
+              <tbody>
+                {selectedGroup.result.table.map((panel, panelIndex) => {
+                  let backgroundColor = panelIndex % 2 === 0 ? 'white' : '#f2f2f2'; // 배경색 교차 설정
+
+                  return [
+                    ...panel.gratings_data.map((grating, gratingIndex) => (
+                      <tr key={grating.id} style={{ backgroundColor }}>
+                        {/* 모든 행에 판 번호, 판 수량 등의 데이터를 반복적으로 삽입 */}
+                        <td>{gratingIndex === 0 ? panel.panelNumber : ''}</td>
+                        <td>{gratingIndex === 0 ? panel.qty : ''}</td>
+                        <td>{gratingIndex === 0 ? '-' : ''}</td>
+                        <td>{gratingIndex === 0 ? '-' : ''}</td>
+                        <td>{gratingIndex === 0 ? '-' : ''}</td>
+                        <td>-</td>
                         <td>{grating.id}</td>
-                        <td>{grating.lep_mm}</td>
-                        <td>{grating.rep_mm}</td>
                         <td>{grating.width_mm}</td>
                         <td>{grating.length_mm}</td>
+                        <td>{grating.lep_mm}</td>
+                        <td>{grating.rep_mm}</td>
+                        <td>-</td>
+                        <td>-</td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </Box>
-            ))
+                    )),
+                    // 마지막 행에 "Loss" 데이터 추가
+                    <tr key={`loss-${panel.panelNumber}`} style={{ backgroundColor }}>
+                      <td></td>
+                      <td></td>
+                      <td>Loss</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td>{panel.loss}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                    </tr>,
+                  ];
+                })}
+              </tbody>
+            </table>
           ) : (
             <p>데이터를 불러오는 중입니다...</p>
           )}
