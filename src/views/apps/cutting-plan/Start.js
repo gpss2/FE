@@ -203,7 +203,6 @@ const Start = () => {
       console.error('Error fetching top-right data:', error);
     }
   };
-  const handlePrint = () => {};
   const handlePrintInNewWindow = () => {
     if (!selectedGroup) return;
 
@@ -237,6 +236,8 @@ const Start = () => {
               font-family: Arial, sans-serif;
               margin: 0;
               padding: 10px;
+              -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
             }
             table {
               width: 100%;
@@ -255,6 +256,12 @@ const Start = () => {
               display: flex;
               justify-content: space-between;
               align-items: center;
+            }
+            .row-even {
+              background-color: #ffffff;
+            }
+            .row-odd {
+              background-color: #f2f2f2;
             }
           </style>
         </head>
@@ -288,47 +295,47 @@ const Start = () => {
             </thead>
             <tbody>
               ${selectedGroup.result.table
-                .map(
-                  (panel, panelIndex) =>
-                    `
-                  ${panel.gratings_data
-                    .map(
-                      (grating, gratingIndex) => `
-                  <tr>
-                    <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
-                    <td>${gratingIndex === 0 ? panel.qty : ''}</td>
-                    <td>${gratingIndex === 0 ? '-' : ''}</td>
-                    <td>${gratingIndex === 0 ? '-' : ''}</td>
-                    <td>${gratingIndex === 0 ? '-' : ''}</td>
-                    <td>-</td>
-                    <td>${grating.id}</td>
-                    <td>${grating.width_mm}</td>
-                    <td>${grating.length_mm}</td>
-                    <td>${grating.lep_mm}</td>
-                    <td>${grating.rep_mm}</td>
-                    <td>-</td>
-                    <td>-</td>
-                  </tr>
-                `,
-                    )
-                    .join('')}
-                  <tr>
-                    <td></td>
-                    <td></td>
-                    <td>Loss</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td>${panel.loss}</td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                    <td></td>
-                  </tr>
-                `,
-                )
+                .map((panel, panelIndex) => {
+                  const rowClass = panelIndex % 2 === 0 ? 'row-even' : 'row-odd';
+                  return `
+                    ${panel.gratings_data
+                      .map(
+                        (grating, gratingIndex) => `
+                    <tr class="${rowClass}">
+                      <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
+                      <td>${gratingIndex === 0 ? panel.qty : ''}</td>
+                      <td>${gratingIndex === 0 ? '-' : ''}</td>
+                      <td>${gratingIndex === 0 ? '-' : ''}</td>
+                      <td>${gratingIndex === 0 ? '-' : ''}</td>
+                      <td>-</td>
+                      <td>${grating.id}</td>
+                      <td>${grating.width_mm}</td>
+                      <td>${grating.length_mm}</td>
+                      <td>${grating.lep_mm}</td>
+                      <td>${grating.rep_mm}</td>
+                      <td>-</td>
+                      <td>-</td>
+                    </tr>
+                  `,
+                      )
+                      .join('')}
+                    <tr class="${rowClass}">
+                      <td></td>
+                      <td></td>
+                      <td>Loss</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td>${panel.loss}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                  `;
+                })
                 .join('')}
             </tbody>
           </table>
@@ -354,6 +361,7 @@ const Start = () => {
 
   return (
     <PageContainer title="절단 계획 생성">
+      <br />
       <Grid container spacing={2}>
         {/* 상단 왼쪽 테이블 */}
         <Grid item xs={5}>
