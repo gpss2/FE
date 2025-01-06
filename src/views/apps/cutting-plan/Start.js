@@ -8,6 +8,7 @@ import {
   DialogTitle,
   Grid,
   Stack,
+  Typography,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
@@ -202,6 +203,147 @@ const Start = () => {
       console.error('Error fetching top-right data:', error);
     }
   };
+  const handlePrint = () => {};
+  const handlePrintInNewWindow = () => {
+    if (!selectedGroup) return;
+
+    const windowFeatures = `
+      width=1200,
+      height=800,
+      top=100,
+      left=100,
+      toolbar=no,
+      menubar=no,
+      scrollbars=no,
+      resizable=no
+    `;
+
+    const printWindow = window.open('', 'PrintWindow', windowFeatures);
+
+    if (printWindow) {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>절단계획 상세 - 품목배치 리스트</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 0;
+            }
+            body {
+              font-family: Arial, sans-serif;
+              margin: 0;
+              padding: 10px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            th, td {
+              border: 1px solid black;
+              padding: 4px;
+              text-align: center;
+            }
+            th {
+              background-color: #f2f2f2;
+            }
+            .header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h3>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</h3>
+            <button class="print-button" onclick="window.print()">
+              출력
+            </button>
+          </div>
+          ${
+            selectedGroup.result?.table?.length > 0
+              ? `
+          <table>
+            <thead>
+              <tr>
+                <th>판 번호</th>
+                <th>판수량</th>
+                <th>L 절단<br> 번호</th>
+                <th>수주 번호</th>
+                <th>수주처명</th>
+                <th>도면번호</th>
+                <th>품목 번호</th>
+                <th>폭 (mm)</th>
+                <th>길이 (mm)</th>
+                <th>LEP (mm)</th>
+                <th>REP (mm)</th>
+                <th>L 절단 수량</th>
+                <th>품목 수량</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${selectedGroup.result.table
+                .map(
+                  (panel, panelIndex) =>
+                    `
+                  ${panel.gratings_data
+                    .map(
+                      (grating, gratingIndex) => `
+                  <tr>
+                    <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
+                    <td>${gratingIndex === 0 ? panel.qty : ''}</td>
+                    <td>${gratingIndex === 0 ? '-' : ''}</td>
+                    <td>${gratingIndex === 0 ? '-' : ''}</td>
+                    <td>${gratingIndex === 0 ? '-' : ''}</td>
+                    <td>-</td>
+                    <td>${grating.id}</td>
+                    <td>${grating.width_mm}</td>
+                    <td>${grating.length_mm}</td>
+                    <td>${grating.lep_mm}</td>
+                    <td>${grating.rep_mm}</td>
+                    <td>-</td>
+                    <td>-</td>
+                  </tr>
+                `,
+                    )
+                    .join('')}
+                  <tr>
+                    <td></td>
+                    <td></td>
+                    <td>Loss</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>${panel.loss}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                  </tr>
+                `,
+                )
+                .join('')}
+            </tbody>
+          </table>
+          `
+              : '<p>데이터가 없습니다.</p>'
+          }
+        </body>
+        </html>
+      `;
+
+      // 새 윈도우에 내용 쓰기
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+    }
+  };
 
   // 왼쪽 테이블에서 행 클릭 시 오른쪽 및 하단 테이블 데이터 로드
   const handleRowClick = (params) => {
@@ -292,88 +434,13 @@ const Start = () => {
               />
             </Box>
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
-              <Button disabled={!selectedGroup} onClick={handleShowDetails}>
+              <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
                 상세 품목배치(작업지시폼)
               </Button>
             </Stack>
           </ParentCard>
         </Grid>
       </Grid>
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="lg">
-        <DialogTitle>
-          절단계획 상세 - 품목배치 리스트(그룹번호: {selectedGroup && selectedGroup.groupNumber})
-        </DialogTitle>
-        <DialogContent>
-          {selectedGroup && selectedGroup.result?.table?.length > 0 ? (
-            <table
-              border="1"
-              style={{ width: '100%', borderCollapse: 'collapse', marginTop: '20px' }}
-            >
-              <thead>
-                <tr style={{ borderBottom: '2px solid black' }}>
-                  <th>판 번호</th>
-                  <th>판수량</th>
-                  <th>L 절단 번호</th>
-                  <th>수주 번호</th>
-                  <th>수주처명</th>
-                  <th>도면번호</th>
-                  <th>품목 번호</th>
-                  <th>폭 (mm)</th>
-                  <th>길이 (mm)</th>
-                  <th>LEP (mm)</th>
-                  <th>REP (mm)</th>
-                  <th>L 절단 수량</th>
-                  <th>품목 수량</th>
-                </tr>
-              </thead>
-              <tbody>
-                {selectedGroup.result.table.map((panel, panelIndex) => {
-                  let backgroundColor = panelIndex % 2 === 0 ? 'white' : '#f2f2f2'; // 배경색 교차 설정
-
-                  return [
-                    ...panel.gratings_data.map((grating, gratingIndex) => (
-                      <tr key={grating.id} style={{ backgroundColor }}>
-                        {/* 모든 행에 판 번호, 판 수량 등의 데이터를 반복적으로 삽입 */}
-                        <td>{gratingIndex === 0 ? panel.panelNumber : ''}</td>
-                        <td>{gratingIndex === 0 ? panel.qty : ''}</td>
-                        <td>{gratingIndex === 0 ? '-' : ''}</td>
-                        <td>{gratingIndex === 0 ? '-' : ''}</td>
-                        <td>{gratingIndex === 0 ? '-' : ''}</td>
-                        <td>-</td>
-                        <td>{grating.id}</td>
-                        <td>{grating.width_mm}</td>
-                        <td>{grating.length_mm}</td>
-                        <td>{grating.lep_mm}</td>
-                        <td>{grating.rep_mm}</td>
-                        <td>-</td>
-                        <td>-</td>
-                      </tr>
-                    )),
-                    // 마지막 행에 "Loss" 데이터 추가
-                    <tr key={`loss-${panel.panelNumber}`} style={{ backgroundColor }}>
-                      <td></td>
-                      <td></td>
-                      <td>Loss</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td>{panel.loss}</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>,
-                  ];
-                })}
-              </tbody>
-            </table>
-          ) : (
-            <p>데이터를 불러오는 중입니다...</p>
-          )}
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   );
 };

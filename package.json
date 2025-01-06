@@ -53,6 +53,7 @@
     "react-router-dom": "^6.3.0",
     "react-slick": "^0.29.0",
     "react-spring": "^9.2.4",
+    "react-to-print": "^3.0.4",
     "simplebar": "^6.2.5",
     "simplebar-react": "^2.4.1",
     "slick-carousel": "^1.8.1",
