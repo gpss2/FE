@@ -74,34 +74,6 @@ const Start = () => {
   useEffect(() => {
     fetchTopLeftData();
   }, []);
-  const handleShowDetails = () => {
-    if (selectedGroup?.result?.table) {
-      console.log(selectedGroup);
-      const groupNumber = selectedGroup.groupNumber;
-      console.log(selectedGroup.result.table);
-      const details = selectedGroup.result.table.flatMap((item) =>
-        item.gratings_data.map((detail) => ({
-          id: detail.id,
-          groupNumber: groupNumber,
-          width_mm: detail.width_mm,
-          length_mm: detail.length_mm,
-          lep_mm: detail.lep_mm,
-          rep_mm: detail.rep_mm,
-        })),
-      );
-
-      setSelectedGroupData(details);
-      setOpenDialog(true);
-    }
-  };
-
-  const detailColumns = [
-    { field: 'id', headerName: '품목번호', flex: 1 },
-    { field: 'width_mm', headerName: '폭', flex: 1 },
-    { field: 'length_mm', headerName: '길이', flex: 1 },
-    { field: 'lep_mm', headerName: 'LEP', flex: 1 },
-    { field: 'rep_mm', headerName: 'REP', flex: 1 },
-  ];
 
   const handleGeneratePlan = async () => {
     if (!selectedOrderId) return;
@@ -109,8 +81,8 @@ const Start = () => {
     try {
       // 그룹 목록 가져오기
       const groupResponse = await axios.get(`/api/plan/order-details/${selectedOrderId}/groups`);
-      const groups = groupResponse.data.groups;
-
+      const groups = groupResponse.data.table;
+      const groupNumbers = groups.map((group) => group.groupNumber);
       // 그룹별로 절단 계획 요청
       const eventSource = new EventSource('/api/plan/events');
       const allPlans = [];
@@ -145,7 +117,7 @@ const Start = () => {
         }
       });
 
-      for (const groupId of groups) {
+      for (const groupId of groupNumbers) {
         await axios.post('/api/plan/generate', {
           order_id: selectedOrderId,
           group_id: groupId,
@@ -167,38 +139,23 @@ const Start = () => {
 
   const fetchTopRightData = async (orderId) => {
     try {
-      const response = await axios.get(`/api/plan/order-details/${orderId}`);
+      const response = await axios.get(`/api/plan/order-details/${orderId}/groups`);
       const data = response.data.table;
 
-      // 짝수 비율 계산 후 데이터 가공
-      const processedData = data.map((item) => {
-        // cbCount가 배열이 아니면 빈 배열로 초기화
-        const cbCountArray = Array.isArray(item.cbCount) ? item.cbCount : [];
+      const processedData = data.map((item, index) => ({
+        ...item,
+        id: item.groupNumber || index, // groupNumber를 id로 사용. 없을 경우 index 사용.
+        compressionSetting: '2본-최적', // 기본값 유지
+        baseLength: 50,
+        plusLAdjustment: 3.0,
+        minusLAdjustment: -3.0,
+        plusWAdjustment: 3.0,
+        minusWAdjustment: -3.0,
+        effectiveWidthLength: 100,
+        iofdLimit: 300,
+      }));
 
-        // 짝수 개수와 비율 계산
-        const evenCount = cbCountArray.filter((count) => count % 2 === 0).length;
-        const evenPercentage = cbCountArray.length ? (evenCount / cbCountArray.length) * 100 : 0;
-
-        return {
-          ...item,
-          percentage: evenPercentage, // 짝수 비율(%) 계산 후 추가
-          compressionSetting: item.compressionSetting || '2본-최적',
-          baseLength: item.baseLength || 50,
-          plusLAdjustment: item.plusLAdjustment || 3.0,
-          minusLAdjustment: item.minusLAdjustment || -3.0,
-          plusWAdjustment: item.plusWAdjustment || 3.0,
-          minusWAdjustment: item.minusWAdjustment || -3.0,
-          effectiveWidthLength: item.effectiveWidthLength || 100,
-          iofdLimit: item.iofdLimit || 300,
-        };
-      });
-
-      // groupNumber 기준으로 중복 제거
-      const uniqueData = Array.from(
-        new Map(processedData.map((item) => [item.groupNumber, item])).values(),
-      );
-
-      setTopRightData(uniqueData);
+      setTopRightData(processedData);
     } catch (error) {
       console.error('Error fetching top-right data:', error);
     }
