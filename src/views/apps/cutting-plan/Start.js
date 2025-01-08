@@ -66,15 +66,12 @@ const Start = () => {
   const [bottomData, setBottomData] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [sseData, setSseData] = useState([]);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedGroupData, setSelectedGroupData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null); // 선택된 그룹 저장
   // 데이터 로드
   useEffect(() => {
     fetchTopLeftData();
   }, []);
-
   const handleGeneratePlan = async () => {
     if (!selectedOrderId) return;
     setLoading(true);
@@ -83,34 +80,75 @@ const Start = () => {
       const groupResponse = await axios.get(`/api/plan/order-details/${selectedOrderId}/groups`);
       const groups = groupResponse.data.table;
       const groupNumbers = groups.map((group) => group.groupNumber);
-      // 그룹별로 절단 계획 요청
+
       const eventSource = new EventSource('/api/plan/events');
       const allPlans = [];
+      let isTimeout = false;
+
+      // 타임아웃 설정 (3초)
+      const timeout = setTimeout(() => {
+        isTimeout = true;
+        eventSource.close();
+        console.warn('SSE response timeout. Using dummy data.');
+
+        // 더미 데이터 가져오기
+        import('./CuttingPlan.js')
+          .then((module) => {
+            const dummyData = module.default;
+            console.log(dummyData);
+            allPlans.push(dummyData);
+
+            // 더미 데이터로 summaryData 생성
+            const summaryData = allPlans.map((plan) => {
+              const totalQuantity =
+                plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
+
+              return {
+                groupNumber: plan.group_id,
+                totalQuantity,
+                bbLossRate: null,
+                cbLossRate: null,
+                bbCode: 'I38*5*3_1100',
+                bbUsage: null,
+                bbLoss: null,
+                cbCode: 'F25*4.5*1.2_6100',
+                cbLoss: null,
+                result: plan.result,
+              };
+            });
+
+            setBottomData(summaryData);
+            setLoading(false);
+          })
+          .catch((error) => console.error('Error loading dummy data:', error));
+      }, 3000);
 
       eventSource.addEventListener('plan_complete', (e) => {
+        if (isTimeout) return; // 타임아웃 발생 시 무시
+
         const planData = JSON.parse(e.data);
         allPlans.push(planData);
 
-        // 요약 정보를 생성
         const summaryData = allPlans.map((plan) => {
           const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
 
           return {
             groupNumber: plan.group_id,
             totalQuantity,
-            bbLossRate: null, // 비워둠
-            cbLossRate: null, // 비워둠
-            bbCode: 'I38*5*3_1100', // 고정값
-            bbUsage: null, // 비워둠
-            bbLoss: null, // 비워둠
-            cbCode: 'F25*4.5*1.2_6100', // 고정값
-            cbLoss: null, // 비워둠
+            bbLossRate: null,
+            cbLossRate: null,
+            bbCode: 'I38*5*3_1100',
+            bbUsage: null,
+            bbLoss: null,
+            cbCode: 'F25*4.5*1.2_6100',
+            cbLoss: null,
             result: plan.result,
           };
         });
 
-        // SSE 응답이 모두 도착한 경우 하단 테이블 업데이트
+        // SSE 응답이 모두 도착한 경우
         if (allPlans.length === groups.length) {
+          clearTimeout(timeout); // 타임아웃 클리어
           setBottomData(summaryData);
           setLoading(false);
           eventSource.close();
