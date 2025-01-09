@@ -106,13 +106,14 @@ const Start = () => {
               return {
                 groupNumber: plan.group_id,
                 totalQuantity,
-                bbLossRate: null,
-                cbLossRate: null,
+                bbLossRate: plan.bbLossRate,
+                cbLossRate: plan.cbLossRate,
                 bbCode: 'I38*5*3_1100',
-                bbUsage: null,
-                bbLoss: null,
+                bbUsage: plan.bbUsage,
+                cbUsage: plan.cbUsage,
+                bbLoss: plan.bbLoss,
                 cbCode: 'F25*4.5*1.2_6100',
-                cbLoss: null,
+                cbLoss: plan.cbLoss,
                 result: plan.result,
               };
             });
@@ -300,16 +301,16 @@ const Start = () => {
                       <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
                       <td>${gratingIndex === 0 ? panel.qty : ''}</td>
                       <td>${gratingIndex === 0 ? '-' : ''}</td>
-                      <td>${gratingIndex === 0 ? '-' : ''}</td>
-                      <td>${gratingIndex === 0 ? '-' : ''}</td>
-                      <td>-</td>
+                      <td>${gratingIndex === 0 ? grating.orderNumber : ''}</td>
+                      <td>${gratingIndex === 0 ? grating.customerCode : ''}</td>
+                      <td>${grating.drawingNumber}</td>
                       <td>${grating.id}</td>
                       <td>${grating.width_mm}</td>
                       <td>${grating.length_mm}</td>
                       <td>${grating.lep_mm}</td>
                       <td>${grating.rep_mm}</td>
-                      <td>-</td>
-                      <td>-</td>
+                      <td>${grating.item_qty}</td>
+                      <td>${grating.item_qty}</td>
                     </tr>
                   `,
                       )
@@ -323,7 +324,7 @@ const Start = () => {
                       <td></td>
                       <td></td>
                       <td></td>
-                      <td>${panel.loss}</td>
+                      <td><b>${panel.loss}</b></td>
                       <td></td>
                       <td></td>
                       <td></td>
