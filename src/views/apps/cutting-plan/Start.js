@@ -253,6 +253,10 @@ const Start = () => {
               justify-content: space-between;
               align-items: center;
             }
+              .header2 {
+              display: flex;
+              justify-content: space-evenly;
+            }
             .row-even {
               background-color: #ffffff;
             }
@@ -267,6 +271,19 @@ const Start = () => {
             <button class="print-button" onclick="window.print()">
               출력
             </button>
+            
+          </div>
+          <div class="header2">
+          <h3>압전본수: 2</h3>
+          <h3>총중량: 4078</h3>
+          <h3>공차 (+L: 3.00 -L: 3.00 +W:3.00 -W: -3.00)</h3> 
+          </div>
+          <div class="header2">
+          <h3>BB: SE25*5</h3>
+          <h3>길이 : 6100</h3>
+          <h3>BP: 30.00</h3>
+          <h3>CB: SQ6*6</h3>
+          <h3>CP: 100</h3> 
           </div>
           ${
             selectedGroup.result?.table?.length > 0
