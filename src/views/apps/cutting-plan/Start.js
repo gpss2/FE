@@ -122,7 +122,7 @@ const Start = () => {
             setLoading(false);
           })
           .catch((error) => console.error('Error loading dummy data:', error));
-      }, 3000);
+      }, 30000);
 
       eventSource.addEventListener('plan_complete', (e) => {
         if (isTimeout) return; // 타임아웃 발생 시 무시
