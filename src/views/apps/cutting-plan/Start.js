@@ -317,7 +317,7 @@ const Start = () => {
                     <tr class="${rowClass}">
                       <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
                       <td>${gratingIndex === 0 ? panel.qty : ''}</td>
-                      <td>${gratingIndex === 0 ? '-' : ''}</td>
+                      <td>${grating.lCuttingNumber}</td>
                       <td>${gratingIndex === 0 ? grating.orderNumber : ''}</td>
                       <td>${gratingIndex === 0 ? grating.customerCode : ''}</td>
                       <td>${grating.drawingNumber}</td>
