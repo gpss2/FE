@@ -108,11 +108,11 @@ const Start = () => {
                 totalQuantity,
                 bbLossRate: plan.bbLossRate,
                 cbLossRate: plan.cbLossRate,
-                bbCode: 'I38*5*3_1100',
+                bbCode: plan.bbCode,
                 bbUsage: plan.bbUsage,
                 cbUsage: plan.cbUsage,
                 bbLoss: plan.bbLoss,
-                cbCode: 'F25*4.5*1.2_6100',
+                cbCode: plan.cbCode,
                 cbLoss: plan.cbLoss,
                 result: plan.result,
               };
@@ -122,7 +122,7 @@ const Start = () => {
             setLoading(false);
           })
           .catch((error) => console.error('Error loading dummy data:', error));
-      }, 30000);
+      }, 10000);
 
       eventSource.addEventListener('plan_complete', (e) => {
         if (isTimeout) return; // 타임아웃 발생 시 무시
@@ -136,13 +136,14 @@ const Start = () => {
           return {
             groupNumber: plan.group_id,
             totalQuantity,
-            bbLossRate: null,
-            cbLossRate: null,
-            bbCode: 'I38*5*3_1100',
-            bbUsage: null,
-            bbLoss: null,
-            cbCode: 'F25*4.5*1.2_6100',
-            cbLoss: null,
+            bbLossRate: plan.bbLossRate,
+            cbLossRate: plan.cbLossRate,
+            bbCode: plan.bbCode,
+            bbUsage: plan.bbUsage,
+            cbUsage: plan.cbUsage,
+            bbLoss: plan.bbLoss,
+            cbCode: plan.cbCode,
+            cbLoss: plan.cbLoss,
             result: plan.result,
           };
         });
@@ -176,22 +177,62 @@ const Start = () => {
     }
   };
 
+  const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
+    bbCode: '',
+    cbCode: '',
+    bWidth: 0,
+    cWidth: 0,
+    length: 0,
+  });
+
   const fetchTopRightData = async (orderId) => {
     try {
+      // 1. /api/settings 요청
+      const settingsResponse = await axios.get('/api/settings');
+      const settings = settingsResponse.data;
+
+      // 2. /api/plan/order-details/${orderId}/groups 요청
       const response = await axios.get(`/api/plan/order-details/${orderId}/groups`);
       const data = response.data.table;
 
+      // 요청된 데이터에서 첫 번째 specCode 추출
+      const specCodes = [...new Set(data.map((item) => item.specCode))][0]; // 중복 제거 후 첫 번째 값
+      console.log('specCodes:', specCodes);
+
+      // 3. /api/item/specific 요청
+      const specificResponse = await axios.get('/api/item/specific');
+      const specificData = specificResponse.data.table;
+      console.log('specificData:', specificData);
+
+      // specCode와 매칭된 데이터 찾기
+      const matchingSpec = specificData.find((item) => item.systemCode === specCodes);
+      console.log('matchingSpec:', matchingSpec);
+
+      if (matchingSpec) {
+        // 상태 업데이트
+        setSpecCodeDetailsMap({
+          length: specCodes.split('_')[1].split('-')[0],
+          bbCode: matchingSpec.bbCode,
+          cbCode: matchingSpec.cbCode,
+          bWidth: matchingSpec.bWidth,
+          cWidth: matchingSpec.cWidth,
+        });
+      } else {
+        console.warn('No matching specCode found in /api/item/specific');
+      }
+
+      // 데이터 처리 및 설정
       const processedData = data.map((item, index) => ({
         ...item,
         id: item.groupNumber || index, // groupNumber를 id로 사용. 없을 경우 index 사용.
-        compressionSetting: '2본-최적', // 기본값 유지
-        baseLength: 50,
-        plusLAdjustment: 3.0,
-        minusLAdjustment: -3.0,
-        plusWAdjustment: 3.0,
-        minusWAdjustment: -3.0,
-        effectiveWidthLength: 100,
-        iofdLimit: 300,
+        compressionSetting: settings.compressionSetting || '2본-최적', // API에서 가져온 값 또는 기본값
+        baseLength: settings.baseLength || 50,
+        plusLAdjustment: settings.plusLAdjustment || 3.0,
+        minusLAdjustment: settings.minusLAdjustment || -3.0,
+        plusWAdjustment: settings.plusWAdjustment || 3.0,
+        minusWAdjustment: settings.minusWAdjustment || -3.0,
+        effectiveWidthLength: settings.effectiveWidthLength || 100,
+        iofdLimit: settings.iofdLimit || 300,
       }));
 
       setTopRightData(processedData);
@@ -199,24 +240,26 @@ const Start = () => {
       console.error('Error fetching top-right data:', error);
     }
   };
-  const handlePrintInNewWindow = () => {
+
+  const handlePrintInNewWindow = async () => {
     if (!selectedGroup) return;
 
-    const windowFeatures = `
-      width=1200,
-      height=800,
-      top=100,
-      left=100,
-      toolbar=no,
-      menubar=no,
-      scrollbars=no,
-      resizable=no
-    `;
+    try {
+      const windowFeatures = `
+        width=1200,
+        height=800,
+        top=100,
+        left=100,
+        toolbar=no,
+        menubar=no,
+        scrollbars=no,
+        resizable=no
+      `;
 
-    const printWindow = window.open('', 'PrintWindow', windowFeatures);
+      const printWindow = window.open('', 'PrintWindow', windowFeatures);
 
-    if (printWindow) {
-      const htmlContent = `
+      if (printWindow) {
+        const htmlContent = `
         <!DOCTYPE html>
         <html lang="en">
         <head>
@@ -226,19 +269,33 @@ const Start = () => {
           <style>
             @page {
               size: A4 landscape;
-              margin: 0;
+              margin: 0mm;
             }
             body {
               font-family: Arial, sans-serif;
               margin: 0;
-              padding: 10px;
+              padding: 0;
               -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page {
+              page-break-after: always;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 10px;
+            }
+            .header h3 {
+              margin: 5px 0;
+            }
+            .header-details {
+              display: flex;
+              justify-content: space-evenly;
+              margin-bottom: 10px;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-top: 10px;
             }
             th, td {
               border: 1px solid black;
@@ -248,123 +305,138 @@ const Start = () => {
             th {
               background-color: #f2f2f2;
             }
-            .header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            }
-              .header2 {
-              display: flex;
-              justify-content: space-evenly;
-            }
             .row-even {
               background-color: #ffffff;
             }
             .row-odd {
-              background-color: #f2f2f2;
+              background-color: #f9f9f9;
+            }
+            .print-button {
+              padding: 5px 10px;
+              background-color: #007bff;
+              color: white;
+              border: none;
+              cursor: pointer;
+              border-radius: 4px;
+              margin: 10px;
+            }
+            .print-button:hover {
+              background-color: #0056b3;
+            }
+            @media print {
+              .print-button {
+                display: none;
+              }
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h3>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</h3>
-            <button class="print-button" onclick="window.print()">
-              출력
-            </button>
-            
-          </div>
-          <div class="header2">
-          <h3>압전본수: 2</h3>
-          <h3>총중량: 4078</h3>
-          <h3>공차 (+L: 3.00 -L: 3.00 +W:3.00 -W: -3.00)</h3> 
-          </div>
-          <div class="header2">
-          <h3>BB: SE25*5</h3>
-          <h3>길이 : 6100</h3>
-          <h3>BP: 30.00</h3>
-          <h3>CB: SQ6*6</h3>
-          <h3>CP: 100</h3> 
-          </div>
+          <button class="print-button" onclick="window.print()">출력</button>
           ${
             selectedGroup.result?.table?.length > 0
-              ? `
-          <table>
-            <thead>
-              <tr>
-                <th>판 번호</th>
-                <th>판수량</th>
-                <th>L 절단<br> 번호</th>
-                <th>수주 번호</th>
-                <th>수주처명</th>
-                <th>도면번호</th>
-                <th>품목 번호</th>
-                <th>폭 (mm)</th>
-                <th>길이 (mm)</th>
-                <th>LEP (mm)</th>
-                <th>REP (mm)</th>
-                <th>L 절단 수량</th>
-                <th>품목 수량</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${selectedGroup.result.table
-                .map((panel, panelIndex) => {
-                  const rowClass = panelIndex % 2 === 0 ? 'row-even' : 'row-odd';
-                  return `
-                    ${panel.gratings_data
-                      .map(
-                        (grating, gratingIndex) => `
-                    <tr class="${rowClass}">
-                      <td>${gratingIndex === 0 ? panel.panelNumber : ''}</td>
-                      <td>${gratingIndex === 0 ? panel.qty : ''}</td>
-                      <td>${grating.lCuttingNumber}</td>
-                      <td>${gratingIndex === 0 ? grating.orderNumber : ''}</td>
-                      <td>${gratingIndex === 0 ? grating.customerCode : ''}</td>
-                      <td>${grating.drawingNumber}</td>
-                      <td>${grating.id}</td>
-                      <td>${grating.width_mm}</td>
-                      <td>${grating.length_mm}</td>
-                      <td>${grating.lep_mm}</td>
-                      <td>${grating.rep_mm}</td>
-                      <td>${grating.item_qty}</td>
-                      <td>${grating.item_qty}</td>
-                    </tr>
+              ? selectedGroup.result.table
+                  .reduce(
+                    (acc, panel, panelIndex) => {
+                      panel.gratings_data.forEach((grating) => {
+                        acc.rows.push({
+                          panelNumber: panel.panelNumber,
+                          qty: panel.qty,
+                          lCuttingNumber: grating.lCuttingNumber,
+                          orderNumber: grating.orderNumber,
+                          customerCode: grating.customerCode,
+                          drawingNumber: grating.drawingNumber,
+                          id: grating.id,
+                          width_mm: grating.width_mm,
+                          length_mm: grating.length_mm,
+                          lep_mm: grating.lep_mm,
+                          rep_mm: grating.rep_mm,
+                          item_qty: grating.item_qty,
+                          loss: panel.loss,
+                        });
+                      });
+                      return acc;
+                    },
+                    { rows: [] },
+                  )
+                  .rows.reduce((pages, row, index) => {
+                    const pageIndex = Math.floor(index / 15); // 15줄마다 새로운 페이지
+                    if (!pages[pageIndex]) pages[pageIndex] = [];
+                    pages[pageIndex].push(row);
+                    return pages;
+                  }, [])
+                  .map(
+                    (pageRows, pageIndex) => `
+                    <div class="page">
+                      <div class="header">
+                        <h3>절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                          selectedGroup.groupNumber
+                        })</h3>
+                         <div class="header-details">
+                      <h3>길이 : ${specCodeDetailsMap.length || 'N/A'}</h3>
+                      <h3>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h3>
+                      <h3>CB: ${specCodeDetailsMap.cbCode || 'N/A'}</h3>
+                      <h3>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h3>
+                    </div>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>판 번호</th>
+                            <th>판수량</th>
+                            <th>L 절단<br> 번호</th>
+                            <th>수주 번호</th>
+                            <th>수주처명</th>
+                            <th>도면번호</th>
+                            <th>품목 번호</th>
+                            <th>폭 (mm)</th>
+                            <th>길이 (mm)</th>
+                            <th>LEP (mm)</th>
+                            <th>REP (mm)</th>
+                            <th>L 절단 수량</th>
+                            <th>품목 수량</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${pageRows
+                            .map(
+                              (row, rowIndex) => `
+                              <tr class="${rowIndex % 2 === 0 ? 'row-even' : 'row-odd'}">
+                                <td>${row.panelNumber}</td>
+                                <td>${row.qty}</td>
+                                <td>${row.lCuttingNumber}</td>
+                                <td>${row.orderNumber}</td>
+                                <td>${row.customerCode}</td>
+                                <td>${row.drawingNumber}</td>
+                                <td>${row.id}</td>
+                                <td>${row.width_mm}</td>
+                                <td>${row.length_mm}</td>
+                                <td>${row.lep_mm}</td>
+                                <td>${row.rep_mm}</td>
+                                <td>${row.item_qty}</td>
+                                <td>${row.item_qty}</td>
+                              </tr>
+                            `,
+                            )
+                            .join('')}
+                        </tbody>
+                      </table>
+                    </div>
                   `,
-                      )
-                      .join('')}
-                    <tr class="${rowClass}">
-                      <td></td>
-                      <td></td>
-                      <td>Loss</td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td><b>${panel.loss}</b></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                      <td></td>
-                    </tr>
-                  `;
-                })
-                .join('')}
-            </tbody>
-          </table>
-          `
+                  )
+                  .join('')
               : '<p>데이터가 없습니다.</p>'
           }
         </body>
         </html>
-      `;
+        `;
 
-      // 새 윈도우에 내용 쓰기
-      printWindow.document.write(htmlContent);
-      printWindow.document.close();
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+      }
+    } catch (error) {
+      console.error('Error fetching specific data:', error);
     }
   };
-
   // 왼쪽 테이블에서 행 클릭 시 오른쪽 및 하단 테이블 데이터 로드
   const handleRowClick = (params) => {
     const orderId = params.row.id;
