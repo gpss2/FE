@@ -260,174 +260,186 @@ const Start = () => {
 
       if (printWindow) {
         const htmlContent = `
-        <!DOCTYPE html>
-        <html lang="en">
-        <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>절단계획 상세 - 품목배치 리스트</title>
-          <style>
-            @page {
-              size: A4 landscape;
-              margin: 0mm;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              -webkit-print-color-adjust: exact;
-              print-color-adjust: exact;
-            }
-            .page {
-              page-break-after: always;
-            }
-            .header {
-              text-align: center;
-              margin-bottom: 10px;
-            }
-            .header h3 {
-              margin: 5px 0;
-            }
-            .header-details {
-              display: flex;
-              justify-content: space-evenly;
-              margin-bottom: 10px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            th, td {
-              border: 1px solid black;
-              padding: 4px;
-              text-align: center;
-            }
-            th {
-              background-color: #f2f2f2;
-            }
-            .row-even {
-              background-color: #ffffff;
-            }
-            .row-odd {
-              background-color: #f9f9f9;
-            }
-            .print-button {
-              padding: 5px 10px;
-              background-color: #007bff;
-              color: white;
-              border: none;
-              cursor: pointer;
-              border-radius: 4px;
-              margin: 10px;
-            }
-            .print-button:hover {
-              background-color: #0056b3;
-            }
-            @media print {
-              .print-button {
-                display: none;
+   <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>절단계획 상세 - 품목배치 리스트</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 0mm;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .page {
+      page-break-after: always;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    .header h3 {
+      margin: 5px 0;
+    }
+    .header-details {
+      display: flex;
+      justify-content: space-evenly;
+      margin-bottom: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid black;
+      padding: 4px;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    .row-even {
+      background-color: #ffffff;
+    }
+    .row-odd {
+      background-color: #f9f9f9;
+    }
+    .print-button {
+      padding: 5px 10px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 10px;
+    }
+    .print-button:hover {
+      background-color: #0056b3;
+    }
+    @media print {
+      .print-button {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <button class="print-button" onclick="window.print()">출력</button>
+  ${
+    selectedGroup.result?.table?.length > 0
+      ? selectedGroup.result.table
+          .reduce(
+            (acc, panel, panelIndex) => {
+              panel.gratings_data.forEach((grating) => {
+                acc.rows.push({
+                  panelNumber: panel.panelNumber,
+                  qty: panel.qty,
+                  lCuttingNumber: grating.lCuttingNumber,
+                  orderNumber: grating.orderNumber,
+                  customerCode: grating.customerCode,
+                  drawingNumber: grating.drawingNumber,
+                  id: grating.id,
+                  width_mm: grating.width_mm,
+                  length_mm: grating.length_mm,
+                  lep_mm: grating.lep_mm,
+                  rep_mm: grating.rep_mm,
+                  item_qty: grating.item_qty,
+                  loss: panel.loss,
+                });
+              });
+              return acc;
+            },
+            { rows: [] },
+          )
+          .rows.reduce((pages, row, index) => {
+            const pageIndex = Math.floor(index / 15); // 15줄마다 새로운 페이지
+            if (!pages[pageIndex]) pages[pageIndex] = [];
+            pages[pageIndex].push(row);
+            return pages;
+          }, [])
+          .map((pageRows, pageIndex) => {
+            // 판 번호 최초 1회만 표시하기 위한 처리
+            const seenPanelNumbers = new Set();
+            const processedRows = pageRows.map((row) => {
+              // 중복 체크 후 이미 본 판 번호면 '' 처리
+              if (seenPanelNumbers.has(row.panelNumber)) {
+                return { ...row, panelNumberForDisplay: '' };
+              } else {
+                seenPanelNumbers.add(row.panelNumber);
+                return { ...row, panelNumberForDisplay: row.panelNumber };
               }
-            }
-          </style>
-        </head>
-        <body>
-          <button class="print-button" onclick="window.print()">출력</button>
-          ${
-            selectedGroup.result?.table?.length > 0
-              ? selectedGroup.result.table
-                  .reduce(
-                    (acc, panel, panelIndex) => {
-                      panel.gratings_data.forEach((grating) => {
-                        acc.rows.push({
-                          panelNumber: panel.panelNumber,
-                          qty: panel.qty,
-                          lCuttingNumber: grating.lCuttingNumber,
-                          orderNumber: grating.orderNumber,
-                          customerCode: grating.customerCode,
-                          drawingNumber: grating.drawingNumber,
-                          id: grating.id,
-                          width_mm: grating.width_mm,
-                          length_mm: grating.length_mm,
-                          lep_mm: grating.lep_mm,
-                          rep_mm: grating.rep_mm,
-                          item_qty: grating.item_qty,
-                          loss: panel.loss,
-                        });
-                      });
-                      return acc;
-                    },
-                    { rows: [] },
-                  )
-                  .rows.reduce((pages, row, index) => {
-                    const pageIndex = Math.floor(index / 15); // 15줄마다 새로운 페이지
-                    if (!pages[pageIndex]) pages[pageIndex] = [];
-                    pages[pageIndex].push(row);
-                    return pages;
-                  }, [])
-                  .map(
-                    (pageRows, pageIndex) => `
-                    <div class="page">
-                      <div class="header">
-                        <h3>절단계획 상세 - 품목배치 리스트 (그룹번호: ${
-                          selectedGroup.groupNumber
-                        })</h3>
-                         <div class="header-details">
-                      <h3>길이 : ${specCodeDetailsMap.length || 'N/A'}</h3>
-                      <h3>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h3>
-                      <h3>CB: ${specCodeDetailsMap.cbCode || 'N/A'}</h3>
-                      <h3>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h3>
-                    </div>
-                      </div>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th>판 번호</th>
-                            <th>판수량</th>
-                            <th>L 절단<br> 번호</th>
-                            <th>수주 번호</th>
-                            <th>수주처명</th>
-                            <th>도면번호</th>
-                            <th>품목 번호</th>
-                            <th>폭 (mm)</th>
-                            <th>길이 (mm)</th>
-                            <th>LEP (mm)</th>
-                            <th>REP (mm)</th>
-                            <th>L 절단 수량</th>
-                            <th>품목 수량</th>
+            });
+
+            return `
+              <div class="page">
+                <div class="header">
+                  <h3>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</h3>
+                   <div class="header-details">
+                    <h3>길이 : ${specCodeDetailsMap.length || 'N/A'}</h3>
+                    <h3>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h3>
+                    <h3>CB: ${specCodeDetailsMap.cbCode || 'N/A'}</h3>
+                    <h3>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h3>
+                  </div>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>판 번호</th>
+                      <th>판수량</th>
+                      <th>L 절단<br> 번호</th>
+                      <th>수주 번호</th>
+                      <th>수주처명</th>
+                      <th>도면번호</th>
+                      <th>품목 번호</th>
+                      <th>폭 (mm)</th>
+                      <th>길이 (mm)</th>
+                      <th>LEP (mm)</th>
+                      <th>REP (mm)</th>
+                      <th>L 절단 수량</th>
+                      <th>품목 수량</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${processedRows
+                      .map(
+                        (row, rowIndex) => `
+                          <tr class="${rowIndex % 2 === 0 ? 'row-even' : 'row-odd'}">
+                            <td>${row.panelNumberForDisplay}</td>
+                            <td>${row.qty}</td>
+                            <td>${row.lCuttingNumber}</td>
+                            <td>${row.orderNumber}</td>
+                            <td>${row.customerCode}</td>
+                            <td>${row.drawingNumber}</td>
+                            <td>${row.id}</td>
+                            <td>${row.width_mm}</td>
+                            <td>${row.length_mm}</td>
+                            <td>${row.lep_mm}</td>
+                            <td>${row.rep_mm}</td>
+                            <td>${row.item_qty}</td>
+                            <td>${row.item_qty}</td>
                           </tr>
-                        </thead>
-                        <tbody>
-                          ${pageRows
-                            .map(
-                              (row, rowIndex) => `
-                              <tr class="${rowIndex % 2 === 0 ? 'row-even' : 'row-odd'}">
-                                <td>${row.panelNumber}</td>
-                                <td>${row.qty}</td>
-                                <td>${row.lCuttingNumber}</td>
-                                <td>${row.orderNumber}</td>
-                                <td>${row.customerCode}</td>
-                                <td>${row.drawingNumber}</td>
-                                <td>${row.id}</td>
-                                <td>${row.width_mm}</td>
-                                <td>${row.length_mm}</td>
-                                <td>${row.lep_mm}</td>
-                                <td>${row.rep_mm}</td>
-                                <td>${row.item_qty}</td>
-                                <td>${row.item_qty}</td>
-                              </tr>
-                            `,
-                            )
-                            .join('')}
-                        </tbody>
-                      </table>
-                    </div>
-                  `,
-                  )
-                  .join('')
-              : '<p>데이터가 없습니다.</p>'
-          }
-        </body>
-        </html>
+                        `,
+                      )
+                      .join('')}
+                  </tbody>
+                </table>
+              </div>
+              `;
+          })
+          .join('')
+      : '<p>데이터가 없습니다.</p>'
+  }
+</body>
+</html>
+
+
         `;
 
         printWindow.document.write(htmlContent);
