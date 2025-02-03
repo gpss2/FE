@@ -471,7 +471,7 @@ const Start = () => {
                                     <td colspan="8"></td>
                                   </tr>
                                   <tr>
-                                    <td>합계</td>
+                                    <td></td>
                                     <td>${selectedGroup.result.table.length || 'N/A'}</td>
                                     <td>${specCodeDetailsMap.totalQuantity || 'N/A'}</td>
                                     <td>1190</td>
