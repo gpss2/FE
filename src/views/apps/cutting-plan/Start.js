@@ -320,13 +320,13 @@ const Start = () => {
               text-align: center;
             }
             th {
-              background-color: #f2f2f2;
+              background-color: gray;
             }
             .row-even {
               background-color: #ffffff;
             }
             .row-odd {
-              background-color: gray;
+              background-color: #f2f2f2;
             }
             .print-button {
               padding: 5px 10px;
