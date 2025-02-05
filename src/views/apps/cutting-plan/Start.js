@@ -101,7 +101,7 @@ const Start = () => {
       const allPlans = [];
       let isTimeout = false;
 
-      // 타임아웃 설정 (3초)
+      // 타임아웃 설정 (60초)
       const timeout = setTimeout(() => {
         isTimeout = true;
         eventSource.close();
@@ -138,7 +138,7 @@ const Start = () => {
             setLoading(false);
           })
           .catch((error) => console.error('Error loading dummy data:', error));
-      }, 10000);
+      }, 60_000); // 타임아웃 60초
 
       eventSource.addEventListener('plan_complete', (e) => {
         if (isTimeout) return; // 타임아웃 발생 시 무시
