@@ -10,6 +10,8 @@ import {
   TextField,
   Button,
   useMediaQuery,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleMobileSidebar } from 'src/store/customizer/CustomizerSlice';
@@ -34,7 +36,7 @@ const topRightColumns = [
 const Header = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [settings, setSettings] = useState({
-    compressionSetting: '',
+    compressionSetting: '2본 기본',
     baseLength: 0,
     plusLAdjustment: 0,
     minusLAdjustment: 0,
@@ -64,7 +66,6 @@ const Header = () => {
     color: `${theme.palette.text.secondary} !important`,
   }));
 
-  // Axios 인스턴스 생성 (JWT 토큰 포함)
   const axiosInstance = axios.create({
     baseURL: '/api',
     headers: {
@@ -72,7 +73,6 @@ const Header = () => {
     },
   });
 
-  // 기본값 가져오기
   useEffect(() => {
     const fetchSettings = async () => {
       try {
@@ -96,7 +96,6 @@ const Header = () => {
   const handleSaveSettings = async () => {
     try {
       await axiosInstance.put('/settings', settings);
-
       handleCloseModal();
     } catch (error) {
       console.error('Error updating settings:', error);
@@ -156,16 +155,26 @@ const Header = () => {
         >
           <h2>Settings</h2>
           <Stack spacing={2}>
-            {topRightColumns.map((column) => (
-              <TextField
-                key={column.field}
-                label={column.headerName.replace('\n', ' ')}
-                name={column.field}
-                type={column.field === 'compressionSetting' ? 'text' : 'number'} // compressionSetting은 문자열로 처리
-                value={settings[column.field]}
-                onChange={handleInputChange}
-              />
-            ))}
+            <Select
+              name="compressionSetting"
+              value={settings.compressionSetting}
+              onChange={handleInputChange}
+            >
+              <MenuItem value="2본 기본">2본 기본</MenuItem>
+              <MenuItem value="2본 최적">2본 최적</MenuItem>
+            </Select>
+            {topRightColumns
+              .filter((col) => col.field !== 'compressionSetting')
+              .map((column) => (
+                <TextField
+                  key={column.field}
+                  label={column.headerName.replace('\n', ' ')}
+                  name={column.field}
+                  type="number"
+                  value={settings[column.field]}
+                  onChange={handleInputChange}
+                />
+              ))}
             <Stack direction="row" spacing={2}>
               <Button variant="contained" color="primary" onClick={handleSaveSettings}>
                 Save
@@ -179,11 +188,6 @@ const Header = () => {
       </Modal>
     </>
   );
-};
-
-Header.propTypes = {
-  sx: PropTypes.object,
-  toggleSidebar: PropTypes.func,
 };
 
 export default Header;
