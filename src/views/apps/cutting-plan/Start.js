@@ -138,7 +138,7 @@ const Start = () => {
             setLoading(false);
           })
           .catch((error) => console.error('Error loading dummy data:', error));
-      }, 60_000); // 타임아웃 60초
+      }, 60_000_0); // 타임아웃 600초
 
       eventSource.addEventListener('plan_complete', (e) => {
         if (isTimeout) return; // 타임아웃 발생 시 무시
