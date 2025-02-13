@@ -172,7 +172,7 @@ const Range = () => {
                     lineHeight: '1.2',
                   },
                   '& .MuiDataGrid-footerContainer': {
-                    display: 'none',
+                    display: '',
                   },
                 }}
               />
@@ -202,7 +202,7 @@ const Range = () => {
                     lineHeight: '1.2',
                   },
                   '& .MuiDataGrid-footerContainer': {
-                    display: 'none',
+                    display: '',
                   },
                 }}
               />

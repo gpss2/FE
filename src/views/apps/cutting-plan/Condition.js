@@ -328,7 +328,7 @@ const Condition = () => {
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': {
-                      display: 'none',
+                      display: '',
                     },
                   }}
                 />

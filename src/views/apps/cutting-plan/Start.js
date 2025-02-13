@@ -645,7 +645,7 @@ const Start = () => {
                 rowHeight={30}
                 sx={{
                   '& .MuiDataGrid-footerContainer': {
-                    display: 'none',
+                    display: '',
                   },
                 }}
               />
