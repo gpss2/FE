@@ -73,7 +73,7 @@ const Setup = () => {
     let materialCode = mType + size;
 
     if (fullType.length > 2) {
-      let w_OUT = ((fullType[1] || '0').split('.')[0] || '0').padStart(4, '0'); // OUT 너비
+      let w_OUT = (fullType[1] || '0').padStart(4, '0').replace('.', ''); // OUT 너비
       let w_IN = ((fullType[2] || '0').split('.')[0] || '0').padEnd(2, '0'); // IN 너비
       materialCode = materialCode + w_OUT + w_IN + '-' + thickness;
     } else if (fullType.length > 1) {
