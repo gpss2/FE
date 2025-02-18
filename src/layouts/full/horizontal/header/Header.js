@@ -21,6 +21,7 @@ import axios from 'axios';
 import Navigation from 'src/layouts/full/horizontal/navbar/Navbar';
 import Language from 'src/layouts/full/vertical/header/Language';
 import Profile from 'src/layouts/full/vertical/header/Profile';
+import logo from 'src/assets/images/gpss2/logo.jpeg';
 
 const topRightColumns = [
   { field: 'compressionSetting', headerName: '압접\n본수\n설정', flex: 1 },
@@ -106,28 +107,10 @@ const Header = () => {
     <>
       <AppBarStyled position="sticky" color="default" elevation={8}>
         <ToolbarStyled>
-          <Box sx={{ width: lgDown ? '45px' : 'auto', overflow: 'hidden' }}>
-            <h1
-              style={{
-                fontSize: '24px',
-                color: '#333fff',
-                fontFamily: 'Galmuri9, sans-serif',
-                fontWeight: 700,
-              }}
-            >
-              GPSS II
-            </h1>
+          <Box sx={{ width: lgDown ? '160px' : 'auto', overflow: 'hidden' }}>
+            <img src={logo}></img>
           </Box>
-          {lgDown && (
-            <IconButton
-              color="inherit"
-              aria-label="menu"
-              onClick={() => dispatch(toggleMobileSidebar())}
-            >
-              <IconMenu2 />
-            </IconButton>
-          )}
-          {lgUp && <Navigation />}
+          <Navigation />
           <Box flexGrow={1} />
           <Stack spacing={1} direction="row" alignItems="center">
             <Language />
