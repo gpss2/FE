@@ -431,7 +431,7 @@ const Start = () => {
                             selectedGroup.groupNumber
                           })</h1>
                           <div class="header-details">
-                            <h3>압전본수: ${specCodeDetailsMap.compressionSetting || 'N/A'}</h3>
+                            <h3>압전본수: ${specCodeDetailsMap.compressionSetting || '2'}</h3>
                             <h3>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h3>
                             <h3>공차(+L: ${specCodeDetailsMap.plusLAdjustment || 'N/A'} -L: ${
                       specCodeDetailsMap.minusLAdjustment || 'N/A'

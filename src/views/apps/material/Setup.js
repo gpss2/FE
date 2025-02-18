@@ -65,7 +65,24 @@ const Setup = () => {
   const navigate = useNavigate();
 
   const generateMaterialCode = (materialType, thickness) => {
-    return `${materialType}_${thickness}`;
+    const fullType = materialType.split('*');
+
+    const mType = (fullType[0]?.match(/[a-zA-Z]+/g) || ['']).join(''); // 자재타입을 분류
+    const size = (fullType[0]?.match(/\d+/g) || ['0']).join('').padStart(3, '0'); // 길이 분리, 기본값 '0'
+
+    let materialCode = mType + size;
+
+    if (fullType.length > 2) {
+      let w_OUT = ((fullType[1] || '0').split('.')[0] || '0').padStart(4, '0'); // OUT 너비
+      let w_IN = ((fullType[2] || '0').split('.')[0] || '0').padEnd(2, '0'); // IN 너비
+      materialCode = materialCode + w_OUT + w_IN + '-' + thickness;
+    } else if (fullType.length > 1) {
+      let w_Integer = ((fullType[1] || '0').split('.')[0] || '0').padStart(3, '0'); // 너비 정수 부분
+      let w_Float = fullType[1]?.split('.')[1] || '0'; // 소수 부분, 없으면 '0'
+      materialCode = materialCode + w_Integer + w_Float + '-' + thickness;
+    }
+
+    return materialCode;
   };
 
   const generateSystemCode = (bbCode, cbCode, bWidth, cWidth, bladeThickness) => {
