@@ -68,7 +68,7 @@ const Setup = () => {
     const fullType = materialType.split('*');
 
     const mType = (fullType[0]?.match(/[a-zA-Z]+/g) || ['']).join(''); // 자재타입을 분류
-    const size = (fullType[0]?.match(/\d+/g) || ['0']).join('').padStart(3, '0'); // 길이 분리, 기본값 '0'
+    const size = fullType[0].replace(mType, '').replace('.', '').padStart(3, '0'); // 길이 분리, 기본값 '0'
 
     let materialCode = mType + size;
 
@@ -119,11 +119,14 @@ const Setup = () => {
   };
 
   const handleOpenModal = (table, row = {}) => {
+    // 오른쪽 테이블(제작사양 입력)에서 새 행 추가 시 기본값 적용
+    if (table === 'right' && Object.keys(row).length === 0) {
+      row = { ...row, bWidth: 30.0, cWidth: 100, bladeThickness: 9 };
+    }
     setCurrentTable(table);
     setCurrentRow(row);
     setModalOpen(true);
   };
-
   const handleCloseModal = () => {
     setModalOpen(false);
     setTimeout(() => {

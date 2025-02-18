@@ -72,8 +72,12 @@ const Orders = () => {
 
   const handleOpenModal = (row = {}) => {
     if (!row.id) {
-      // 새 수주일 경우 자동으로 테스크 번호 생성
+      // 새 수주일 경우 자동으로 태스크 번호 생성 및 기본값 설정
       row.taskNumber = generateTaskNumber();
+      row.surfaceTreatment = 'GALV';
+      row.coatingThickness = 75.0;
+      row.remarks = '없음';
+      row.category = '플랜트';
     }
     setCurrentRow(row);
     setIsEditing(!!row.id);
