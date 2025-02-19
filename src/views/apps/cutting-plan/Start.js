@@ -223,7 +223,7 @@ const Start = () => {
         if (matchingSpec) {
           setSpecCodeDetailsMap((prevState) => ({
             ...prevState,
-            length: specCodes.split('-')[1].split('-')[0],
+            length: matchingSpec.bbCode.split('-')[1],
             bbCode: matchingSpec.bbCode,
             cbCode: matchingSpec.cbCode,
             bWidth: matchingSpec.bWidth,
