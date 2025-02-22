@@ -45,7 +45,26 @@ const Range = () => {
   const [selectionModel, setSelectionModel] = useState([]);
 
   const navigate = useNavigate();
+  axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
 
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 403) {
+        window.location.href = '/auth/login';
+      }
+      return Promise.reject(error);
+    },
+  );
   // 페이지 로드시 상단 테이블 데이터 가져오기
   useEffect(() => {
     const token = localStorage.getItem('token');

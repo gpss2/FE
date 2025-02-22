@@ -80,6 +80,27 @@ const Condition = () => {
     weight_kg: '',
     neWeight_kg: '',
   });
+  axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 403) {
+        window.location.href = '/auth/login';
+      }
+      return Promise.reject(error);
+    },
+  );
+
   const handleAddModalOpen = () => {
     // 하단 테이블 데이터가 있는지 확인
     const lastData = bottomData[bottomData.length - 1];

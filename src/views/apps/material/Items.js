@@ -44,7 +44,26 @@ const Items = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentRow, setCurrentRow] = useState({});
   const [isEditing, setIsEditing] = useState(false);
+  axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
 
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 403) {
+        window.location.href = '/auth/login';
+      }
+      return Promise.reject(error);
+    },
+  );
   const fetchData = async () => {
     try {
       const response = await axios.get('/api/item/standard');

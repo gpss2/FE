@@ -36,6 +36,26 @@ const Orders = () => {
   const [currentRow, setCurrentRow] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [dailyTaskCount, setDailyTaskCount] = useState(0);
+  axios.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error),
+  );
+
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 403) {
+        window.location.href = '/auth/login';
+      }
+      return Promise.reject(error);
+    },
+  );
 
   // 데이터 로드
   const fetchData = async () => {
