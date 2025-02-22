@@ -154,9 +154,11 @@ const Range = () => {
 
   const handleMerge = async () => {
     console.log('병합 시작');
+    console.log(selectedDrawings);
     const response = await axios.post(`/api/plan/order-groups/${selectOrderId}/concat`, {
       drawingNumbers: selectedDrawings, // 문자열 배열
     });
+    setSelectedDrawings([]);
     setSelectionModel([]);
     fetchBottomData(selectOrderId);
   };
@@ -167,6 +169,7 @@ const Range = () => {
       groupNumber: selectGroupId, // 문자열 배열
     });
     setSelectionModel([]);
+    setSelectedDrawings([]);
     fetchBottomData(selectOrderId);
   };
 
