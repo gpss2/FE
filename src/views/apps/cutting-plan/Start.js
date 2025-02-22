@@ -285,7 +285,8 @@ const Start = () => {
         <style>
           @page {
             size: A4 landscape;
-            margin: 0mm;
+            margin: 15mm, 5mm;
+
           }
           body {
             font-family: Arial, sans-serif;
@@ -301,7 +302,7 @@ const Start = () => {
             text-align: center;
             margin-bottom: 10px;
           }
-          .header h1 {
+          .header h2 {
             margin: 5px 0;
           }
           .header-details {
@@ -427,24 +428,24 @@ const Start = () => {
                     return `
                       <div class="page">
                         <div class="header">
-                          <h1>절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                          <h2>절단계획 상세 - 품목배치 리스트 (그룹번호: ${
                             selectedGroup.groupNumber
-                          })</h1>
+                          })</h2>
                           <div class="header-details">
-                            <h3>압전본수: ${specCodeDetailsMap.compressionSetting || '2'}</h3>
-                            <h3>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h3>
-                            <h3>공차(+L: ${specCodeDetailsMap.plusLAdjustment || 'N/A'} -L: ${
+                            <h2>압전본수: ${specCodeDetailsMap.compressionSetting || '2'}</h2>
+                            <h2>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h2>
+                            <h2>공차(+L: ${specCodeDetailsMap.plusLAdjustment || 'N/A'} -L: ${
                       specCodeDetailsMap.minusLAdjustment || 'N/A'
                     } +W: ${specCodeDetailsMap.plusWAdjustment || 'N/A'} -W: ${
                       specCodeDetailsMap.minusWAdjustment || 'N/A'
-                    })</h3>
+                    })</h2>
                           </div>
                           <div class="header-details">
-                            <h3>BB: ${specCodeDetailsMap.bbCode.split('_')[0] || 'N/A'}</h3>
-                            <h3>길이: ${specCodeDetailsMap.length || 'N/A'}</h3>
-                            <h3>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h3>
-                            <h3>CB: ${specCodeDetailsMap.cbCode.split('_')[0] || 'N/A'}</h3>
-                            <h3>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h3>
+                            <h2>BB: ${specCodeDetailsMap.bbCode.split('_')[0] || 'N/A'}</h2>
+                            <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
+                            <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
+                            <h2>CB: ${specCodeDetailsMap.cbCode.split('_')[0] || 'N/A'}</h2>
+                            <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
                           </div>
                         </div>
                         <table>
