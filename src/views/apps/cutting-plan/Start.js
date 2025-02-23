@@ -8,6 +8,8 @@ import {
   DialogTitle,
   Grid,
   Stack,
+  Select,
+  MenuItem,
   Typography,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -68,6 +70,8 @@ const Start = () => {
   const [sseData, setSseData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null); // 선택된 그룹 저장
+  const [compressionSetting, setCompressionSetting] = useState('Basic');
+
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
     cbCode: '',
@@ -84,6 +88,9 @@ const Start = () => {
     plusWAdjustment: 3.0,
     minusWAdjustment: -3.0,
   });
+  const handleInputChange = (event) => {
+    setCompressionSetting(event.target.value);
+  };
   // 데이터 로드
   axios.interceptors.request.use(
     (config) => {
@@ -199,6 +206,7 @@ const Start = () => {
         await axios.post('/api/plan/generate', {
           order_id: selectedOrderId,
           group_id: groupId,
+          option: compressionSetting,
         });
       }
     } catch (error) {
@@ -616,10 +624,18 @@ const Start = () => {
                 }}
               />
             </Box>
-            <Stack direction="row" justifyContent="flex-start">
+            <Stack direction="row" justifyContent="flex-start" spacing={1}>
               <Button disabled={!selectedOrderId || loading} onClick={handleGeneratePlan}>
                 {loading ? <CircularProgress size={24} /> : '계획 생성'}
               </Button>
+              <Select
+                name="compressionSetting"
+                value={compressionSetting}
+                onChange={handleInputChange}
+              >
+                <MenuItem value="Basic">2본 기본</MenuItem>
+                <MenuItem value="Optimized">2본 최적</MenuItem>
+              </Select>
             </Stack>
           </ParentCard>
         </Grid>

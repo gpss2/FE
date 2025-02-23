@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Grid, Box, Stack, Typography } from '@mui/material';
 import PageContainer from 'src/components/container/PageContainer';
-import img1 from 'src/assets/images/backgrounds/login-bg.svg';
+import img1 from 'src/assets/images/gpss2/logo.jpeg';
 import Logo from 'src/layouts/full/shared/logo/Logo';
 import AuthLogin from '../authForms/AuthLogin';
 
@@ -30,9 +30,7 @@ const Login = () => (
         }}
       >
         <Box position="relative">
-          <Box px={3}>
-            {/* <Logo /> */}
-          </Box>
+          <Box px={3}>{/* <Logo /> */}</Box>
           <Box
             alignItems="center"
             justifyContent="center"
@@ -66,9 +64,7 @@ const Login = () => (
         alignItems="center"
       >
         <Box p={4}>
-          <AuthLogin
-            title="GPSS II "
-          />
+          <AuthLogin title="GPSS II " />
         </Box>
       </Grid>
     </Grid>
