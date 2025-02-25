@@ -190,7 +190,12 @@ const Condition = () => {
   };
   const handleProcessRowUpdate = async (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow; // 변경 없을 경우
-
+    // lep_mm과 rep_mm 동기화 로직
+    if (newRow.lep_mm !== oldRow.lep_mm && newRow.lep_mm !== oldRow.rep_mm) {
+      newRow.rep_mm = newRow.lep_mm;
+    } else if (newRow.rep_mm !== oldRow.rep_mm && newRow.rep_mm !== oldRow.lep_mm) {
+      newRow.lep_mm = newRow.rep_mm;
+    }
     try {
       await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, newRow);
       await fetchBottomData(selectedOrderId); // 업데이트 후 하단 데이터 갱신
