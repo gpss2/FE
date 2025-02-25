@@ -43,7 +43,7 @@ axios.interceptors.response.use(
 const columnsLeft = [
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
   { field: 'materialType', headerName: '자재타입', flex: 1 },
-  { field: 'thickness', headerName: '자재길이 (mm)', flex: 1 },
+  { field: 'length', headerName: '자재길이 (mm)', flex: 1 },
   { field: 'weight', headerName: '단중 (Kg/m)', flex: 1 },
 ];
 
