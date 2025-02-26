@@ -188,24 +188,58 @@ const Condition = () => {
     setSelectedOrderNumber(orderNumber);
     fetchBottomData(orderId);
   };
-  const handleProcessRowUpdate = async (newRow, oldRow) => {
-    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow; // 변경 없을 경우
-    // lep_mm과 rep_mm 동기화 로직
-    if (newRow.lep_mm !== oldRow.lep_mm && newRow.lep_mm !== oldRow.rep_mm) {
-      newRow.rep_mm = newRow.lep_mm;
-    } else if (newRow.rep_mm !== oldRow.rep_mm && newRow.rep_mm !== oldRow.lep_mm) {
-      newRow.lep_mm = newRow.rep_mm;
+  // 계산 로직 함수: 입력 데이터에 대해 cbCount, lep_mm, rep_mm를 재계산합니다.
+  const recalcValues = (data) => {
+    // 필요한 값들을 숫자로 변환합니다.
+    const length_mm = Number(data.length_mm);
+    let cbCount = Number(data.cbCount);
+
+    // 기본 계산식: rep = lep = ceil((l - (cbCount - 1) * 100) / 2)
+    let baseValue = Math.ceil((length_mm - (cbCount - 1) * 100) / 2);
+    let lep = baseValue;
+    let rep = baseValue;
+
+    // 조건 1: cbCount가 홀수이고, lep가 100/2(즉, 50) 미만일 경우
+    if (cbCount % 2 !== 0 && lep < Math.floor(100 / 2)) {
+      cbCount -= 1;
+      lep = lep + Math.floor(100 / 2); // 50을 더함
+      rep = lep;
     }
+
+    // 조건 2: lep가 10 미만인 경우
+    if (lep < 10) {
+      cbCount -= 1;
+      lep = lep + Math.floor(100 / 2); // 50을 더함
+      rep = lep;
+    }
+
+    return {
+      ...data,
+      cbCount, // 재계산된 cbCount
+      lep_mm: lep, // 재계산된 lep_mm
+      rep_mm: rep, // 재계산된 rep_mm
+    };
+  };
+
+  // 기존 handleProcessRowUpdate 함수에서 계산 함수를 호출하여 동기화 처리
+  const handleProcessRowUpdate = async (newRow, oldRow) => {
+    // 변경된 값이 없으면 그대로 반환
+    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
+
+    // newRow에 대해 계산 로직을 실행하여 모든 값을 동기화합니다.
+    const recalculatedRow = recalcValues(newRow);
+
     try {
-      await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, newRow);
+      await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, recalculatedRow);
       await fetchBottomData(selectedOrderId); // 업데이트 후 하단 데이터 갱신
       await fetchTopData(); // 업데이트 후 상단 데이터 갱신
-      return newRow;
+      return recalculatedRow;
     } catch (error) {
       console.error('Error updating row:', error);
       return oldRow;
     }
   };
+
   const handleCellDoubleClick = (params) => {
     const { field, row } = params;
 
