@@ -24,26 +24,26 @@ import Profile from 'src/layouts/full/vertical/header/Profile';
 import logo from 'src/assets/images/gpss2/logo.jpeg';
 
 const topRightColumns = [
-  { field: 'compressionSetting', headerName: '압접\n본수\n설정', flex: 1 },
-  { field: 'baseLength', headerName: '기본\n로스', flex: 1 },
-  { field: 'plusLAdjustment', headerName: '+L\n공차', flex: 1 },
-  { field: 'minusLAdjustment', headerName: '-L\n공차', flex: 1 },
-  { field: 'plusWAdjustment', headerName: '+W\n공차', flex: 1 },
-  { field: 'minusWAdjustment', headerName: '-W\n공차', flex: 1 },
-  { field: 'effectiveWidthLength', headerName: '폭묶음 길이비(%)', flex: 1 },
+  { field: 'initialCuttingPointLB', headerName: 'initialCuttingPointLB', flex: 1 },
+  { field: 'panelWidthUB', headerName: 'panelWidthUB', flex: 1 },
+  { field: 'initialWeldingPointLB', headerName: 'initialWeldingPointLB', flex: 1 },
+  { field: 'initialWeldingPointUB', headerName: 'initialWeldingPointUB', flex: 1 },
+  { field: 'weldingAdjustmentLB', headerName: 'weldingAdjustmentLB', flex: 1 },
+  { field: 'weldingAdjustmentUB', headerName: 'weldingAdjustmentUB', flex: 1 },
+  { field: 'weldingAndCuttingGapLB', headerName: 'weldingAndCuttingGapLB', flex: 1 },
   { field: 'iofdLimit', headerName: 'IOFD\n탐색제한\n(mm)', flex: 1 },
 ];
 
 const Header = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [settings, setSettings] = useState({
-    compressionSetting: '2본 기본',
-    baseLength: 0,
-    plusLAdjustment: 0,
-    minusLAdjustment: 0,
-    plusWAdjustment: 0,
-    minusWAdjustment: 0,
-    effectiveWidthLength: 0,
+    initialCuttingPointLB: '2본 기본',
+    panelWidthUB: 0,
+    initialWeldingPointLB: 0,
+    initialWeldingPointUB: 0,
+    weldingAdjustmentLB: 0,
+    weldingAdjustmentUB: 0,
+    weldingAndCuttingGapLB: 0,
     iofdLimit: 0,
   });
 
@@ -136,16 +136,8 @@ const Header = () => {
             p: 4,
           }}
         >
-          <h2>Settings</h2>
+          <h2>머신 파라미터 세팅</h2>
           <Stack spacing={2}>
-            <Select
-              name="compressionSetting"
-              value={settings.compressionSetting}
-              onChange={handleInputChange}
-            >
-              <MenuItem value="2본 기본">2본 기본</MenuItem>
-              <MenuItem value="2본 최적">2본 최적</MenuItem>
-            </Select>
             {topRightColumns
               .filter((col) => col.field !== 'compressionSetting')
               .map((column) => (
