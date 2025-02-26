@@ -159,10 +159,10 @@ const Setup = () => {
     const updatedRow = { ...currentRow, [field]: value };
 
     if (currentTable === 'left') {
-      if (field === 'materialType' || field === 'thickness') {
+      if (field === 'materialType' || field === 'length') {
         updatedRow.materialCode = generateMaterialCode(
           updatedRow.materialType || '',
-          updatedRow.thickness || '',
+          updatedRow.length || '',
         );
       }
     } else {
@@ -286,8 +286,8 @@ const Setup = () => {
                 label="자재길이 (mm)"
                 type="number"
                 fullWidth
-                value={currentRow.thickness || ''}
-                onChange={(e) => handleInputChange('thickness', e.target.value)}
+                value={currentRow.length || ''}
+                onChange={(e) => handleInputChange('length', e.target.value)}
               />
               <TextField
                 margin="dense"
