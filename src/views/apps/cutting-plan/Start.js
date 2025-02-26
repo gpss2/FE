@@ -70,7 +70,7 @@ const Start = () => {
   const [sseData, setSseData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null); // 선택된 그룹 저장
-  const [compressionSetting, setCompressionSetting] = useState('Basic');
+  const [compressionSetting, setCompressionSetting] = useState('Optimized');
 
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
