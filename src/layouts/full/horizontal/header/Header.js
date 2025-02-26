@@ -24,13 +24,17 @@ import Profile from 'src/layouts/full/vertical/header/Profile';
 import logo from 'src/assets/images/gpss2/logo.jpeg';
 
 const topRightColumns = [
-  { field: 'initialCuttingPointLB', headerName: '기본 로스', flex: 1 },
-  { field: 'panelWidthUB', headerName: '제작 가능한 패널의 최대 폭', flex: 1 },
-  { field: 'initialWeldingPointLB', headerName: '최초 압접 지점 하한', flex: 1 },
-  { field: 'initialWeldingPointUB', headerName: '최초 압접 지점 상한', flex: 1 },
-  { field: 'weldingAdjustmentLB', headerName: '압접 지점 조정 하한', flex: 1 },
-  { field: 'weldingAdjustmentUB', headerName: ' 압접 지점 조정 상한', flex: 1 },
-  { field: 'weldingAndCuttingGapLB', headerName: ' 압접 지점과 절단 지점 간의 최소 간격', flex: 1 },
+  { field: 'initialCuttingPointLB', headerName: '기본 로스(mm)', flex: 1 },
+  { field: 'panelWidthUB', headerName: '제작 가능한 패널의 최대 폭(mm)', flex: 1 },
+  { field: 'initialWeldingPointLB', headerName: '최초 압접 지점 하한(mm)', flex: 1 },
+  { field: 'initialWeldingPointUB', headerName: '최초 압접 지점 상한(mm)', flex: 1 },
+  { field: 'weldingAdjustmentLB', headerName: '압접 지점 조정 하한(mm)', flex: 1 },
+  { field: 'weldingAdjustmentUB', headerName: ' 압접 지점 조정 상한(mm)', flex: 1 },
+  {
+    field: 'weldingAndCuttingGapLB',
+    headerName: ' 압접 지점과 절단 지점 간의 최소 간격(mm)',
+    flex: 1,
+  },
 ];
 
 const Header = () => {
