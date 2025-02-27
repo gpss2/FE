@@ -21,7 +21,7 @@ const topColumns = [
 // 하단 테이블 컬럼 정의
 const bottomColumns = [
   { field: 'drawingNumber', headerName: '도면번호', flex: 1 },
-  { field: 'id', headerName: '품목 번호', flex: 1 },
+  { field: 'itemNo', headerName: '품목 번호', flex: 1 },
   { field: 'itemType', headerName: '품목종류', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },

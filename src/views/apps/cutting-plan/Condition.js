@@ -35,9 +35,8 @@ const topColumns = [
 ];
 
 const bottomColumns = [
-  // { field: 'id', headerName: 'ID', flex: 1 },
   { field: 'drawingNumber', headerName: '도면번호', flex: 1 },
-  { field: 'id', headerName: '품목번호', flex: 1 },
+  { field: 'itemNo', headerName: '품목번호', flex: 1 },
   { field: 'itemType', headerName: '품목종류', editable: true, flex: 1 },
   { field: 'itemName', headerName: '품명', editable: true, flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
