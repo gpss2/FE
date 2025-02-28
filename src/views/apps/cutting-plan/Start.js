@@ -7,9 +7,10 @@ import {
   DialogContent,
   DialogTitle,
   Grid,
-  Stack,
-  Select,
   MenuItem,
+  Select,
+  Stack,
+  TextField,
   Typography,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
@@ -70,7 +71,12 @@ const Start = () => {
   const [sseData, setSseData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null); // 선택된 그룹 저장
+  const [modalOpen, setModalOpen] = useState(false);
   const [compressionSetting, setCompressionSetting] = useState('Optimized');
+  const [plusLAdjustment, setPlusLAdjustment] = useState(3.0);
+  const [minusLAdjustment, setMinusLAdjustment] = useState(-3.0);
+  const [plusWAdjustment, setPlusWAdjustment] = useState(3.0);
+  const [minusWAdjustment, setMinusWAdjustment] = useState(-3.0);
 
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
@@ -206,7 +212,13 @@ const Start = () => {
         await axios.post('/api/plan/generate', {
           order_id: selectedOrderId,
           group_id: groupId,
-          option: compressionSetting,
+          option: {
+            compressionSetting,
+            plusLAdjustment,
+            minusLAdjustment,
+            plusWAdjustment,
+            minusWAdjustment,
+          },
         });
       }
     } catch (error) {
@@ -596,7 +608,18 @@ const Start = () => {
     setSelectedOrderId(orderId);
     fetchTopRightData(orderId);
   };
-
+  const handleModalSave = () => {
+    // 필요시 specCodeDetailsMap에도 업데이트 가능
+    setSpecCodeDetailsMap((prev) => ({
+      ...prev,
+      compressionSetting,
+      plusLAdjustment,
+      minusLAdjustment,
+      plusWAdjustment,
+      minusWAdjustment,
+    }));
+    setModalOpen(false);
+  };
   return (
     <PageContainer title="절단 계획 생성">
       <br />
@@ -628,14 +651,7 @@ const Start = () => {
               <Button disabled={!selectedOrderId || loading} onClick={handleGeneratePlan}>
                 {loading ? <CircularProgress size={24} /> : '계획 생성'}
               </Button>
-              <Select
-                name="compressionSetting"
-                value={compressionSetting}
-                onChange={handleInputChange}
-              >
-                <MenuItem value="Basic">2본 기본</MenuItem>
-                <MenuItem value="Optimized">2본 최적</MenuItem>
-              </Select>
+              <Button onClick={() => setModalOpen(true)}>설정 변경</Button>
             </Stack>
           </ParentCard>
         </Grid>
@@ -695,6 +711,50 @@ const Start = () => {
           </ParentCard>
         </Grid>
       </Grid>
+      <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
+        <DialogTitle>설정 변경</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 2 }}>
+            <Select
+              label="압전본 설정"
+              value={compressionSetting}
+              onChange={(e) => setCompressionSetting(e.target.value)}
+              fullWidth
+            >
+              <MenuItem value="Optimized">2본-최적</MenuItem>
+              <MenuItem value="Basic">2본-기본</MenuItem>
+            </Select>
+
+            <TextField
+              label="+L 공차"
+              type="number"
+              value={plusLAdjustment}
+              onChange={(e) => setPlusLAdjustment(parseFloat(e.target.value))}
+            />
+            <TextField
+              label="-L 공차"
+              type="number"
+              value={minusLAdjustment}
+              onChange={(e) => setMinusLAdjustment(parseFloat(e.target.value))}
+            />
+            <TextField
+              label="+W 공차"
+              type="number"
+              value={plusWAdjustment}
+              onChange={(e) => setPlusWAdjustment(parseFloat(e.target.value))}
+            />
+            <TextField
+              label="-W 공차"
+              type="number"
+              value={minusWAdjustment}
+              onChange={(e) => setMinusWAdjustment(parseFloat(e.target.value))}
+            />
+            <Button variant="contained" onClick={handleModalSave}>
+              저장
+            </Button>
+          </Stack>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 };
