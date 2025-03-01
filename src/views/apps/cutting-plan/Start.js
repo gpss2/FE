@@ -182,7 +182,7 @@ const Start = () => {
         const summaryData = allPlans.map((plan) => {
           const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
           const totalCB = plan.totalCB || 0; // totalCB를 올바르게 참조
-
+          console.log(plan);
           return {
             groupNumber: plan.group_id,
             totalQuantity,
@@ -196,6 +196,10 @@ const Start = () => {
             cbCode: plan.cbCode,
             cbLoss: plan.cbLoss,
             result: plan.result,
+            minusLAdjustment: plan.minusLAdjustment,
+            minusWAdjustment: plan.minusWAdjustment,
+            plusLAdjustment: plan.plusLAdjustment,
+            plusWAdjustment: plan.plusWAdjustment,
           };
         });
 
