@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Grid, IconButton, Stack, Button, Typography, Modal, TextField } from '@mui/material';
+import { Box, Grid, Stack, Button, Typography, Modal, TextField } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
@@ -79,6 +79,13 @@ const Condition = () => {
     weight_kg: '',
     neWeight_kg: '',
   });
+
+  // 데이터 입력(템플릿) 모달 상태 및 선택값
+  const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
+  const [selectedSpecific, setSelectedSpecific] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState('');
+  const [templateDownloaded, setTemplateDownloaded] = useState(false);
+
   axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
@@ -101,14 +108,12 @@ const Condition = () => {
   );
 
   const handleAddModalOpen = () => {
-    // 하단 테이블 데이터가 있는지 확인
     const lastData = bottomData[bottomData.length - 1];
     const nextDrawingNumber = lastData
       ? String(Number(lastData.drawingNumber)).padStart(2, '0')
       : '01';
     const nextOrderNumber = lastData ? String(Number(lastData.orderNumber) + 1) : '1';
 
-    // 새로운 데이터의 초기값 설정
     setNewData({
       drawingNumber: nextDrawingNumber,
       orderNumber: nextOrderNumber,
@@ -127,6 +132,7 @@ const Condition = () => {
     });
     setAddModalOpen(true);
   };
+
   const fetchMeterialCode = async () => {
     try {
       const response = await axios.get('/api/item/material');
@@ -144,6 +150,7 @@ const Condition = () => {
       console.error('Error fetching right table data:', error);
     }
   };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -168,18 +175,20 @@ const Condition = () => {
       console.error('Error fetching top data:', error);
     }
   };
+
   const fetchBottomData = async (orderId) => {
     try {
       const response = await axios.get(`/api/plan/order-details/${orderId}`);
       const processedData = response.data.table.map((row, index) => ({
         ...row,
-        orderNumber: index + 1, // 1부터 시작하는 번호
+        orderNumber: index + 1,
       }));
       setBottomData(processedData);
     } catch (error) {
       console.error('Error fetching bottom data:', error);
     }
   };
+
   const handleRowClick = (params) => {
     const orderId = params.id;
     const orderNumber = params.row.taskNumber;
@@ -187,51 +196,40 @@ const Condition = () => {
     setSelectedOrderNumber(orderNumber);
     fetchBottomData(orderId);
   };
-  // 계산 로직 함수: 입력 데이터에 대해 cbCount, lep_mm, rep_mm를 재계산합니다.
+
+  // 계산 로직 함수
   const recalcValues = (data) => {
-    // 필요한 값들을 숫자로 변환합니다.
     const length_mm = Number(data.length_mm);
     let cbCount = Number(data.cbCount);
-
-    // 기본 계산식: rep = lep = ceil((l - (cbCount - 1) * 100) / 2)
     let baseValue = Math.ceil((length_mm - (cbCount - 1) * 100) / 2);
     let lep = baseValue;
     let rep = baseValue;
 
-    // 조건 1: cbCount가 홀수이고, lep가 100/2(즉, 50) 미만일 경우
     if (cbCount % 2 !== 0 && lep < Math.floor(100 / 2)) {
       cbCount -= 1;
-      lep = lep + Math.floor(100 / 2); // 50을 더함
+      lep = lep + Math.floor(100 / 2);
       rep = lep;
     }
-
-    // 조건 2: lep가 10 미만인 경우
     if (lep < 10) {
       cbCount -= 1;
-      lep = lep + Math.floor(100 / 2); // 50을 더함
+      lep = lep + Math.floor(100 / 2);
       rep = lep;
     }
-
     return {
       ...data,
-      cbCount, // 재계산된 cbCount
-      lep_mm: lep, // 재계산된 lep_mm
-      rep_mm: rep, // 재계산된 rep_mm
+      cbCount,
+      lep_mm: lep,
+      rep_mm: rep,
     };
   };
 
-  // 기존 handleProcessRowUpdate 함수에서 계산 함수를 호출하여 동기화 처리
   const handleProcessRowUpdate = async (newRow, oldRow) => {
-    // 변경된 값이 없으면 그대로 반환
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-
-    // newRow에 대해 계산 로직을 실행하여 모든 값을 동기화합니다.
     const recalculatedRow = recalcValues(newRow);
-
     try {
       await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, recalculatedRow);
-      await fetchBottomData(selectedOrderId); // 업데이트 후 하단 데이터 갱신
-      await fetchTopData(); // 업데이트 후 상단 데이터 갱신
+      await fetchBottomData(selectedOrderId);
+      await fetchTopData();
       return recalculatedRow;
     } catch (error) {
       console.error('Error updating row:', error);
@@ -241,7 +239,6 @@ const Condition = () => {
 
   const handleCellDoubleClick = (params) => {
     const { field, row } = params;
-
     if (field === 'specCode' || field === 'endBar') {
       setModalData(row);
       setModalOpen(true);
@@ -255,7 +252,6 @@ const Condition = () => {
 
   const handleSave = () => {
     const { id, specCode, endBar } = modalData;
-
     axios
       .put(`/api/plan/order-details/${selectedOrderId}/${id}`, { specCode, endBar })
       .then(() => {
@@ -273,35 +269,87 @@ const Condition = () => {
 
   const handleDelete = () => {
     if (!selectedDetailId) return;
-
     axios
       .delete(`/api/plan/order-details/${selectedOrderId}/${selectedDetailId}`)
       .then(() => {
-        fetchBottomData();
+        fetchBottomData(selectedOrderId);
         setBottomData((prev) => prev.filter((row) => row.id !== selectedDetailId));
         setSelectedDetailId(null);
       })
       .catch((error) => console.error('Error deleting row:', error));
   };
-  const handleFileUpload = async (event) => {
+
+  // 데이터 입력(템플릿) 모달 관련 함수
+  const handleTemplateModalOpen = () => {
+    setTemplateModalOpen(true);
+    setSelectedSpecific('');
+    setSelectedMaterial('');
+    setTemplateDownloaded(false);
+  };
+
+  const handleTemplateModalClose = () => {
+    setTemplateModalOpen(false);
+    setSelectedSpecific('');
+    setSelectedMaterial('');
+    setTemplateDownloaded(false);
+  };
+
+  const handleDownloadTemplate = async () => {
+    // 이미 상태로 보유한 specCode, meterialCode 배열에서 선택한 사양코드/EndBar에 해당하는 id를 찾습니다.
+    const specificItem = specCode.find((item) => item.systemCode === selectedSpecific);
+    const materialItem = meterialCode.find((item) => item.materialCode === selectedMaterial);
+    if (!specificItem || !materialItem) {
+      console.error('선택한 사양코드 또는 EndBar 항목을 찾을 수 없습니다.');
+      return;
+    }
+    try {
+      const response = await axios.get(
+        `/api/plan/order-details/${selectedOrderId}/excel-template`,
+        {
+          params: {
+            specific_id: specificItem.id,
+            material_id: materialItem.id,
+          },
+          responseType: 'blob',
+        },
+      );
+      // 상단 테이블에서 현재 선택된 수주 정보를 찾아 파일명을 생성합니다.
+      const selectedOrder = topData.find((order) => order.id === selectedOrderId);
+      const fileName = selectedOrder
+        ? `${selectedOrder.orderNumber}-${selectedOrder.customerCode}.xlsx`
+        : 'excel-template.xlsx';
+      // 파일 다운로드 처리
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTemplateDownloaded(true);
+    } catch (error) {
+      console.error('Error downloading template:', error);
+    }
+  };
+
+  const handleTemplateUpload = async (event) => {
     if (!selectedOrderId) return;
     const file = event.target.files[0];
     if (!file) return;
-
     const formData = new FormData();
     formData.append('file', file);
-
     try {
       await axios.post(`/api/plan/order-details/${selectedOrderId}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      await fetchBottomData(selectedOrderId); // 업로드 후 하단 데이터 갱신
+      await fetchBottomData(selectedOrderId);
+      setTemplateDownloaded(false);
+      setTemplateModalOpen(false);
     } catch (error) {
-      console.error('Error uploading file:', error);
+      console.error('Error uploading modified template:', error);
     }
   };
+
   const handleAddModalClose = () => {
     setAddModalOpen(false);
     setNewData({
@@ -353,9 +401,7 @@ const Condition = () => {
                       textAlign: 'center',
                       lineHeight: '1.2',
                     },
-                    '& .MuiDataGrid-footerContainer': {
-                      display: 'none',
-                    },
+                    '& .MuiDataGrid-footerContainer': { display: 'none' },
                   }}
                 />
               </Box>
@@ -365,9 +411,7 @@ const Condition = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} mt={3}>
             <ParentCard
-              title={`수주별 품목명세 입력 화면${
-                selectedOrderNumber ? ` : ${selectedOrderNumber}` : ''
-              }`}
+              title={`수주별 품목명세 입력 화면 ${selectedOrderNumber ? selectedOrderNumber : ''}`}
             >
               <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
                 <DataGrid
@@ -387,21 +431,27 @@ const Condition = () => {
                       textAlign: 'center',
                       lineHeight: '1.2',
                     },
-                    '& .MuiDataGrid-footerContainer': {
-                      display: '',
-                    },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
                   }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" mb={1} spacing={2}>
                 <Button
                   variant="contained"
-                  component="label"
                   startIcon={<UploadFileIcon />}
                   disabled={!selectedOrderId}
+                  onClick={handleTemplateModalOpen}
                 >
-                  CSV 업로드
-                  <input type="file" accept=".csv" hidden onChange={handleFileUpload} />
+                  양식 다운로드
+                </Button>
+                <Button variant="contained" component="label" disabled={!selectedOrderId}>
+                  BOM 업로드
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls, .csv"
+                    hidden
+                    onChange={handleTemplateUpload}
+                  />
                 </Button>
                 <Button
                   variant="contained"
@@ -450,7 +500,6 @@ const Condition = () => {
                 />
               </Grid>
             </Grid>
-
             <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
               <Button variant="outlined" onClick={handleModalClose}>
                 취소
@@ -470,7 +519,6 @@ const Condition = () => {
             데이터 추가
           </Typography>
           <Stack spacing={2}>
-            {/* STRING 타입 필드 */}
             <TextField
               fullWidth
               label="도면번호"
@@ -508,8 +556,6 @@ const Condition = () => {
               value={newData.endBar}
               onChange={(e) => setNewData((prev) => ({ ...prev, endBar: e.target.value }))}
             />
-
-            {/* INTEGER 타입 필드 */}
             <TextField
               fullWidth
               label="폭(mm)"
@@ -564,8 +610,6 @@ const Condition = () => {
                 setNewData((prev) => ({ ...prev, quantity: parseInt(e.target.value, 10) || 0 }))
               }
             />
-
-            {/* FLOAT 타입 필드 */}
             <TextField
               fullWidth
               label="중량(Kg)"
@@ -595,6 +639,43 @@ const Condition = () => {
           </Stack>
         </Box>
       </Modal>
+
+      {/* 데이터 입력(템플릿) 모달 */}
+      {isTemplateModalOpen && (
+        <Modal open={isTemplateModalOpen} onClose={handleTemplateModalClose}>
+          <Box sx={modalStyle}>
+            <Typography variant="h6" mb={2}>
+              데이터 입력
+            </Typography>
+            <Stack spacing={2}>
+              <SearchableSelect
+                label="사양코드"
+                options={specCode.map((row) => row.systemCode)}
+                value={selectedSpecific}
+                onChange={(e) => setSelectedSpecific(e.target.value)}
+              />
+              <SearchableSelect
+                label="EndBar"
+                options={meterialCode.map((row) => row.materialCode)}
+                value={selectedMaterial}
+                onChange={(e) => setSelectedMaterial(e.target.value)}
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
+              <Button variant="outlined" onClick={handleTemplateModalClose}>
+                취소
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleDownloadTemplate}
+                disabled={!selectedSpecific || !selectedMaterial}
+              >
+                양식 다운로드
+              </Button>
+            </Stack>
+          </Box>
+        </Modal>
+      )}
     </div>
   );
 };
