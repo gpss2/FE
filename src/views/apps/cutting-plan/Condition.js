@@ -197,35 +197,101 @@ const Condition = () => {
     fetchBottomData(orderId);
   };
 
-  // 계산 로직 함수
-  const recalcValues = (data) => {
-    const length_mm = Number(data.length_mm);
-    let cbCount = Number(data.cbCount);
-    let baseValue = Math.ceil((length_mm - (cbCount - 1) * 100) / 2);
-    let lep = baseValue;
-    let rep = baseValue;
+  // 모든 값에 소수점 허용 (단, 길이 변경 시 CB수는 정수로 산출)
+  const recalcValues = (newData, oldData) => {
+    // 변경된 필드 판별 (우선순위: length_mm > cbCount > lep_mm > rep_mm)
+    let source = 'length_mm';
+    if (newData.length_mm !== oldData.length_mm) {
+      source = 'length_mm';
+    } else if (newData.cbCount !== oldData.cbCount) {
+      source = 'cbCount';
+    } else if (newData.lep_mm !== oldData.lep_mm) {
+      source = 'lep_mm';
+    } else if (newData.rep_mm !== oldData.rep_mm) {
+      source = 'rep_mm';
+    }
 
-    if (cbCount % 2 !== 0 && lep < Math.floor(100 / 2)) {
-      cbCount -= 1;
-      lep = lep + Math.floor(100 / 2);
+    let length_mm, cbCount, lep, rep;
+    const half100 = 100 / 2; // 50
+
+    if (source === 'length_mm') {
+      // [길이 변경] : 입력받은 길이로부터 계산 (CB수는 CPTest 로직에 따라 정수 처리)
+      length_mm = Number(newData.length_mm);
+      cbCount = Math.floor(length_mm / 100) + 1;
+      let baseValue = (length_mm - (cbCount - 1) * 100) / 2; // 소수점 연산
+      lep = baseValue;
+      rep = baseValue;
+
+      if (cbCount % 2 !== 0 && lep < half100) {
+        cbCount = cbCount - 1;
+        lep = lep + half100;
+        rep = lep;
+      }
+      if (lep < 10) {
+        cbCount = cbCount - 1;
+        lep = lep + half100;
+        rep = lep;
+      }
+    } else if (source === 'cbCount') {
+      // [CB수 변경] : 사용자가 입력한 cbCount(소수점 허용)를 사용, 기존의 LEP(없으면 기본 50)로 길이 재계산
+      cbCount = Number(newData.cbCount);
+      lep = newData.lep_mm !== undefined && newData.lep_mm !== null ? Number(newData.lep_mm) : 50;
       rep = lep;
-    }
-    if (lep < 10) {
-      cbCount -= 1;
-      lep = lep + Math.floor(100 / 2);
+      length_mm = (cbCount - 1) * 100 + 2 * lep;
+
+      if (cbCount % 2 !== 0 && lep < half100) {
+        lep = lep + half100;
+        rep = lep;
+        length_mm = (cbCount - 1) * 100 + 2 * lep;
+      }
+      if (lep < 10) {
+        lep = lep + half100;
+        rep = lep;
+        length_mm = (cbCount - 1) * 100 + 2 * lep;
+      }
+    } else if (source === 'lep_mm' || source === 'rep_mm') {
+      // [LEP 또는 REP 변경] : 변경된 값을 LEP로 적용(두 값 동일), 기존의 cbCount를 사용해 길이 계산
+      lep = source === 'lep_mm' ? Number(newData.lep_mm) : Number(newData.rep_mm);
       rep = lep;
+      cbCount =
+        newData.cbCount !== undefined && newData.cbCount !== null
+          ? Number(newData.cbCount)
+          : Math.floor(Number(newData.length_mm) / 100) + 1;
+      length_mm = (cbCount - 1) * 100 + 2 * lep;
+
+      // 길이로부터 다시 CB수를 산출해 일관성 검증 (길이 변경 시 CB수는 정수 처리)
+      let computedCb = Math.floor(length_mm / 100) + 1;
+      if (computedCb !== cbCount) {
+        cbCount = computedCb;
+        let baseValue = (length_mm - (cbCount - 1) * 100) / 2;
+        if (cbCount % 2 !== 0 && baseValue < half100) {
+          cbCount = cbCount - 1;
+          baseValue = baseValue + half100;
+          length_mm = (cbCount - 1) * 100 + 2 * baseValue;
+        }
+        if (baseValue < 10) {
+          cbCount = cbCount - 1;
+          baseValue = baseValue + half100;
+          length_mm = (cbCount - 1) * 100 + 2 * baseValue;
+        }
+        // LEP가 기준보다 작으면 forward 결과를 우선 적용
+        lep = rep = lep < baseValue ? baseValue : lep;
+      }
     }
+
     return {
-      ...data,
-      cbCount,
-      lep_mm: lep,
-      rep_mm: rep,
+      ...newData,
+      length_mm, // 길이는 소수점 허용
+      cbCount, // CB수는 길이 변경 시 정수로 산출, 나머지는 사용자가 입력한 소수점 값 가능
+      lep_mm: lep, // LEP
+      rep_mm: rep, // REP
     };
   };
 
   const handleProcessRowUpdate = async (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-    const recalculatedRow = recalcValues(newRow);
+    // oldRow와 newRow를 비교하여 어느 필드가 변경되었는지 확인 후 재계산
+    const recalculatedRow = recalcValues(newRow, oldRow);
     try {
       await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, recalculatedRow);
       await fetchBottomData(selectedOrderId);
@@ -396,12 +462,30 @@ const Condition = () => {
                   onRowClick={handleRowClick}
                   disableSelectionOnClick
                   sx={{
+                    // 셀에 검은색 테두리 및 폰트 크기 증가
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '1.2rem',
+                    },
+                    // 헤더에도 검은색 테두리 및 폰트 크기 증가
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '1.0rem',
+                    },
+                    // 홀수 행: 흰색 배경
+                    '& .MuiDataGrid-row:nth-of-type(odd)': {
+                      backgroundColor: '#ffffff',
+                    },
+                    // 짝수 행: 연한 회색 배경
+                    '& .MuiDataGrid-row:nth-of-type(even)': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                    // 컬럼 헤더 텍스트 스타일
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
                       textAlign: 'center',
                       lineHeight: '1.2',
                     },
-                    '& .MuiDataGrid-footerContainer': { display: 'none' },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
                   }}
                 />
               </Box>
@@ -426,6 +510,24 @@ const Condition = () => {
                   experimentalFeatures={{ newEditingApi: true }}
                   onCellDoubleClick={handleCellDoubleClick}
                   sx={{
+                    // 셀에 검은색 테두리 및 폰트 크기 증가
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '1.2rem',
+                    },
+                    // 헤더에도 검은색 테두리 및 폰트 크기 증가
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '1.0rem',
+                    },
+                    // 홀수 행: 흰색 배경
+                    '& .MuiDataGrid-row:nth-of-type(odd)': {
+                      backgroundColor: '#ffffff',
+                    },
+                    // 짝수 행: 연한 회색 배경
+                    '& .MuiDataGrid-row:nth-of-type(even)': {
+                      backgroundColor: '#f5f5f5',
+                    },
+                    // 컬럼 헤더 텍스트 스타일
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
                       textAlign: 'center',
