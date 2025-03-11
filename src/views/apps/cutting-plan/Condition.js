@@ -134,9 +134,18 @@ const bottomColumns = [
 
 /**
  * recalcValues 함수
- * - 길이(length_mm)가 변경되면: 새 길이에 따라 기본 CB, LEP, REP를 계산한 후, LEP(및 REP)가 40 미만이면 CB 수를 하나씩 줄여 재계산.
- * - CB, LEP, REP 중 하나가 변경되면: 기존 길이(oldData.length_mm)는 유지하고, 입력값을 반영하여 재계산.
- * - LEP와 REP 각각은 최소 40 이상이어야 하며, 두 값의 합(LEP+REP)이 200 이상이면 error 플래그(error: true)를 부여.
+ *
+ * - [길이 변경 시] 새 길이(newData.length_mm)에 따라 CB, LEP, REP를 재계산하고,
+ *   total = 길이 - (CB수-1)*100을 균등 분배(total/2, total/2)합니다.
+ *   만약 계산된 LEP나 REP가 40 미만이면 CB 수를 줄여 재계산합니다.
+ *
+ * - [CB 수 변경 시] 기존 길이를 유지하며 total을 계산한 후 total/2씩 균등 분배합니다.
+ *
+ * - [LEP 또는 REP 변경 시] 기존의 길이와 CB 수를 그대로 유지하고,
+ *   total = 길이 - (CB수-1)*100을 계산한 후 사용자가 입력한 값에 따라 반대쪽 값이 total에서 빼지도록 합니다.
+ *   예) 초기 (50,50)에서 사용자가 LEP를 40으로 수정하면 REP는 total - 40 = 60이 됩니다.
+ *
+ * - 최종적으로 LEP와 REP 각각은 최소 40 이상이어야 하며, total(=LEP+REP)이 200 이상이면 error 플래그(error: true)를 부여합니다.
  */
 const recalcValues = (newData, oldData) => {
   let source = '';
@@ -154,63 +163,60 @@ const recalcValues = (newData, oldData) => {
 
   let length_mm, cbCount, lep, rep;
   let errorFlag = false;
-  // 길이 변경이 아닐 경우 기존 길이를 유지
-  const fixedLength =
-    source === 'length_mm' ? Number(newData.length_mm) : Number(oldData.length_mm);
 
   if (source === 'length_mm') {
-    // 길이가 변경된 경우: 새 길이에 따른 기본 값 계산
     length_mm = Number(newData.length_mm);
     cbCount = Math.floor(length_mm / 100) + 1;
-    lep = (length_mm - (cbCount - 1) * 100) / 2;
-    rep = lep;
-    // LEP(및 REP)가 40 미만이면 CB 수를 줄여서 재계산
-    while (lep < 40 && cbCount > 1) {
-      cbCount = cbCount - 1;
-      lep = (length_mm - (cbCount - 1) * 100) / 2;
-      rep = lep;
+    let total = length_mm - (cbCount - 1) * 100;
+    lep = total / 2;
+    rep = total / 2;
+    // 최소 40 미만이면 CB 수를 줄여 재계산
+    while ((lep < 40 || rep < 40) && cbCount > 1) {
+      cbCount--;
+      total = length_mm - (cbCount - 1) * 100;
+      lep = total / 2;
+      rep = total / 2;
     }
-    if (lep < 40) {
-      errorFlag = true;
-    }
-    if (lep + rep >= 200) {
+    if (lep < 40 || rep < 40 || total >= 200) {
       errorFlag = true;
     }
   } else if (source === 'cbCount') {
-    // CB 수가 변경된 경우: 기존 길이 유지
-    length_mm = fixedLength;
+    length_mm = Number(oldData.length_mm);
     cbCount = Number(newData.cbCount);
-    lep = (length_mm - (cbCount - 1) * 100) / 2;
-    rep = lep;
-    while (lep < 40 && cbCount > 1) {
-      cbCount = cbCount - 1;
-      lep = (length_mm - (cbCount - 1) * 100) / 2;
-      rep = lep;
+    let total = length_mm - (cbCount - 1) * 100;
+    lep = total / 2;
+    rep = total / 2;
+    while ((lep < 40 || rep < 40) && cbCount > 1) {
+      cbCount--;
+      total = length_mm - (cbCount - 1) * 100;
+      lep = total / 2;
+      rep = total / 2;
     }
-    if (lep < 40) {
+    if (lep < 40 || rep < 40 || total >= 200) {
       errorFlag = true;
     }
-    if (lep + rep >= 200) {
+  } else if (source === 'lep_mm') {
+    // 사용자가 LEP를 수정한 경우: 기존 길이와 CB 수는 그대로 유지
+    length_mm = Number(oldData.length_mm);
+    cbCount = Number(oldData.cbCount);
+    const total = length_mm - (cbCount - 1) * 100;
+    const newLep = Number(newData.lep_mm);
+    const newRep = total - newLep;
+    lep = newLep;
+    rep = newRep;
+    if (newLep < 40 || newRep < 40 || total >= 200) {
       errorFlag = true;
     }
-  } else if (source === 'lep_mm' || source === 'rep_mm') {
-    // LEP 또는 REP가 변경된 경우: 기존 길이 유지하고, 입력값을 반영하여 자동으로 CB 수 재계산
-    length_mm = fixedLength;
-    const userLEP = Number(newData.lep_mm);
-    // 고정 길이와 입력된 LEP 값에 따른 CB 수 계산: L = (cbCount - 1)*100 + 2*LEP  =>  cbCount = ((L - 2*LEP) / 100) + 1
-    let computedCB = Math.floor((length_mm - 2 * userLEP) / 100) + 1;
-    cbCount = computedCB;
-    lep = (length_mm - (cbCount - 1) * 100) / 2;
-    rep = lep;
-    while (lep < 40 && cbCount > 1) {
-      cbCount = cbCount - 1;
-      lep = (length_mm - (cbCount - 1) * 100) / 2;
-      rep = lep;
-    }
-    if (lep < 40) {
-      errorFlag = true;
-    }
-    if (lep + rep >= 200) {
+  } else if (source === 'rep_mm') {
+    // 사용자가 REP를 수정한 경우: 기존 길이와 CB 수는 그대로 유지
+    length_mm = Number(oldData.length_mm);
+    cbCount = Number(oldData.cbCount);
+    const total = length_mm - (cbCount - 1) * 100;
+    const newRep = Number(newData.rep_mm);
+    const newLep = total - newRep;
+    lep = newLep;
+    rep = newRep;
+    if (newRep < 40 || newLep < 40 || total >= 200) {
       errorFlag = true;
     }
   } else {
@@ -529,7 +535,7 @@ const Condition = () => {
   // 누적된 pendingUpdates에 대해 유효성 검사 후 업데이트 적용 (Bulk Save)
   const handleBulkSave = async () => {
     const invalidMessages = [];
-    // pendingUpdates에 저장된 각 행의 lep와 rep 합 검사 후 error 플래그 적용
+    // pendingUpdates에 저장된 각 행의 LEP와 REP 합 검사 후 error 플래그 적용
     const updatedBottomData = bottomData.map((row) => {
       if (pendingUpdates[row.id]) {
         const updatedRow = pendingUpdates[row.id];
