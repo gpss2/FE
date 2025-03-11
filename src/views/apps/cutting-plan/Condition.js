@@ -34,21 +34,102 @@ const topColumns = [
   { field: 'totalWeight', headerName: '총중량(Kg)', flex: 1 },
 ];
 
+// lep_mm, rep_mm 에 cellClassName 추가(오류 발생 시 'error-cell' 클래스를 부여)
 const bottomColumns = [
-  { field: 'drawingNumber', headerName: '도면번호', flex: 1 },
-  { field: 'itemNo', headerName: '품목번호', flex: 1 },
-  { field: 'itemType', headerName: '품목종류', editable: true, flex: 1 },
-  { field: 'itemName', headerName: '품명', editable: true, flex: 1 },
-  { field: 'specCode', headerName: '사양코드', flex: 1 },
-  { field: 'endBar', headerName: 'EndBar', flex: 1 },
-  { field: 'width_mm', headerName: '폭(mm)', editable: true, flex: 1 },
-  { field: 'length_mm', headerName: '길이(mm)', editable: true, flex: 1 },
-  { field: 'cbCount', headerName: 'CB 수', editable: true, flex: 1 },
-  { field: 'lep_mm', headerName: 'LEP(mm)', editable: true, flex: 1 },
-  { field: 'rep_mm', headerName: 'REP(mm)', editable: true, flex: 1 },
-  { field: 'quantity', headerName: '수량', editable: true, flex: 1 },
-  { field: 'weight_kg', headerName: '중량(Kg)', editable: true, flex: 1 },
-  { field: 'neWeight_kg', headerName: 'NE 중량(Kg)', editable: true, flex: 1 },
+  {
+    field: 'drawingNumber',
+    headerName: '도면번호',
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'itemNo',
+    headerName: '품목번호',
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'itemType',
+    headerName: '품목종류',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'itemName',
+    headerName: '품명',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'specCode',
+    headerName: '사양코드',
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'endBar',
+    headerName: 'EndBar',
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'width_mm',
+    headerName: '폭(mm)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'length_mm',
+    headerName: '길이(mm)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'cbCount',
+    headerName: 'CB 수',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'lep_mm',
+    headerName: 'LEP(mm)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'rep_mm',
+    headerName: 'REP(mm)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'quantity',
+    headerName: '수량',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'weight_kg',
+    headerName: '중량(Kg)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
+  {
+    field: 'neWeight_kg',
+    headerName: 'NE 중량(Kg)',
+    editable: true,
+    flex: 1,
+    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
+  },
 ];
 
 const Condition = () => {
@@ -79,6 +160,8 @@ const Condition = () => {
     weight_kg: '',
     neWeight_kg: '',
   });
+  // pendingUpdates 상태 : 수정된 데이터들을 누적해서 저장
+  const [pendingUpdates, setPendingUpdates] = useState({});
 
   // 데이터 입력(템플릿) 모달 상태 및 선택값
   const [isTemplateModalOpen, setTemplateModalOpen] = useState(false);
@@ -176,13 +259,23 @@ const Condition = () => {
     }
   };
 
+  // 하단 데이터 fetch 시 도면번호가 바뀔 때마다 group 값을 부여하여 그룹별 색상 처리
   const fetchBottomData = async (orderId) => {
     try {
       const response = await axios.get(`/api/plan/order-details/${orderId}`);
-      const processedData = response.data.table.map((row, index) => ({
+      let processedData = response.data.table.map((row, index) => ({
         ...row,
         orderNumber: index + 1,
       }));
+      let lastDrawingNumber = null;
+      let group = 0; // 0,1 두 그룹을 번갈아 사용
+      processedData = processedData.map((row) => {
+        if (row.drawingNumber !== lastDrawingNumber) {
+          group = group === 0 ? 1 : 0;
+          lastDrawingNumber = row.drawingNumber;
+        }
+        return { ...row, group };
+      });
       setBottomData(processedData);
     } catch (error) {
       console.error('Error fetching bottom data:', error);
@@ -199,7 +292,6 @@ const Condition = () => {
 
   // 모든 값에 소수점 허용 (단, 길이 변경 시 CB수는 정수로 산출)
   const recalcValues = (newData, oldData) => {
-    // 변경된 필드 판별 (우선순위: length_mm > cbCount > lep_mm > rep_mm)
     let source = 'length_mm';
     if (newData.length_mm !== oldData.length_mm) {
       source = 'length_mm';
@@ -215,10 +307,9 @@ const Condition = () => {
     const half100 = 100 / 2; // 50
 
     if (source === 'length_mm') {
-      // [길이 변경] : 입력받은 길이로부터 계산 (CB수는 CPTest 로직에 따라 정수 처리)
       length_mm = Number(newData.length_mm);
       cbCount = Math.floor(length_mm / 100) + 1;
-      let baseValue = (length_mm - (cbCount - 1) * 100) / 2; // 소수점 연산
+      let baseValue = (length_mm - (cbCount - 1) * 100) / 2;
       lep = baseValue;
       rep = baseValue;
 
@@ -233,7 +324,6 @@ const Condition = () => {
         rep = lep;
       }
     } else if (source === 'cbCount') {
-      // [CB수 변경] : 사용자가 입력한 cbCount(소수점 허용)를 사용, 기존의 LEP(없으면 기본 50)로 길이 재계산
       cbCount = Number(newData.cbCount);
       lep = newData.lep_mm !== undefined && newData.lep_mm !== null ? Number(newData.lep_mm) : 50;
       rep = lep;
@@ -250,7 +340,6 @@ const Condition = () => {
         length_mm = (cbCount - 1) * 100 + 2 * lep;
       }
     } else if (source === 'lep_mm' || source === 'rep_mm') {
-      // [LEP 또는 REP 변경] : 변경된 값을 LEP로 적용(두 값 동일), 기존의 cbCount를 사용해 길이 계산
       lep = source === 'lep_mm' ? Number(newData.lep_mm) : Number(newData.rep_mm);
       rep = lep;
       cbCount =
@@ -259,7 +348,6 @@ const Condition = () => {
           : Math.floor(Number(newData.length_mm) / 100) + 1;
       length_mm = (cbCount - 1) * 100 + 2 * lep;
 
-      // 길이로부터 다시 CB수를 산출해 일관성 검증 (길이 변경 시 CB수는 정수 처리)
       let computedCb = Math.floor(length_mm / 100) + 1;
       if (computedCb !== cbCount) {
         cbCount = computedCb;
@@ -274,35 +362,28 @@ const Condition = () => {
           baseValue = baseValue + half100;
           length_mm = (cbCount - 1) * 100 + 2 * baseValue;
         }
-        // LEP가 기준보다 작으면 forward 결과를 우선 적용
         lep = rep = lep < baseValue ? baseValue : lep;
       }
     }
 
     return {
       ...newData,
-      length_mm, // 길이는 소수점 허용
-      cbCount, // CB수는 길이 변경 시 정수로 산출, 나머지는 사용자가 입력한 소수점 값 가능
-      lep_mm: lep, // LEP
-      rep_mm: rep, // REP
+      length_mm,
+      cbCount,
+      lep_mm: lep,
+      rep_mm: rep,
     };
   };
 
-  const handleProcessRowUpdate = async (newRow, oldRow) => {
+  // 그리드 인라인 수정 시 바로 PUT 요청 대신 pendingUpdates에 저장
+  const handleProcessRowUpdate = (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-    // oldRow와 newRow를 비교하여 어느 필드가 변경되었는지 확인 후 재계산
     const recalculatedRow = recalcValues(newRow, oldRow);
-    try {
-      await axios.put(`/api/plan/order-details/${selectedOrderId}/${newRow.id}`, recalculatedRow);
-      await fetchBottomData(selectedOrderId);
-      await fetchTopData();
-      return recalculatedRow;
-    } catch (error) {
-      console.error('Error updating row:', error);
-      return oldRow;
-    }
+    setPendingUpdates((prev) => ({ ...prev, [newRow.id]: recalculatedRow }));
+    return recalculatedRow;
   };
 
+  // 사양코드 혹은 EndBar 셀 더블클릭 시 모달을 열어 수정하고, 변경내용은 pendingUpdates에 저장
   const handleCellDoubleClick = (params) => {
     const { field, row } = params;
     if (field === 'specCode' || field === 'endBar') {
@@ -316,21 +397,12 @@ const Condition = () => {
     setModalData(null);
   };
 
-  const handleSave = () => {
+  const handleSaveModal = () => {
     const { id, specCode, endBar } = modalData;
-    axios
-      .put(`/api/plan/order-details/${selectedOrderId}/${id}`, { specCode, endBar })
-      .then(() => {
-        setBottomData((prev) =>
-          prev.map((row) =>
-            row.id === id
-              ? { ...row, specCode: modalData.specCode, endBar: modalData.endBar }
-              : row,
-          ),
-        );
-        setModalOpen(false);
-      })
-      .catch((error) => console.error('Error updating row:', error));
+    const updatedRow = { ...modalData, specCode, endBar };
+    setPendingUpdates((prev) => ({ ...prev, [id]: updatedRow }));
+    setBottomData((prev) => prev.map((row) => (row.id === id ? updatedRow : row)));
+    setModalOpen(false);
   };
 
   const handleDelete = () => {
@@ -361,7 +433,6 @@ const Condition = () => {
   };
 
   const handleDownloadTemplate = async () => {
-    // 이미 상태로 보유한 specCode, meterialCode 배열에서 선택한 사양코드/EndBar에 해당하는 id를 찾습니다.
     const specificItem = specCode.find((item) => item.systemCode === selectedSpecific);
     const materialItem = meterialCode.find((item) => item.materialCode === selectedMaterial);
     if (!specificItem || !materialItem) {
@@ -379,12 +450,10 @@ const Condition = () => {
           responseType: 'blob',
         },
       );
-      // 상단 테이블에서 현재 선택된 수주 정보를 찾아 파일명을 생성합니다.
       const selectedOrder = topData.find((order) => order.id === selectedOrderId);
       const fileName = selectedOrder
         ? `${selectedOrder.orderNumber}-${selectedOrder.customerCode}.xlsx`
         : 'excel-template.xlsx';
-      // 파일 다운로드 처리
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -447,6 +516,43 @@ const Condition = () => {
       .catch((error) => console.error('Error adding new row:', error));
   };
 
+  // 누적된 pendingUpdates에 대해 유효성 검사 후 업데이트 적용 (Bulk Save)
+  const handleBulkSave = async () => {
+    const invalidMessages = [];
+    // pendingUpdates에 저장된 각 행의 lep와 rep 합 검사 후 error 플래그 적용
+    const updatedBottomData = bottomData.map((row) => {
+      if (pendingUpdates[row.id]) {
+        const updatedRow = pendingUpdates[row.id];
+        const sum = Number(updatedRow.lep_mm) + Number(updatedRow.rep_mm);
+        if (sum >= 200) {
+          invalidMessages.push(`${updatedRow.itemNo} - 잘못된 입력`);
+          return { ...row, error: true };
+        } else {
+          return { ...row, error: false };
+        }
+      }
+      return row;
+    });
+    if (invalidMessages.length > 0) {
+      setBottomData(updatedBottomData);
+      alert(invalidMessages.join('\n'));
+      return;
+    }
+
+    try {
+      const updates = Object.values(pendingUpdates);
+      const updatePromises = updates.map((row) =>
+        axios.put(`/api/plan/order-details/${selectedOrderId}/${row.id}`, row),
+      );
+      await Promise.all(updatePromises);
+      await fetchBottomData(selectedOrderId);
+      setPendingUpdates({});
+      alert('적용되었습니다.');
+    } catch (error) {
+      console.error('Error saving updates:', error);
+    }
+  };
+
   return (
     <div>
       <PageContainer title="수주 및 품목 관리">
@@ -462,24 +568,13 @@ const Condition = () => {
                   onRowClick={handleRowClick}
                   disableSelectionOnClick
                   sx={{
-                    // 셀에 검은색 테두리 및 폰트 크기 증가
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '1.2rem',
                     },
-                    // 헤더에도 검은색 테두리 및 폰트 크기 증가
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '1.0rem',
                     },
-                    // 홀수 행: 흰색 배경
-                    '& .MuiDataGrid-row:nth-of-type(odd)': {
-                      backgroundColor: '#ffffff',
-                    },
-                    // 짝수 행: 연한 회색 배경
-                    '& .MuiDataGrid-row:nth-of-type(even)': {
-                      backgroundColor: '#f5f5f5',
-                    },
-                    // 컬럼 헤더 텍스트 스타일
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
                       textAlign: 'center',
@@ -509,25 +604,21 @@ const Condition = () => {
                   onRowClick={(params) => setSelectedDetailId(params.id)}
                   experimentalFeatures={{ newEditingApi: true }}
                   onCellDoubleClick={handleCellDoubleClick}
+                  // 행의 배경색은 도면번호 그룹에 따라 결정 (getRowClassName 사용)
+                  getRowClassName={(params) => (params.row.group === 0 ? 'group0' : 'group1')}
                   sx={{
-                    // 셀에 검은색 테두리 및 폰트 크기 증가
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '1.2rem',
                     },
-                    // 헤더에도 검은색 테두리 및 폰트 크기 증가
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '1.0rem',
                     },
-                    // 홀수 행: 흰색 배경
-                    '& .MuiDataGrid-row:nth-of-type(odd)': {
-                      backgroundColor: '#ffffff',
-                    },
-                    // 짝수 행: 연한 회색 배경
-                    '& .MuiDataGrid-row:nth-of-type(even)': {
-                      backgroundColor: '#f5f5f5',
-                    },
-                    // 컬럼 헤더 텍스트 스타일
+                    // 그룹별 배경색 지정
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    // 오류가 있는 셀에 대해 빨간색 배경 (글자색 대비를 위해 white)
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
                       textAlign: 'center',
@@ -538,6 +629,13 @@ const Condition = () => {
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" mb={1} spacing={2}>
+                <Button
+                  variant="contained"
+                  onClick={handleBulkSave}
+                  disabled={Object.keys(pendingUpdates).length === 0}
+                >
+                  적용
+                </Button>
                 <Button
                   variant="contained"
                   startIcon={<UploadFileIcon />}
@@ -606,7 +704,7 @@ const Condition = () => {
               <Button variant="outlined" onClick={handleModalClose}>
                 취소
               </Button>
-              <Button variant="contained" onClick={handleSave}>
+              <Button variant="contained" onClick={handleSaveModal}>
                 저장
               </Button>
             </Stack>
