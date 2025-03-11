@@ -74,9 +74,9 @@ const Start = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [compressionSetting, setCompressionSetting] = useState('Optimized');
   const [plusLAdjustment, setPlusLAdjustment] = useState(3.0);
-  const [minusLAdjustment, setMinusLAdjustment] = useState(-3.0);
+  const [minusLAdjustment, setMinusLAdjustment] = useState('-3');
   const [plusWAdjustment, setPlusWAdjustment] = useState(3.0);
-  const [minusWAdjustment, setMinusWAdjustment] = useState(-3.0);
+  const [minusWAdjustment, setMinusWAdjustment] = useState('-3');
 
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
@@ -739,7 +739,20 @@ const Start = () => {
               label="-L 공차"
               type="number"
               value={minusLAdjustment}
-              onChange={(e) => setMinusLAdjustment(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value;
+                // '-' 또는 빈 문자열은 그대로 허용, 유효한 숫자인 경우에도 업데이트
+                if (val === '-' || val === '' || !isNaN(Number(val))) {
+                  setMinusLAdjustment(val);
+                }
+              }}
+              onBlur={() => {
+                // 입력이 완료되면 숫자로 변환하여 처리 (필요한 경우)
+                const parsed = parseFloat(minusLAdjustment);
+                if (!isNaN(parsed)) {
+                  setMinusLAdjustment(parsed.toString());
+                }
+              }}
             />
             <TextField
               label="+W 공차"
@@ -751,7 +764,18 @@ const Start = () => {
               label="-W 공차"
               type="number"
               value={minusWAdjustment}
-              onChange={(e) => setMinusWAdjustment(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '-' || val === '' || !isNaN(Number(val))) {
+                  setMinusWAdjustment(val);
+                }
+              }}
+              onBlur={() => {
+                const parsed = parseFloat(minusWAdjustment);
+                if (!isNaN(parsed)) {
+                  setMinusWAdjustment(parsed.toString());
+                }
+              }}
             />
             <Button variant="contained" onClick={handleModalSave}>
               저장
