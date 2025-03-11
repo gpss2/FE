@@ -177,7 +177,7 @@ const recalcValues = (newData, oldData) => {
       lep = total / 2;
       rep = total / 2;
     }
-    if (lep < 40 || rep < 40 || total >= 200) {
+    if (total >= 200) {
       errorFlag = true;
     }
   } else if (source === 'cbCount') {
@@ -192,7 +192,7 @@ const recalcValues = (newData, oldData) => {
       lep = total / 2;
       rep = total / 2;
     }
-    if (lep < 40 || rep < 40 || total >= 200) {
+    if (total >= 200) {
       errorFlag = true;
     }
   } else if (source === 'lep_mm') {
