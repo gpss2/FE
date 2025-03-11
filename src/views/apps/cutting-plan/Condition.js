@@ -132,6 +132,101 @@ const bottomColumns = [
   },
 ];
 
+/**
+ * recalcValues 함수
+ * - 길이(length_mm)가 변경되면: 새 길이에 따라 기본 CB, LEP, REP를 계산한 후, LEP(및 REP)가 40 미만이면 CB 수를 하나씩 줄여 재계산.
+ * - CB, LEP, REP 중 하나가 변경되면: 기존 길이(oldData.length_mm)는 유지하고, 입력값을 반영하여 재계산.
+ * - LEP와 REP 각각은 최소 40 이상이어야 하며, 두 값의 합(LEP+REP)이 200 이상이면 error 플래그(error: true)를 부여.
+ */
+const recalcValues = (newData, oldData) => {
+  let source = '';
+  if (newData.length_mm !== oldData.length_mm) {
+    source = 'length_mm';
+  } else if (newData.cbCount !== oldData.cbCount) {
+    source = 'cbCount';
+  } else if (newData.lep_mm !== oldData.lep_mm) {
+    source = 'lep_mm';
+  } else if (newData.rep_mm !== oldData.rep_mm) {
+    source = 'rep_mm';
+  } else {
+    source = 'none';
+  }
+
+  let length_mm, cbCount, lep, rep;
+  let errorFlag = false;
+  // 길이 변경이 아닐 경우 기존 길이를 유지
+  const fixedLength =
+    source === 'length_mm' ? Number(newData.length_mm) : Number(oldData.length_mm);
+
+  if (source === 'length_mm') {
+    // 길이가 변경된 경우: 새 길이에 따른 기본 값 계산
+    length_mm = Number(newData.length_mm);
+    cbCount = Math.floor(length_mm / 100) + 1;
+    lep = (length_mm - (cbCount - 1) * 100) / 2;
+    rep = lep;
+    // LEP(및 REP)가 40 미만이면 CB 수를 줄여서 재계산
+    while (lep < 40 && cbCount > 1) {
+      cbCount = cbCount - 1;
+      lep = (length_mm - (cbCount - 1) * 100) / 2;
+      rep = lep;
+    }
+    if (lep < 40) {
+      errorFlag = true;
+    }
+    if (lep + rep >= 200) {
+      errorFlag = true;
+    }
+  } else if (source === 'cbCount') {
+    // CB 수가 변경된 경우: 기존 길이 유지
+    length_mm = fixedLength;
+    cbCount = Number(newData.cbCount);
+    lep = (length_mm - (cbCount - 1) * 100) / 2;
+    rep = lep;
+    while (lep < 40 && cbCount > 1) {
+      cbCount = cbCount - 1;
+      lep = (length_mm - (cbCount - 1) * 100) / 2;
+      rep = lep;
+    }
+    if (lep < 40) {
+      errorFlag = true;
+    }
+    if (lep + rep >= 200) {
+      errorFlag = true;
+    }
+  } else if (source === 'lep_mm' || source === 'rep_mm') {
+    // LEP 또는 REP가 변경된 경우: 기존 길이 유지하고, 입력값을 반영하여 자동으로 CB 수 재계산
+    length_mm = fixedLength;
+    const userLEP = Number(newData.lep_mm);
+    // 고정 길이와 입력된 LEP 값에 따른 CB 수 계산: L = (cbCount - 1)*100 + 2*LEP  =>  cbCount = ((L - 2*LEP) / 100) + 1
+    let computedCB = Math.floor((length_mm - 2 * userLEP) / 100) + 1;
+    cbCount = computedCB;
+    lep = (length_mm - (cbCount - 1) * 100) / 2;
+    rep = lep;
+    while (lep < 40 && cbCount > 1) {
+      cbCount = cbCount - 1;
+      lep = (length_mm - (cbCount - 1) * 100) / 2;
+      rep = lep;
+    }
+    if (lep < 40) {
+      errorFlag = true;
+    }
+    if (lep + rep >= 200) {
+      errorFlag = true;
+    }
+  } else {
+    return oldData;
+  }
+
+  return {
+    ...newData,
+    length_mm,
+    cbCount,
+    lep_mm: lep,
+    rep_mm: rep,
+    error: errorFlag,
+  };
+};
+
 const Condition = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
@@ -288,91 +383,6 @@ const Condition = () => {
     setSelectedOrderId(orderId);
     setSelectedOrderNumber(orderNumber);
     fetchBottomData(orderId);
-  };
-
-  // 모든 값에 소수점 허용 (단, 길이 변경 시 CB수는 정수로 산출)
-  const recalcValues = (newData, oldData) => {
-    let source = 'length_mm';
-    if (newData.length_mm !== oldData.length_mm) {
-      source = 'length_mm';
-    } else if (newData.cbCount !== oldData.cbCount) {
-      source = 'cbCount';
-    } else if (newData.lep_mm !== oldData.lep_mm) {
-      source = 'lep_mm';
-    } else if (newData.rep_mm !== oldData.rep_mm) {
-      source = 'rep_mm';
-    }
-
-    let length_mm, cbCount, lep, rep;
-    const half100 = 100 / 2; // 50
-
-    if (source === 'length_mm') {
-      length_mm = Number(newData.length_mm);
-      cbCount = Math.floor(length_mm / 100) + 1;
-      let baseValue = (length_mm - (cbCount - 1) * 100) / 2;
-      lep = baseValue;
-      rep = baseValue;
-
-      if (cbCount % 2 !== 0 && lep < half100) {
-        cbCount = cbCount - 1;
-        lep = lep + half100;
-        rep = lep;
-      }
-      if (lep < 10) {
-        cbCount = cbCount - 1;
-        lep = lep + half100;
-        rep = lep;
-      }
-    } else if (source === 'cbCount') {
-      cbCount = Number(newData.cbCount);
-      lep = newData.lep_mm !== undefined && newData.lep_mm !== null ? Number(newData.lep_mm) : 50;
-      rep = lep;
-      length_mm = (cbCount - 1) * 100 + 2 * lep;
-
-      if (cbCount % 2 !== 0 && lep < half100) {
-        lep = lep + half100;
-        rep = lep;
-        length_mm = (cbCount - 1) * 100 + 2 * lep;
-      }
-      if (lep < 10) {
-        lep = lep + half100;
-        rep = lep;
-        length_mm = (cbCount - 1) * 100 + 2 * lep;
-      }
-    } else if (source === 'lep_mm' || source === 'rep_mm') {
-      lep = source === 'lep_mm' ? Number(newData.lep_mm) : Number(newData.rep_mm);
-      rep = lep;
-      cbCount =
-        newData.cbCount !== undefined && newData.cbCount !== null
-          ? Number(newData.cbCount)
-          : Math.floor(Number(newData.length_mm) / 100) + 1;
-      length_mm = (cbCount - 1) * 100 + 2 * lep;
-
-      let computedCb = Math.floor(length_mm / 100) + 1;
-      if (computedCb !== cbCount) {
-        cbCount = computedCb;
-        let baseValue = (length_mm - (cbCount - 1) * 100) / 2;
-        if (cbCount % 2 !== 0 && baseValue < half100) {
-          cbCount = cbCount - 1;
-          baseValue = baseValue + half100;
-          length_mm = (cbCount - 1) * 100 + 2 * baseValue;
-        }
-        if (baseValue < 10) {
-          cbCount = cbCount - 1;
-          baseValue = baseValue + half100;
-          length_mm = (cbCount - 1) * 100 + 2 * baseValue;
-        }
-        lep = rep = lep < baseValue ? baseValue : lep;
-      }
-    }
-
-    return {
-      ...newData,
-      length_mm,
-      cbCount,
-      lep_mm: lep,
-      rep_mm: rep,
-    };
   };
 
   // 그리드 인라인 수정 시 바로 PUT 요청 대신 pendingUpdates에 저장
@@ -570,10 +580,10 @@ const Condition = () => {
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
-                      fontSize: '1.2rem',
+                      fontSize: '12px',
                     },
                     '& .MuiDataGrid-columnHeader': {
-                      fontSize: '1.0rem',
+                      fontSize: '14px',
                     },
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
@@ -609,10 +619,10 @@ const Condition = () => {
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
-                      fontSize: '1.2rem',
+                      fontSize: '12px',
                     },
                     '& .MuiDataGrid-columnHeader': {
-                      fontSize: '1.0rem',
+                      fontSize: '14px',
                     },
                     // 그룹별 배경색 지정
                     '& .group0': { backgroundColor: '#ffffff' },
