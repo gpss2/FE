@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
 import {
@@ -12,6 +12,7 @@ import {
   DialogTitle,
   Button,
   TextField,
+  CircularProgress,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
@@ -62,19 +63,24 @@ const Setup = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [currentRow, setCurrentRow] = useState({});
   const [currentTable, setCurrentTable] = useState('left');
+  const [isLoading, setIsLoading] = useState(false); // 로딩 상태 추가
   const navigate = useNavigate();
+
+  const inputRefs = useRef([]);
+  const materialTypeRef = useRef(null); // 자재타입 필드를 참조하기 위한 ref
 
   const generateMaterialCode = (materialType, thickness) => {
     const fullType = materialType.split('*');
 
     const mType = (fullType[0]?.match(/[a-zA-Z]+/g) || ['']).join(''); // 자재타입을 분류
-    const size = fullType[0].replace(mType, '').replace('.', '').padStart(3, '0'); // 길이 분리, 기본값 '0'
-
+    const size = fullType[0].replace(mType, '').split('.')[0].padStart(3, '0');
     let materialCode = mType + size;
 
     if (fullType.length > 2) {
-      let w_OUT = (fullType[1] || '0').padStart(4, '0').replace('.', ''); // OUT 너비
-      let w_IN = ((fullType[2] || '0').split('.')[0] || '0').padEnd(2, '0'); // IN 너비
+      let w_OUT =
+        (fullType[1] || '0').split('.')[0].padStart(3, '0') +
+        ((fullType[1] || '0').split('.')[1] || '0');
+      let w_IN = (fullType[2] || '0').replace('.', '').padEnd(2, '0'); // IN 너비
       materialCode = materialCode + w_OUT + w_IN + '-' + thickness;
     } else if (fullType.length > 1) {
       let w_Integer = ((fullType[1] || '0').split('.')[0] || '0').padStart(3, '0'); // 너비 정수 부분
@@ -119,7 +125,6 @@ const Setup = () => {
   };
 
   const handleOpenModal = (table, row = {}) => {
-    // 오른쪽 테이블(제작사양 입력)에서 새 행 추가 시 기본값 적용
     if (table === 'right' && Object.keys(row).length === 0) {
       row = { ...row, bWidth: 30.0, cWidth: 100, bladeThickness: 9 };
     }
@@ -127,6 +132,7 @@ const Setup = () => {
     setCurrentRow(row);
     setModalOpen(true);
   };
+
   const handleCloseModal = () => {
     setModalOpen(false);
     setTimeout(() => {
@@ -135,6 +141,7 @@ const Setup = () => {
   };
 
   const handleSave = async () => {
+    setIsLoading(true); // 로딩 시작
     try {
       if (currentRow.id) {
         await axios.put(
@@ -152,11 +159,16 @@ const Setup = () => {
       handleCloseModal();
     } catch (error) {
       console.error('Error saving row:', error);
+    } finally {
+      setIsLoading(false); // 로딩 끝
     }
   };
 
   const handleInputChange = (field, value) => {
-    const updatedRow = { ...currentRow, [field]: value };
+    // 입력값을 대문자로 변환하고 'x'는 '*'로 변환
+    let updatedValue = value.toUpperCase().replace(/X/g, '*');
+
+    const updatedRow = { ...currentRow, [field]: updatedValue };
 
     if (currentTable === 'left') {
       if (field === 'materialType' || field === 'length') {
@@ -186,6 +198,16 @@ const Setup = () => {
     setCurrentRow(updatedRow);
   };
 
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+      if (index < inputRefs.current.length - 1) {
+        inputRefs.current[index + 1].focus();
+      } else {
+        handleSave();
+      }
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -195,6 +217,17 @@ const Setup = () => {
     fetchLeftTableData();
     fetchRightTableData();
   }, [navigate]);
+
+  // 모달이 열릴 때 자재타입 필드에 포커스를 맞추기 위한 useEffect
+  useEffect(() => {
+    if (modalOpen) {
+      setTimeout(() => {
+        if (materialTypeRef.current) {
+          materialTypeRef.current.focus();
+        }
+      }, 100); // 포커스를 100ms 지연 후 설정
+    }
+  }, [modalOpen]);
 
   return (
     <div className="main">
@@ -280,6 +313,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.materialType || ''}
                 onChange={(e) => handleInputChange('materialType', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 0)}
+                inputRef={materialTypeRef} // 자재타입 필드에 포커스
               />
               <TextField
                 margin="dense"
@@ -288,6 +323,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.length || ''}
                 onChange={(e) => handleInputChange('length', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 1)}
+                inputRef={(el) => (inputRefs.current[1] = el)}
               />
               <TextField
                 margin="dense"
@@ -296,6 +333,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.weight || ''}
                 onChange={(e) => handleInputChange('weight', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 2)}
+                inputRef={(el) => (inputRefs.current[2] = el)}
               />
             </>
           ) : (
@@ -307,6 +346,8 @@ const Setup = () => {
                     options={leftTableData.map((row) => row.materialCode)}
                     value={currentRow.bbCode || ''}
                     onChange={(e) => handleInputChange('bbCode', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 0)}
+                    inputRef={(el) => (inputRefs.current[0] = el)}
                   />
                 </Grid>
                 <Grid item xs={6}>
@@ -315,6 +356,8 @@ const Setup = () => {
                     options={leftTableData.map((row) => row.materialCode)}
                     value={currentRow.cbCode || ''}
                     onChange={(e) => handleInputChange('cbCode', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 1)}
+                    inputRef={(el) => (inputRefs.current[1] = el)}
                   />
                 </Grid>
               </Grid>
@@ -325,6 +368,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.bWidth || ''}
                 onChange={(e) => handleInputChange('bWidth', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 2)}
+                inputRef={(el) => (inputRefs.current[2] = el)}
               />
               <TextField
                 margin="dense"
@@ -333,6 +378,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.cWidth || ''}
                 onChange={(e) => handleInputChange('cWidth', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 3)}
+                inputRef={(el) => (inputRefs.current[3] = el)}
               />
               <TextField
                 margin="dense"
@@ -341,6 +388,8 @@ const Setup = () => {
                 fullWidth
                 value={currentRow.bladeThickness || ''}
                 onChange={(e) => handleInputChange('bladeThickness', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 4)}
+                inputRef={(el) => (inputRefs.current[4] = el)}
               />
               <TextField
                 margin="dense"
@@ -375,8 +424,12 @@ const Setup = () => {
               삭제
             </Button>
           )}
-          <Button onClick={handleSave} color="primary">
-            {currentRow.id ? '수정' : '추가'}
+          <Button
+            onClick={handleSave}
+            color="primary"
+            disabled={isLoading} // 로딩 중 버튼 비활성화
+          >
+            {isLoading ? <CircularProgress size={24} /> : currentRow.id ? '수정' : '추가'}
           </Button>
         </DialogActions>
       </Dialog>
