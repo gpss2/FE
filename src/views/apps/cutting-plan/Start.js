@@ -12,10 +12,12 @@ import {
   Stack,
   TextField,
 } from '@mui/material';
+import NewWindow from 'react-new-window';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import DrawingCanvas from './DrawingCanvas.js';
 
 const topLeftColumns = [
   { field: 'taskNumber', headerName: '태스크\n번호', flex: 1 },
@@ -92,6 +94,7 @@ const Start = () => {
     plusWAdjustment: 3.0,
     minusWAdjustment: -3.0,
   });
+  const [openDrawingWindow, setOpenDrawingWindow] = useState(false);
 
   // axios 인터셉터 설정
   axios.interceptors.request.use(
@@ -219,6 +222,10 @@ const Start = () => {
     } catch (error) {
       console.error('Error generating plans:', error);
     }
+  };
+  const handleViewDrawing = () => {
+    if (!selectedGroup) return;
+    setOpenDrawingWindow(true);
   };
 
   const fetchTopLeftData = async () => {
@@ -693,6 +700,9 @@ const Start = () => {
               <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
                 상세 품목배치(작업지시폼)
               </Button>
+              <Button disabled={!selectedGroup} onClick={handleViewDrawing}>
+                상세보기
+              </Button>
             </Stack>
           </ParentCard>
         </Grid>
@@ -762,6 +772,25 @@ const Start = () => {
           </Stack>
         </DialogContent>
       </Dialog>
+      {openDrawingWindow && selectedGroup && (
+        <NewWindow
+          title={`도면 - 그룹번호: ${selectedGroup.groupNumber}`}
+          onUnload={() => setOpenDrawingWindow(false)}
+          copyStyles={false}
+          features={{
+            width: 1200,
+            height: 800,
+            top: 100,
+            left: 100,
+            toolbar: 'no',
+            menubar: 'no',
+            scrollbars: 'yes',
+            resizable: 'yes',
+          }}
+        >
+          <DrawingCanvas data={selectedGroup.result} />
+        </NewWindow>
+      )}
     </PageContainer>
   );
 };
