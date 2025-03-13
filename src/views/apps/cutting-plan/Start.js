@@ -644,7 +644,7 @@ const Start = () => {
           </ParentCard>
         </Grid>
 
-        {/* 상단 오른쪽 테이블  */}
+        {/* 상단 오른쪽 테이블   tq*/}
         <Grid item xs={7}>
           <ParentCard title="그룹별 계획조건 개별지정">
             <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
