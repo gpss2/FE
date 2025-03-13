@@ -353,11 +353,14 @@ const Setup = () => {
                 <Grid item xs={6}>
                   <SearchableSelect
                     label="CB 코드 선택"
-                    options={leftTableData.map((row) => row.materialCode)}
+                    options={leftTableData
+                      .map((row) => row.materialCode)
+                      .filter((code) => /^SQ|RQ|PI/.test(code))}
                     value={currentRow.cbCode || ''}
                     onChange={(e) => handleInputChange('cbCode', e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, 1)}
                     inputRef={(el) => (inputRefs.current[1] = el)}
+                    required
                   />
                 </Grid>
               </Grid>
