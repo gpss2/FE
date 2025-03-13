@@ -11,13 +11,11 @@ import {
   Select,
   Stack,
   TextField,
-  Typography,
 } from '@mui/material';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
-import { result } from 'lodash';
 
 const topLeftColumns = [
   { field: 'taskNumber', headerName: '태스크\n번호', flex: 1 },
@@ -35,7 +33,7 @@ const topRightColumns = [
   { field: 'percentage', headerName: '짝수\n비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
-  { field: 'compressionSetting', headerName: '압접\n본수\n설정', flex: 1 },
+  { field: 'compressionSetting', headerName: '압접본수\n설정', flex: 1 },
   { field: 'baseLength', headerName: '기본\n로스', flex: 1 },
   { field: 'plusLAdjustment', headerName: '+L\n공차', flex: 1 },
   { field: 'minusLAdjustment', headerName: '-L\n공차', flex: 1 },
@@ -68,10 +66,10 @@ const Start = () => {
   const [topRightData, setTopRightData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
-  const [sseData, setSseData] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null); // 선택된 그룹 저장
+  const [selectedGroup, setSelectedGroup] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
+  // 모달에서 변경하는 값들
   const [compressionSetting, setCompressionSetting] = useState('Optimized');
   const [plusLAdjustment, setPlusLAdjustment] = useState(3.0);
   const [minusLAdjustment, setMinusLAdjustment] = useState('-3');
@@ -94,10 +92,8 @@ const Start = () => {
     plusWAdjustment: 3.0,
     minusWAdjustment: -3.0,
   });
-  const handleInputChange = (event) => {
-    setCompressionSetting(event.target.value);
-  };
-  // 데이터 로드
+
+  // axios 인터셉터 설정
   axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
@@ -118,9 +114,11 @@ const Start = () => {
       return Promise.reject(error);
     },
   );
+
   useEffect(() => {
     fetchTopLeftData();
   }, [specCodeDetailsMap]);
+
   const handleGeneratePlan = async () => {
     if (!selectedOrderId) return;
     setLoading(true);
@@ -134,7 +132,7 @@ const Start = () => {
       const allPlans = [];
       let isTimeout = false;
 
-      // 타임아웃 설정 (60초)
+      // 타임아웃 설정 (30분)
       const timeout = setTimeout(() => {
         isTimeout = true;
         eventSource.close();
@@ -144,14 +142,11 @@ const Start = () => {
         import('./CuttingPlan.js')
           .then((module) => {
             const dummyData = module.default;
-            console.log(dummyData);
             allPlans.push(dummyData);
 
-            // 더미 데이터로 summaryData 생성
             const summaryData = allPlans.map((plan) => {
               const totalQuantity =
                 plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
-
               return {
                 groupNumber: plan.group_id,
                 totalQuantity,
@@ -171,22 +166,19 @@ const Start = () => {
             setLoading(false);
           })
           .catch((error) => console.error('Error loading dummy data:', error));
-      }, 30 * 60 * 1000); // 타임아웃 30분
+      }, 30 * 60 * 1000);
 
       eventSource.addEventListener('plan_complete', (e) => {
-        if (isTimeout) return; // 타임아웃 발생 시 무시
-
+        if (isTimeout) return;
         const planData = JSON.parse(e.data);
         allPlans.push(planData);
-        console.log(allPlans);
         const summaryData = allPlans.map((plan) => {
           const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
-          const totalCB = plan.totalCB || 0; // totalCB를 올바르게 참조
-          console.log(plan);
+          const totalCB = plan.totalCB || 0;
           return {
             groupNumber: plan.group_id,
             totalQuantity,
-            totalCB, // 추가
+            totalCB,
             bbLossRate: plan.bbLossRate,
             cbLossRate: plan.cbLossRate,
             bbCode: plan.bbCode,
@@ -203,9 +195,8 @@ const Start = () => {
           };
         });
 
-        // SSE 응답이 모두 도착한 경우
         if (allPlans.length === groups.length) {
-          clearTimeout(timeout); // 타임아웃 클리어
+          clearTimeout(timeout);
           setBottomData(summaryData);
           setLoading(false);
           eventSource.close();
@@ -241,62 +232,43 @@ const Start = () => {
 
   const fetchTopRightData = async (orderId) => {
     try {
-      // 1. /api/settings 요청
       const settingsResponse = await axios.get('/api/settings');
       const settings = settingsResponse.data;
-
-      // 2. /api/plan/order-details/${orderId}/groups 요청
       const response = await axios.get(`/api/plan/order-details/${orderId}/groups`);
       const data = response.data.table;
-
-      // 요청된 데이터에서 첫 번째 specCode 추출
-      const specCodes = [...new Set(data.map((item) => item.specCode))][0]; // 중복 제거 후 첫 번째 값
-      console.log('specCodes:', specCodes);
-
-      // 3. /api/item/specific 요청
+      const specCodes = [...new Set(data.map((item) => item.specCode))][0];
       const specificResponse = await axios.get('/api/item/specific');
       const specificData = specificResponse.data.table;
-      console.log('specificData:', specificData);
-
-      // specCode와 매칭된 데이터 찾기
       const matchingSpec = specificData.find((item) => item.systemCode === specCodes);
-      console.log('matchingSpec:', matchingSpec);
-
       if (matchingSpec) {
-        // 상태 업데이트
-        if (matchingSpec) {
-          setSpecCodeDetailsMap((prevState) => ({
-            ...prevState,
-            length: matchingSpec.bbCode.split('-')[1],
-            bbCode: matchingSpec.bbCode,
-            cbCode: matchingSpec.cbCode,
-            bWidth: matchingSpec.bWidth,
-            cWidth: matchingSpec.cWidth,
-            compressionSetting: settings.compressionSetting,
-            plusLAdjustment: settings.plusLAdjustment || 3.0,
-            minusLAdjustment: settings.minusLAdjustment || -3.0,
-            plusWAdjustment: settings.plusWAdjustment || 3.0,
-            minusWAdjustment: settings.minusWAdjustment || -3.0,
-          }));
-        }
+        setSpecCodeDetailsMap((prevState) => ({
+          ...prevState,
+          length: matchingSpec.bbCode.split('-')[1],
+          bbCode: matchingSpec.bbCode,
+          cbCode: matchingSpec.cbCode,
+          bWidth: matchingSpec.bWidth,
+          cWidth: matchingSpec.cWidth,
+          compressionSetting: settings.compressionSetting,
+          plusLAdjustment: settings.plusLAdjustment || 3.0,
+          minusLAdjustment: settings.minusLAdjustment || -3.0,
+          plusWAdjustment: settings.plusWAdjustment || 3.0,
+          minusWAdjustment: settings.minusWAdjustment || -3.0,
+        }));
       } else {
         console.warn('No matching specCode found in /api/item/specific');
       }
-
-      // 데이터 처리 및 설정
       const processedData = data.map((item, index) => ({
         ...item,
-        id: item.groupNumber || index, // groupNumber를 id로 사용. 없을 경우 index 사용.
-        compressionSetting: settings.compressionSetting || '2본-최적', // API에서 가져온 값 또는 기본값
+        id: item.groupNumber || index,
+        compressionSetting: compressionSetting,
         baseLength: settings.baseLength || 50,
-        plusLAdjustment: settings.plusLAdjustment || 3.0,
-        minusLAdjustment: settings.minusLAdjustment || -3.0,
-        plusWAdjustment: settings.plusWAdjustment || 3.0,
-        minusWAdjustment: settings.minusWAdjustment || -3.0,
+        plusLAdjustment: plusLAdjustment,
+        minusLAdjustment: minusLAdjustment,
+        plusWAdjustment: plusWAdjustment,
+        minusWAdjustment: minusWAdjustment,
         effectiveWidthLength: settings.effectiveWidthLength || 100,
         iofdLimit: settings.iofdLimit || 300,
       }));
-
       setTopRightData(processedData);
     } catch (error) {
       console.error('Error fetching top-right data:', error);
@@ -304,6 +276,25 @@ const Start = () => {
   };
 
   const handlePrintInNewWindow = async () => {
+    function transformCode(code) {
+      // 첫 번째 숫자가 시작되는 인덱스 찾기
+      const firstDigitIndex = code.search(/\d/);
+      // 숫자가 없거나 최소한 7자리(길이 3 + 너비 정수 3 + 너비 소수 1)가 없으면 원본 반환
+      if (firstDigitIndex === -1 || code.length < firstDigitIndex + 7) return code;
+
+      // 타입 부분: 첫 번째 숫자 전까지
+      const typePart = code.substring(0, firstDigitIndex);
+
+      // 뒤쪽 7자리는 각각: 길이(3자리), 너비 정수부(3자리), 너비 소수부(1자리)
+      const lengthPart = parseInt(code.substring(firstDigitIndex, firstDigitIndex + 3), 10);
+      const widthInt = parseInt(code.substring(firstDigitIndex + 3, firstDigitIndex + 6), 10);
+      const widthDec = code.substring(firstDigitIndex + 6, firstDigitIndex + 7);
+
+      // 소수부가 '0'이면 소수점 없이, 아니라면 정수부와 소수부를 '.'로 연결
+      const widthPart = widthDec === '0' ? widthInt.toString() : `${widthInt}.${widthDec}`;
+
+      return `${typePart}${lengthPart}*${widthPart}`;
+    }
     if (!selectedGroup) return;
     try {
       const windowFeatures = `
@@ -316,281 +307,264 @@ const Start = () => {
         scrollbars=no,
         resizable=no
       `;
-
       const printWindow = window.open('', 'PrintWindow', windowFeatures);
-
       if (printWindow) {
+        // allRows 배열에 모든 행이 들어있음 (loss row 포함)
+        const allRows = [];
+        selectedGroup.result.table.forEach((panel) => {
+          panel.gratings_data.forEach((grating) => {
+            allRows.push({
+              panelNumber: panel.panelNumber,
+              qty: panel.qty,
+              lCuttingNumber: grating.lCuttingNumber, // 기존 번호 (식별용)
+              lCuttingQty: grating.item_qty || 0, // L 절단 수량 (숫자) <-- 심각한 버그, 말해야함
+              orderNumber: grating.orderNumber,
+              customerCode: grating.customerCode,
+              drawingNumber: grating.drawingNumber,
+              id: grating.id,
+              width_mm: grating.width_mm,
+              length_mm: grating.length_mm,
+              lep_mm: grating.lep_mm,
+              rep_mm: grating.rep_mm,
+              item_qty: grating.item_qty || 0, // 품목 수량
+              loss: panel.loss,
+              isLossRow: false,
+            });
+          });
+          // loss row 추가
+          allRows.push({
+            panelNumber: panel.panelNumber,
+            isLossRow: true,
+            loss: panel.loss,
+          });
+        });
+        // 페이지 나누기 (15줄씩)
+        const pages = allRows.reduce((pages, row, index) => {
+          const pageIndex = Math.floor(index / 22);
+          if (!pages[pageIndex]) pages[pageIndex] = [];
+          pages[pageIndex].push(row);
+          return pages;
+        }, []);
+        // 전체 합계 계산 (loss row 제외)
+        const totalLCuttingQty = allRows.reduce((sum, row) => {
+          return row.isLossRow ? sum : sum + Number(row.lCuttingQty);
+        }, 0);
+        const totalItemQty = allRows.reduce((sum, row) => {
+          return row.isLossRow ? sum : sum + Number(row.item_qty);
+        }, 0);
+        // HTML 생성 (페이지별)
         const htmlContent = `<!DOCTYPE html>
       <html lang="en">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>절단계획 상세 - 품목배치 리스트</title>
+        <title>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</title>
         <style>
           @page {
             size: A4 landscape;
-            margin: 15mm, 5mm;
-
+            margin: 10mm 5mm 5mm 5mm;
+          }
+          @media print {
+          .print-button {
+          display: none;
+            }
           }
           body {
-            font-family: Arial, sans-serif;
+
             margin: 0;
             padding: 0;
             -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
+
           }
           .page {
             page-break-after: always;
           }
           .header {
-            text-align: center;
-            margin-bottom: 10px;
+            text-align: left;
+            padding-left: 10px;
+
           }
           .header h2 {
             margin: 5px 0;
+            font-size: 20px;
           }
           .header-details {
             display: flex;
-            justify-content: space-evenly;
-            margin-bottom: 10px;
+            justify-content: flex-start;
+
           }
+          .header-details > h2{
+            padding-right: 30px;
+          } 
           table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+
           }
           th, td {
             border: 1px solid black;
-            padding: 4px;
+            padding: 0px;
             text-align: center;
+            line-height: 25px;   /* 텍스트의 높이와 셀 높이를 맞춤 */
+             height: 25px; 
           }
           th {
             background-color: gray;
+            color: black;
           }
-          .row-even {
-            background-color: #ffffff;
-          }
-          .row-odd {
-            background-color: #f2f2f2;
-          }
-          .print-button {
-            padding: 5px 10px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-            margin: 10px;
-          }
-          .print-button:hover {
-            background-color: #0056b3;
-          }
-          @media print {
-            .print-button {
-              display: none;
-            }
-          }
+        tr {
+         height: 25px;
+         }
+     /* 변경: 홀수행의 배경색을 노란색으로 */
+          .row-odd { background-color: #ffffff; }
+          .row-even { background-color: yellow; }
         </style>
       </head>
       <body>
         <button class="print-button" onclick="window.print()">출력</button>
         ${
-          selectedGroup.result?.table?.length > 0
-            ? (() => {
-                // 1. 전체 패널 순서에 따른 색상 적용을 위한 panelOrderMap 생성
-                const panelOrderMap = {};
-                let panelOrderCounter = 0;
-                selectedGroup.result.table.forEach((panel) => {
-                  if (panelOrderMap[panel.panelNumber] === undefined) {
-                    panelOrderMap[panel.panelNumber] = panelOrderCounter++;
-                  }
-                });
-
-                // 2. 모든 행 데이터를 구성 (각 패널의 그라팅 데이터 + 마지막에 loss row 추가)
-                const allRows = [];
-                selectedGroup.result.table.forEach((panel) => {
-                  // 각 패널의 그라팅 데이터
-                  panel.gratings_data.forEach((grating) => {
-                    allRows.push({
-                      panelNumber: panel.panelNumber,
-                      qty: panel.qty,
-                      lCuttingNumber: grating.lCuttingNumber,
-                      orderNumber: grating.orderNumber,
-                      customerCode: grating.customerCode,
-                      drawingNumber: grating.drawingNumber,
-                      id: grating.id,
-                      width_mm: grating.width_mm,
-                      length_mm: grating.length_mm,
-                      lep_mm: grating.lep_mm,
-                      rep_mm: grating.rep_mm,
-                      item_qty: grating.item_qty,
-                      loss: panel.loss,
-                      isLossRow: false,
-                    });
-                  });
-                  // 패널의 마지막에 loss 정보를 위한 행 추가
-                  allRows.push({
-                    panelNumber: panel.panelNumber,
-                    isLossRow: true,
-                    loss: panel.loss,
-                  });
-                });
-
-                // 3. 15줄마다 페이지로 나누기
-                const pages = allRows.reduce((pages, row, index) => {
-                  const pageIndex = Math.floor(index / 15);
-                  if (!pages[pageIndex]) pages[pageIndex] = [];
-                  pages[pageIndex].push(row);
-                  return pages;
-                }, []);
-
-                // 4. 각 페이지별 HTML 생성
-                return pages
-                  .map((pageRows, pageIndex, pagesArr) => {
-                    const isLastPage = pageIndex === pagesArr.length - 1;
-                    // 페이지 내에서 판 번호 중복 표시는 한 번만 (해당 페이지 내)
-                    const seenPanelNumbers = new Set();
-                    // **변경된 부분: 판수량(qtyForDisplay)도 첫 번째에만 표시**
-                    const processedRows = pageRows.map((row) => {
-                      if (!row.isLossRow) {
-                        if (seenPanelNumbers.has(row.panelNumber)) {
-                          return { ...row, panelNumberForDisplay: '', qtyForDisplay: '' };
-                        } else {
-                          seenPanelNumbers.add(row.panelNumber);
-                          return {
-                            ...row,
-                            panelNumberForDisplay: row.panelNumber,
-                            qtyForDisplay: row.qty,
-                          };
-                        }
+          pages.length > 0
+            ? pages
+                .map((pageRows, pageIndex, pagesArr) => {
+                  // 누적 오프셋 계산 (현재 페이지 이전의 총 행 수)
+                  const cumulativeOffset = pagesArr
+                    .slice(0, pageIndex)
+                    .reduce((sum, p) => sum + p.length, 0);
+                  // 페이지 내 행별 HTML 생성 (번호 칼럼 추가)
+                  const rowsHtml = pageRows
+                    .map((row, rowIndex) => {
+                      const rowNumber = cumulativeOffset + rowIndex + 1;
+                      const rowClass = row.isLossRow
+                        ? ''
+                        : row.panelNumber % 2 === 0
+                        ? 'row-even'
+                        : 'row-odd';
+                      if (row.isLossRow) {
+                        return `
+                <tr class="${rowClass}">
+                  <td>${rowNumber}</td>
+                  <td></td>
+                  <td></td>
+                  <td>Loss</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td>${row.loss}</td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                  <td></td>
+                </tr>
+              `;
                       } else {
-                        // loss row는 판번호와 판수량 셀은 빈값 처리
-                        return { ...row, panelNumberForDisplay: '', qtyForDisplay: '' };
+                        return `
+                <tr class="${rowClass}">
+                  <td>${rowNumber}</td>
+                  <td>${row.panelNumberForDisplay || row.panelNumber}</td>
+                  <td>${row.qtyForDisplay || row.qty}</td>
+                  <td>${row.lCuttingNumber}</td>
+                  <td>${row.orderNumber}</td>
+                  <td>${row.customerCode}</td>
+                  <td>${row.drawingNumber}</td>
+                  <td>${row.id}</td>
+                  <td>${row.width_mm}</td>
+                  <td>${row.length_mm}</td>
+                  <td>${row.lep_mm}</td>
+                  <td>${row.rep_mm}</td>
+                  <td>${row.lCuttingQty}</td>
+                  <td>${row.item_qty}</td>
+                </tr>
+              `;
                       }
-                    });
-
-                    return `
-                      <div class="page">
-                        <div class="header">
-                          <h2>절단계획 상세 - 품목배치 리스트 (그룹번호: ${
-                            selectedGroup.groupNumber
-                          })</h2>
-                          <div class="header-details">
-                            <h2>압전본수: ${'2' || '2'}</h2>
-                            <h2>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h2>
-                            <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
-                      selectedGroup.minusLAdjustment || 'N/A'
-                    } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
-                      selectedGroup.minusWAdjustment || 'N/A'
-                    })</h2>
-                          </div>
-                          <div class="header-details">
-                            <h2>BB: ${specCodeDetailsMap.bbCode.split('_')[0] || 'N/A'}</h2>
-                            <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
-                            <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
-                            <h2>CB: ${specCodeDetailsMap.cbCode.split('_')[0] || 'N/A'}</h2>
-                            <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
-                          </div>
-                        </div>
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>판 번호</th>
-                              <th>판수량</th>
-                              <th>L 절단<br> 번호</th>
-                              <th>수주 번호</th>
-                              <th>수주처명</th>
-                              <th>도면번호</th>
-                              <th>품목 번호</th>
-                              <th>폭 (mm)</th>
-                              <th>길이 (mm)</th>
-                              <th>LEP (mm)</th>
-                              <th>REP (mm)</th>
-                              <th>L 절단 수량</th>
-                              <th>품목 수량</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            ${processedRows
-                              .map((row) => {
-                                // 전역 panelOrderMap을 참조하여, 해당 판의 순서에 따라 배경색 결정 (짝수: row-even, 홀수: row-odd)
-                                const rowClass =
-                                  panelOrderMap[row.panelNumber] % 2 === 0 ? 'row-even' : 'row-odd';
-                                if (row.isLossRow) {
-                                  return `
-                                    <tr class="${rowClass}">
-                                      <td></td>
-                                      <td></td>
-                                      <td>Loss</td>
-                                      <td></td>
-                                      <td></td>
-                                      <td></td>
-                                      <td></td>
-                                      <td></td>
-                                      <td>${row.loss}</td>
-                                      <td></td>
-                                      <td></td>
-                                      <td></td>
-                                      <td></td>
-                                    </tr>
-                                  `;
-                                } else {
-                                  return `
-                                    <tr class="${rowClass}">
-                                      <td>${row.panelNumberForDisplay}</td>
-                                      <td>${row.qtyForDisplay}</td>
-                                      <td>${row.lCuttingNumber}</td>
-                                      <td>${row.orderNumber}</td>
-                                      <td>${row.customerCode}</td>
-                                      <td>${row.drawingNumber}</td>
-                                      <td>${row.id}</td>
-                                      <td>${row.width_mm}</td>
-                                      <td>${row.length_mm}</td>
-                                      <td>${row.lep_mm}</td>
-                                      <td>${row.rep_mm}</td>
-                                      <td>${row.item_qty}</td>
-                                      <td>${row.item_qty}</td>
-                                    </tr>
-                                  `;
-                                }
-                              })
-                              .join('')}
-                            ${
-                              isLastPage
-                                ? `
-                              <!-- 마지막 페이지에만 최종 합계 2줄 추가 (왼쪽에 배치) -->
-                              <tr>
-                                <th>합계</th>
-                                <th>총판수</th>
-                                <th>절단수량</th>
-                                <th>총 CB수량</th>
-                                <th>총품목수량</th>
-                                <td colspan="8"></td>
-                              </tr>
-                              <tr>
-                                <td></td>
-                                <td>${selectedGroup.result.table.length || 'N/A'}</td>
-                                <td>${specCodeDetailsMap.totalQuantity || 'N/A'}</td>
-                                <td>${selectedGroup.totalCB}</td>
-                                <td>${specCodeDetailsMap.totalQuantity || 'N/A'}</td>
-                                <td colspan="8"></td>
-                              </tr>
-                              `
-                                : ''
-                            }
-                          </tbody>
-                        </table>
-                      </div>
-                    `;
-                  })
-                  .join('');
-              })()
+                    })
+                    .join('');
+                  // 마지막 페이지에 합계 행 추가
+                  const sumHtml =
+                    pageIndex === pagesArr.length - 1
+                      ? `
+            <tr style="background-color: gray; color: black;">
+              <th>번호</th>
+              <th>합계</th>
+              <th>총판수</th>
+              <th>절단수량</th>
+              <th>총 CB수량</th>
+              <th>총품목수량</th>
+              <th colspan="8"></th>
+            </tr>
+            <tr style="background-color: white; color: black;">
+              <td></td>
+              <td></td>
+              <td>${selectedGroup.result.table.length || 'N/A'}</td>
+              <td>${totalLCuttingQty}</td>
+              <td>${selectedGroup.totalCB || 0}</td>
+              <td>${totalItemQty}</td>
+              <td colspan="8"></td>
+            </tr>
+          `
+                      : '';
+                  return `
+            <div class="page">
+              <div class="header">
+                <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                  selectedGroup.groupNumber
+                })</h2>
+                <div class="header-details">
+                  <h2 >압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
+                  <h2>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h2>
+                  <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
+                    selectedGroup.minusLAdjustment || 'N/A'
+                  } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
+                    selectedGroup.minusWAdjustment || 'N/A'
+                  })</h2>
+                </div>
+                <div class="header-details">
+                  <h2>BB: ${
+                    specCodeDetailsMap.bbCode ? transformCode(specCodeDetailsMap.bbCode) : 'N/A'
+                  }</h2>
+                  <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
+                  <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
+                  <h2>CB: ${
+                    specCodeDetailsMap.cbCode ? transformCode(specCodeDetailsMap.cbCode) : 'N/A'
+                  }</h2>
+                  <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
+                  <h2>EB: ${specCodeDetailsMap.ebCode || 'SQ6*6'}</h2>
+                </div>
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>번호</th>
+                    <th>판 번호</th>
+                    <th>판수량</th>
+                    <th>L 절단<br>번호</th>
+                    <th>수주 번호</th>
+                    <th>수주처명</th>
+                    <th>도면번호</th>
+                    <th>품목 번호</th>
+                    <th>폭</th>
+                    <th>길이</th>
+                    <th>LEP</th>
+                    <th>REP</th>
+                    <th>L 절단<br>수량</th>
+                    <th>품목<br>수량</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rowsHtml}
+                  ${sumHtml}
+                </tbody>
+              </table>
+            </div>
+          `;
+                })
+                .join('')
             : '<p>데이터가 없습니다.</p>'
         }
       </body>
       </html>
       `;
-
         printWindow.document.write(htmlContent);
         printWindow.document.close();
       }
@@ -598,7 +572,7 @@ const Start = () => {
       console.error('Error fetching specific data:', error);
     }
   };
-  // 왼쪽 테이블에서 행 클릭 시 오른쪽 및 하단 테이블 데이터 로드
+
   const handleRowClick = (params) => {
     const orderId = params.row.id;
     const totalWeight = params.row.totalWeight;
@@ -608,12 +582,11 @@ const Start = () => {
       totalWeight: totalWeight,
       totalQuantity: totalQuantity,
     }));
-    console.log(specCodeDetailsMap);
     setSelectedOrderId(orderId);
     fetchTopRightData(orderId);
   };
+
   const handleModalSave = () => {
-    // 필요시 specCodeDetailsMap에도 업데이트 가능
     setSpecCodeDetailsMap((prev) => ({
       ...prev,
       compressionSetting,
@@ -622,8 +595,19 @@ const Start = () => {
       plusWAdjustment,
       minusWAdjustment,
     }));
+    setTopRightData((prevData) =>
+      prevData.map((row) => ({
+        ...row,
+        compressionSetting: compressionSetting,
+        plusLAdjustment: plusLAdjustment,
+        minusLAdjustment: minusLAdjustment,
+        plusWAdjustment: plusWAdjustment,
+        minusWAdjustment: minusWAdjustment,
+      })),
+    );
     setModalOpen(false);
   };
+
   return (
     <PageContainer title="절단 계획 생성">
       <br />
@@ -701,9 +685,7 @@ const Start = () => {
                 columnHeaderHeight={30}
                 rowHeight={30}
                 sx={{
-                  '& .MuiDataGrid-footerContainer': {
-                    display: '',
-                  },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
             </Box>
@@ -728,7 +710,6 @@ const Start = () => {
               <MenuItem value="Optimized">2본-최적</MenuItem>
               <MenuItem value="Basic">2본-기본</MenuItem>
             </Select>
-
             <TextField
               label="+L 공차"
               type="number"
@@ -741,13 +722,11 @@ const Start = () => {
               value={minusLAdjustment}
               onChange={(e) => {
                 const val = e.target.value;
-                // '-' 또는 빈 문자열은 그대로 허용, 유효한 숫자인 경우에도 업데이트
                 if (val === '-' || val === '' || !isNaN(Number(val))) {
                   setMinusLAdjustment(val);
                 }
               }}
               onBlur={() => {
-                // 입력이 완료되면 숫자로 변환하여 처리 (필요한 경우)
                 const parsed = parseFloat(minusLAdjustment);
                 if (!isNaN(parsed)) {
                   setMinusLAdjustment(parsed.toString());

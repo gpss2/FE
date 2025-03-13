@@ -179,23 +179,28 @@ const Range = () => {
       <Grid container spacing={2}>
         <Grid item xs={12} mt={3}>
           <ParentCard title="태스크범위 지정 화면">
-            <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
+            <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
               <DataGrid
                 rows={topData}
                 columns={topColumns}
                 columnHeaderHeight={30}
-                rowHeight={30}
+                rowHeight={25}
                 disableSelectionOnClick
                 onRowClick={handleRowClick}
                 sx={{
+                  '& .MuiDataGrid-cell': {
+                    border: '1px solid black',
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeader': {
+                    fontSize: '14px',
+                  },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': {
-                    display: '',
-                  },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
             </Box>
@@ -207,7 +212,7 @@ const Range = () => {
       <Grid container spacing={2}>
         <Grid item xs={12} mt={3}>
           <ParentCard title="그룹범위 지정 화면">
-            <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
+            <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
               <DataGrid
                 rows={bottomData}
                 columns={bottomColumns}
@@ -216,16 +221,27 @@ const Range = () => {
                 onSelectionModelChange={handleSelectionModelChange}
                 onRowClick={handleCellClick}
                 columnHeaderHeight={30}
-                rowHeight={30}
+                rowHeight={25}
                 sx={{
+                  '& .MuiDataGrid-cell': {
+                    border: '1px solid black',
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeader': {
+                    fontSize: '14px',
+                  },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': {
-                    display: '',
+                  '& .MuiDataGrid-cellCheckbox': {
+                    display: 'none',
                   },
+                  '& .MuiDataGrid-columnHeaderCheckbox': {
+                    display: 'none',
+                  },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
             </Box>

@@ -149,6 +149,7 @@ const bottomColumns = [
  */
 const recalcValues = (newData, oldData) => {
   let source = '';
+  let C_PITCH = 100;
   if (newData.length_mm !== oldData.length_mm) {
     source = 'length_mm';
   } else if (newData.cbCount !== oldData.cbCount) {
@@ -166,14 +167,14 @@ const recalcValues = (newData, oldData) => {
 
   if (source === 'length_mm') {
     length_mm = Number(newData.length_mm);
-    cbCount = Math.floor(length_mm / 100) + 1;
-    let total = length_mm - (cbCount - 1) * 100;
+    cbCount = Math.floor(length_mm / C_PITCH) + 1;
+    let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
     // 최소 40 미만이면 CB 수를 줄여 재계산
     while ((lep < 40 || rep < 40) && cbCount > 1) {
       cbCount--;
-      total = length_mm - (cbCount - 1) * 100;
+      total = length_mm - (cbCount - 1) * C_PITCH;
       lep = total / 2;
       rep = total / 2;
     }
@@ -183,12 +184,12 @@ const recalcValues = (newData, oldData) => {
   } else if (source === 'cbCount') {
     length_mm = Number(oldData.length_mm);
     cbCount = Number(newData.cbCount);
-    let total = length_mm - (cbCount - 1) * 100;
+    let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
     while ((lep < 40 || rep < 40) && cbCount > 1) {
       cbCount--;
-      total = length_mm - (cbCount - 1) * 100;
+      total = length_mm - (cbCount - 1) * C_PITCH;
       lep = total / 2;
       rep = total / 2;
     }
@@ -199,7 +200,7 @@ const recalcValues = (newData, oldData) => {
     // 사용자가 LEP를 수정한 경우: 기존 길이와 CB 수는 그대로 유지
     length_mm = Number(oldData.length_mm);
     cbCount = Number(oldData.cbCount);
-    const total = length_mm - (cbCount - 1) * 100;
+    const total = length_mm - (cbCount - 1) * C_PITCH;
     const newLep = Number(newData.lep_mm);
     const newRep = total - newLep;
     lep = newLep;
@@ -211,7 +212,7 @@ const recalcValues = (newData, oldData) => {
     // 사용자가 REP를 수정한 경우: 기존 길이와 CB 수는 그대로 유지
     length_mm = Number(oldData.length_mm);
     cbCount = Number(oldData.cbCount);
-    const total = length_mm - (cbCount - 1) * 100;
+    const total = length_mm - (cbCount - 1) * C_PITCH;
     const newRep = Number(newData.rep_mm);
     const newLep = total - newRep;
     lep = newLep;
@@ -575,12 +576,12 @@ const Condition = () => {
         <Grid container spacing={2}>
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주 선택">
-              <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
+              <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
                 <DataGrid
                   rows={topData}
                   columns={topColumns}
                   columnHeaderHeight={30}
-                  rowHeight={30}
+                  rowHeight={25}
                   onRowClick={handleRowClick}
                   disableSelectionOnClick
                   sx={{
@@ -608,32 +609,31 @@ const Condition = () => {
             <ParentCard
               title={`수주별 품목명세 입력 화면 ${selectedOrderNumber ? selectedOrderNumber : ''}`}
             >
-              <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
+              <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
                 <DataGrid
                   rows={bottomData}
                   columns={bottomColumns}
-                  columnHeaderHeight={45}
-                  rowHeight={30}
+                  columnHeaderHeight={30}
+                  rowHeight={25}
                   processRowUpdate={handleProcessRowUpdate}
                   disableSelectionOnClick
                   getRowId={(row) => row.id}
                   onRowClick={(params) => setSelectedDetailId(params.id)}
                   experimentalFeatures={{ newEditingApi: true }}
                   onCellDoubleClick={handleCellDoubleClick}
-                  // 행의 배경색은 도면번호 그룹에 따라 결정 (getRowClassName 사용)
                   getRowClassName={(params) => (params.row.group === 0 ? 'group0' : 'group1')}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
                     },
-                    // 그룹별 배경색 지정
                     '& .group0': { backgroundColor: '#ffffff' },
                     '& .group1': { backgroundColor: '#f5f5f5' },
-                    // 오류가 있는 셀에 대해 빨간색 배경 (글자색 대비를 위해 white)
                     '& .error-cell': { backgroundColor: 'red', color: 'white' },
                     '& .MuiDataGrid-columnHeaderTitle': {
                       whiteSpace: 'pre-wrap',
