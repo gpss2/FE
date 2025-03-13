@@ -1,178 +1,122 @@
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 
 const DrawingCanvas = ({ data }) => {
-  const canvasRef = useRef(null);
+  if (!data) return null;
+  const panels = data.result ? data.result.table : data.table;
+  if (!Array.isArray(panels)) return null;
 
-  useEffect(() => {
-    console.log('Received data:', data);
-    if (!data) return;
+  // 6200px의 내부 좌표계를 화면에 축소하기 위한 스케일 팩터 (예: 0.13 → 약 800px 폭)
+  const scaleFactor = 0.13;
 
-    // 1) panel 배열 꺼내기 (data.result.table 또는 data.table)
-    const panels = data.result ? data.result.table : data.table;
-    if (!panels || !Array.isArray(panels)) return;
-
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    // 내부 캔버스 해상도 (파이썬 코드와 동일)
-    const canvasWidth = 6200;
-    // 여러 패널을 한 번에 그리려면 높이를 넉넉하게 잡거나, 동적으로 계산
-    const canvasHeight = 5000; // 예: 5000 픽셀 (패널 개수 많으면 조정)
-    canvas.width = canvasWidth;
-    canvas.height = canvasHeight;
-
-    const ColorWhite = '#FFFFFF';
-    const ColorBlack = '#000000';
-    const ColorBlue = '#7F7FFF';
-    ctx.fillStyle = ColorWhite;
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // 판(Panel) 간 세로 간격
-    const panelSpacing = 200;
-    // 각 패널의 상단 여백
-    let currentPanelTop = 50;
-
-    panels.forEach((panel, panelIndex) => {
-      // 2) lCuttingNumber로 그룹화 → "슬롯" 복원
-      const slotMap = {};
-      panel.gratings_data.forEach((g) => {
-        const slotKey = g.lCuttingNumber;
-        if (!slotMap[slotKey]) {
-          slotMap[slotKey] = [];
-        }
-        slotMap[slotKey].push(g);
-      });
-      // 슬롯 목록
-      const slots = Object.values(slotMap);
-
-      // "슬롯들 중 최대 높이"를 구해서, 그 높이를 panel 전체 높이로 사용
-      const panelMaxHeight = computePanelMaxHeight(slots);
-
-      // === 슬롯별로 그리기 ===
-      slots.forEach((slot) => {
-        // slot 내 첫 그레이팅
-        const firstGrating = slot[0];
-        const leftCut = firstGrating.leftCut;
-        const rightCut = firstGrating.rightCut;
-        const leftWeld = firstGrating.leftWeld;
-        const rightWeld = firstGrating.rightWeld;
-
-        // [LeftMargin + leftCut + 5, currentPanelTop, ...] 계산
-        const leftX = 50 + leftCut + 5;
-        const rightX = 50 + rightCut - 5;
-
-        // 슬롯이 결합(IsCombined)인지 → slot.length > 1이면 결합
-        if (slot.length === 1) {
-          // 단일 슬롯
-          const singleWidth = slot[0].width_mm;
-          // rectangle: (leftX, currentPanelTop) ~ (rightX, currentPanelTop + singleWidth)
-          ctx.fillStyle = ColorBlue;
-          ctx.fillRect(leftX, currentPanelTop, rightX - leftX, singleWidth);
-          ctx.strokeStyle = ColorBlack;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(leftX, currentPanelTop, rightX - leftX, singleWidth);
-        } else {
-          // 결합 슬롯
-          let bby = 0; // 파이썬 코드: BBY = 0
-          slot.forEach((grating, idx) => {
-            const w = grating.width_mm;
-            // rectangle: (leftX, currentPanelTop + bby) ~ (rightX, currentPanelTop + bby + w)
-            ctx.fillStyle = ColorBlue;
-            ctx.fillRect(leftX, currentPanelTop + bby, rightX - leftX, w);
-            ctx.strokeStyle = ColorBlack;
-            ctx.lineWidth = 2;
-            ctx.strokeRect(leftX, currentPanelTop + bby, rightX - leftX, w);
-
-            // bby += grating.width_mm + 25
-            bby += w + 25;
-          });
-        }
-
-        // 크로스바(수직선) 그리기
-        // 파이썬은 LeftWeldingPoint~RightWeldingPoint에서 100mm 간격
-        if (leftWeld !== undefined && rightWeld !== undefined) {
-          let weldX = leftWeld;
-          while (weldX < rightWeld) {
-            ctx.beginPath();
-            ctx.moveTo(50 + weldX, currentPanelTop);
-            ctx.lineTo(50 + weldX, currentPanelTop + panelMaxHeight);
-            ctx.strokeStyle = ColorBlack;
-            ctx.lineWidth = 5;
-            ctx.stroke();
-            weldX += 100;
-          }
-          // 마지막 선
-          ctx.beginPath();
-          ctx.moveTo(50 + rightWeld, currentPanelTop);
-          ctx.lineTo(50 + rightWeld, currentPanelTop + panelMaxHeight);
-          ctx.stroke();
-        }
-
-        // L 절단 선(흰색) → leftCut, rightCut
-        ctx.beginPath();
-        ctx.moveTo(50 + leftCut, currentPanelTop);
-        ctx.lineTo(50 + leftCut, currentPanelTop + panelMaxHeight);
-        ctx.strokeStyle = ColorWhite;
-        ctx.lineWidth = 5;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.moveTo(50 + rightCut, currentPanelTop);
-        ctx.lineTo(50 + rightCut, currentPanelTop + panelMaxHeight);
-        ctx.strokeStyle = ColorWhite;
-        ctx.lineWidth = 5;
-        ctx.stroke();
-      });
-
-      // 베어링 바(수평선) → 파이썬은 0 ~ PanelWidth, 30 간격
-      // 여기서는 panelMaxHeight 사용
-      for (let y = currentPanelTop; y < currentPanelTop + panelMaxHeight; y += 30) {
-        ctx.beginPath();
-        ctx.moveTo(50, y);
-        ctx.lineTo(50 + 6100, y);
-        ctx.strokeStyle = ColorBlack;
-        ctx.lineWidth = 5;
-        ctx.stroke();
-      }
-
-      // 다음 패널로 넘어가기 전에 currentPanelTop 업데이트
-      currentPanelTop += panelMaxHeight + panelSpacing;
+  // 슬롯 높이 계산 (단일 슬롯: width_mm, 결합 슬롯: 각 width_mm 합 + 25*(슬롯 개수-1))
+  const computeSlotHeight = (slot) => {
+    if (slot.length === 1) return slot[0].width_mm;
+    let total = 0;
+    slot.forEach((g) => {
+      total += g.width_mm;
     });
-  }, [data]);
+    total += 25 * (slot.length - 1);
+    return total;
+  };
 
-  // "결합 슬롯"이면 widths를 모두 합하고 사이 간격(25*(N-1))을 더해서 최대값 판단
-  function computePanelMaxHeight(slots) {
-    let maxHeight = 0;
+  // 패널을 DOM 요소로 변환해 렌더링하는 함수
+  const renderPanel = (panel, panelIndex) => {
+    // lCuttingNumber 기준으로 슬롯 그룹화
+    const slotMap = {};
+    panel.gratings_data.forEach((g) => {
+      const slotKey = g.lCuttingNumber;
+      if (!slotMap[slotKey]) {
+        slotMap[slotKey] = [];
+      }
+      slotMap[slotKey].push(g);
+    });
+    const slots = Object.values(slotMap);
+
+    // 패널 내 최대 높이 계산
+    let panelMaxHeight = 0;
     slots.forEach((slot) => {
-      if (slot.length === 1) {
-        // 단일 슬롯 높이 = width_mm
-        const h = slot[0].width_mm;
-        if (h > maxHeight) maxHeight = h;
-      } else {
-        // 결합 슬롯 높이 = sum(width_mm) + 25*(개수-1)
-        let total = 0;
-        slot.forEach((g) => {
-          total += g.width_mm;
-        });
-        total += 25 * (slot.length - 1);
-        if (total > maxHeight) maxHeight = total;
-      }
+      const h = computeSlotHeight(slot);
+      if (h > panelMaxHeight) panelMaxHeight = h;
     });
-    return maxHeight;
-  }
 
-  // 내부 해상도는 (6200 x 5000)이지만, 화면에는 축소해서 표시
+    const slotElements = [];
+    slots.forEach((slot) => {
+      const first = slot[0];
+      const leftCut = first.leftCut;
+      const rightCut = first.rightCut;
+      // 원래 좌표에서 50px 여백 후 leftCut+5, rightCut-5 적용하고 스케일 팩터 적용
+      const leftX = (50 + leftCut + 5) * scaleFactor;
+      const rightX = (50 + rightCut - 5) * scaleFactor;
+      let currentOffset = 0;
+      slot.forEach((grating, idx) => {
+        const w = grating.width_mm;
+        const rectStyle = {
+          position: 'absolute',
+          left: leftX + 'px',
+          top: (50 + currentOffset) * scaleFactor + 'px',
+          width: rightX - leftX + 'px',
+          height: w * scaleFactor + 'px',
+          backgroundColor: '#7F7FFF',
+          border: '1px solid #000',
+          boxSizing: 'border-box',
+          // 3D 효과를 위해 더 강한 기울기 적용
+          transform: 'rotateX(25deg)',
+          transformOrigin: 'top left',
+          transition: 'transform 0.3s ease, background-color 0.3s ease',
+        };
+
+        const handleMouseEnter = (e) => {
+          e.currentTarget.style.transform = 'rotateX(0deg) translateY(-5px)';
+          e.currentTarget.style.backgroundColor = '#FFA500';
+        };
+        const handleMouseLeave = (e) => {
+          e.currentTarget.style.transform = 'rotateX(25deg)';
+          e.currentTarget.style.backgroundColor = '#7F7FFF';
+        };
+
+        slotElements.push(
+          <div
+            key={`${panelIndex}-slot-${first.lCuttingNumber}-${idx}`}
+            style={rectStyle}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          />,
+        );
+        currentOffset += w + 25;
+      });
+    });
+
+    // 패널 컨테이너 (내부 좌표계 6200px를 스케일 팩터로 축소)
+    const panelStyle = {
+      position: 'relative',
+      width: 6200 * scaleFactor + 'px',
+      height: (panelMaxHeight + 100) * scaleFactor + 'px',
+      marginBottom: '20px',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
+      background:
+        'repeating-linear-gradient(45deg, #e5e5e5, #e5e5e5 5px, #bfbfbf 5px, #bfbfbf 10px)',
+      // 패널 자체에 3D 기울기 적용
+      transform: 'rotateX(25deg)',
+      transformOrigin: 'top left',
+    };
+
+    // 컨테이너에 perspective 적용해서 3D 효과 극대화
+    const containerStyle = {
+      perspective: '1000px',
+      marginBottom: '20px',
+    };
+
+    return (
+      <div key={`panel-${panelIndex}`} style={containerStyle}>
+        <div style={panelStyle}>{slotElements}</div>
+      </div>
+    );
+  };
+
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        border: '1px solid #000',
-        // 가로 폭을 1/10로 축소(620px), 세로는 비율 유지(auto)
-        width: '1000px',
-        height: 'auto',
-      }}
-    />
+    <div style={{ width: '100%', overflowX: 'auto', padding: '20px' }}>
+      {panels.map((panel, idx) => renderPanel(panel, idx))}
+    </div>
   );
 };
 
