@@ -34,13 +34,6 @@ const DrawingCanvas = ({ data }) => {
     let currentPanelTop = 50;
 
     panels.forEach((panel, panelIndex) => {
-      console.log(`Panel ${panel.panelNumber} start Y: ${currentPanelTop}`);
-      // panel 안에 gratings_data가 없으면 skip
-      if (!panel.gratings_data || panel.gratings_data.length === 0) {
-        console.warn(`Panel ${panel.panelNumber}에 gratings_data가 없음`);
-        return;
-      }
-
       // 2) lCuttingNumber로 그룹화 → "슬롯" 복원
       const slotMap = {};
       panel.gratings_data.forEach((g) => {
@@ -176,7 +169,7 @@ const DrawingCanvas = ({ data }) => {
       style={{
         border: '1px solid #000',
         // 가로 폭을 1/10로 축소(620px), 세로는 비율 유지(auto)
-        width: '1200px',
+        width: '1000px',
         height: 'auto',
       }}
     />
