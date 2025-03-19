@@ -7,8 +7,22 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import { width } from '@mui/system';
 
+const indexColumn = {
+  field: 'index',
+  headerName: '',
+  width: 20,
+  sortable: false,
+  filterable: false,
+  disableColumnMenu: true,
+  cellClassName: 'index-cell',
+  renderCell: (params) => {
+    const sortedRowIds = params.api.getSortedRowIds();
+    return sortedRowIds.indexOf(params.id) + 1;
+  },
+};
 // 상단 테이블 컬럼 정의
 const topColumns = [
+  indexColumn,
   { field: 'orderNumber', headerName: '수주번호', flex: 1 },
   { field: 'category', headerName: '구분', flex: 1 },
   { field: 'orderDate', headerName: '수주일자', flex: 1 },
@@ -21,6 +35,7 @@ const topColumns = [
 
 // 하단 테이블 컬럼 정의
 const bottomColumns = [
+  indexColumn,
   { field: 'drawingNumber', headerName: '도면\n번호', width: 60 },
   { field: 'itemNo', headerName: '품목 번호', width: 60 },
   { field: 'itemType', headerName: '품목\n종류', width: 60 },
@@ -201,16 +216,24 @@ const Range = () => {
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
                     fontSize: '12px',
+                    paddingTop: '2px', // 위쪽 패딩 조정
+                    paddingBottom: '2px', // 아래쪽 패딩 조정
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '14px',
+                    backgroundColor: '#B2B2B2',
+                    border: '1px solid black',
                   },
+                  '& .group0': { backgroundColor: '#ffffff' },
+                  '& .group1': { backgroundColor: '#f5f5f5' },
+                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
                   '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
             </Box>
@@ -239,6 +262,8 @@ const Range = () => {
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '14px',
+                    backgroundColor: '#B2B2B2',
+                    border: '1px solid black',
                   },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
@@ -252,6 +277,7 @@ const Range = () => {
                     display: 'none',
                   },
                   '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
             </Box>

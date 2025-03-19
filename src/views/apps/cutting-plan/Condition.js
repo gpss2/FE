@@ -697,14 +697,27 @@ const Condition = () => {
                   onRowClick={handleRowClick}
                   disableSelectionOnClick
                   sx={{
-                    '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px' },
-                    '& .MuiDataGrid-columnHeader': { fontSize: '12px', backgroundColor: '#f5f5f5' },
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
+                    },
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
                     '& .MuiDataGrid-columnHeaderTitle': {
-                      textAlign: 'center',
                       whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                 />
               </Box>
@@ -745,25 +758,30 @@ const Condition = () => {
                   onCellDoubleClick={handleCellDoubleClick}
                   onCellKeyDown={handleCellKeyDown}
                   getRowClassName={(params) => (params.row.group === 0 ? 'group0' : 'group1')}
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
-                      paddingTop: '2px',
-                      paddingBottom: '2px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
                     },
-                    '& .MuiDataGrid-columnHeader': { fontSize: '12px', backgroundColor: '#f5f5f5' },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
+                    },
                     '& .group0': { backgroundColor: '#ffffff' },
                     '& .group1': { backgroundColor: '#f5f5f5' },
                     '& .error-cell': { backgroundColor: 'red', color: 'white' },
                     '& .MuiDataGrid-columnHeaderTitle': {
-                      textAlign: 'center',
                       whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                 />
               </Box>

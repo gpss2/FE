@@ -19,9 +19,21 @@ import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
-
+const indexColumn = {
+  field: 'index',
+  headerName: '',
+  width: 20,
+  sortable: false,
+  filterable: false,
+  disableColumnMenu: true,
+  cellClassName: 'index-cell',
+  renderCell: (params) => {
+    const sortedRowIds = params.api.getSortedRowIds();
+    return sortedRowIds.indexOf(params.id) + 1;
+  },
+};
 const columns = [
-  { field: 'id', headerName: 'No.', width: 70 },
+  indexColumn,
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
   { field: 'pcs', headerName: '입고수량 (PCS)', flex: 1 },
   { field: 'kg', headerName: '입고중량 (Kg)', flex: 1 },
@@ -134,7 +146,7 @@ const Add = () => {
                   pageSize={10}
                   rowsPerPageOptions={[10, 20, 30]}
                   pagination
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
                     '& .MuiDataGrid-cell': {
@@ -145,6 +157,8 @@ const Add = () => {
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
                     },
                     '& .group0': { backgroundColor: '#ffffff' },
                     '& .group1': { backgroundColor: '#f5f5f5' },
@@ -155,6 +169,7 @@ const Add = () => {
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   onRowClick={(params) => handleOpenModal(params.row)}
                 />

@@ -39,8 +39,21 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
+const indexColumn = {
+  field: 'index',
+  headerName: '',
+  width: 20,
+  sortable: false,
+  filterable: false,
+  disableColumnMenu: true,
+  cellClassName: 'index-cell',
+  renderCell: (params) => {
+    const sortedRowIds = params.api.getSortedRowIds();
+    return sortedRowIds.indexOf(params.id) + 1;
+  },
+};
 const columns = [
+  indexColumn,
   { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
   { field: 'orderNumber', headerName: '수주번호', flex: 1 },
   { field: 'surfaceTreatment', headerName: '표면처리', flex: 1 },
@@ -183,14 +196,27 @@ const Orders = () => {
                   columnHeaderHeight={30}
                   rowHeight={25}
                   sx={{
-                    '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px' },
-                    '& .MuiDataGrid-columnHeader': { fontSize: '12px', backgroundColor: '#f5f5f5' },
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
+                    },
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
                     '& .MuiDataGrid-columnHeaderTitle': {
-                      textAlign: 'center',
                       whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   onRowClick={(params) => handleOpenModal(params.row)}
                 />

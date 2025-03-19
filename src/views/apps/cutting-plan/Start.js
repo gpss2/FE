@@ -18,10 +18,24 @@ import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import DrawingCanvas from './DrawingCanvas.js';
+const indexColumn = {
+  field: 'index',
+  headerName: '',
+  width: 30,
+  sortable: false,
+  filterable: false,
+  disableColumnMenu: true,
+  cellClassName: 'index-cell',
+  renderCell: (params) => {
+    const sortedRowIds = params.api.getSortedRowIds();
+    return sortedRowIds.indexOf(params.id) + 1;
+  },
+};
 
 const topLeftColumns = [
+  indexColumn,
   { field: 'taskNumber', headerName: '태스크\n번호', flex: 1 },
-  { field: 'orderNumber', headerName: '수주번호', flex: 1 },
+  { field: 'orderNumber', headerName: '수주번호', width: 110 },
   { field: 'category', headerName: '구분', flex: 1 },
   { field: 'orderDate', headerName: '수주일자', flex: 1 },
   { field: 'deliveryDate', headerName: '납기일자', flex: 1 },
@@ -31,6 +45,7 @@ const topLeftColumns = [
 ];
 
 const topRightColumns = [
+  indexColumn,
   { field: 'groupNumber', headerName: '그룹번호', width: 160 },
   { field: 'percentage', headerName: '짝수\n비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
@@ -60,6 +75,7 @@ const topRightColumns = [
 ];
 
 const bottomColumns = [
+  indexColumn,
   { field: 'groupNumber', headerName: '그룹번호', width: 160 },
   { field: 'totalQuantity', headerName: '총판수', flex: 1 },
   { field: 'bbLossRate', headerName: 'BB 손실율(%)', flex: 1 },
@@ -432,6 +448,12 @@ const Start = () => {
               font-weight: bold;
               height: 25px;
             }
+              td:nth-child(8),  /* 품목번호 */
+              td:nth-child(10), /* 길이 */
+              td:nth-child(12), /* REP */
+              td:nth-child(13)  /* L 절단 수량 */ {
+              border-right: 2px solid black;
+            }
             th {
              border: 1px solid black;
               background-color: #B2B2B2;
@@ -697,22 +719,24 @@ const Start = () => {
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
                     fontSize: '12px',
+                    paddingTop: '2px', // 위쪽 패딩 조정
+                    paddingBottom: '2px', // 아래쪽 패딩 조정
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '12px',
+                    backgroundColor: '#B2B2B2',
+                    border: '1px solid black',
                   },
+                  '& .group0': { backgroundColor: '#ffffff' },
+                  '& .group1': { backgroundColor: '#f5f5f5' },
+                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-cellCheckbox': {
-                    display: 'none',
-                  },
-                  '& .MuiDataGrid-columnHeaderCheckbox': {
-                    display: 'none',
-                  },
                   '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
             </Box>
@@ -738,22 +762,24 @@ const Start = () => {
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
                     fontSize: '12px',
+                    paddingTop: '2px', // 위쪽 패딩 조정
+                    paddingBottom: '2px', // 아래쪽 패딩 조정
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '12px',
+                    backgroundColor: '#B2B2B2',
+                    border: '1px solid black',
                   },
+                  '& .group0': { backgroundColor: '#ffffff' },
+                  '& .group1': { backgroundColor: '#f5f5f5' },
+                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-cellCheckbox': {
-                    display: 'none',
-                  },
-                  '& .MuiDataGrid-columnHeaderCheckbox': {
-                    display: 'none',
-                  },
                   '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
             </Box>
@@ -780,22 +806,24 @@ const Start = () => {
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
                     fontSize: '12px',
+                    paddingTop: '2px', // 위쪽 패딩 조정
+                    paddingBottom: '2px', // 아래쪽 패딩 조정
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '12px',
+                    backgroundColor: '#B2B2B2',
+                    border: '1px solid black',
                   },
+                  '& .group0': { backgroundColor: '#ffffff' },
+                  '& .group1': { backgroundColor: '#f5f5f5' },
+                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-cellCheckbox': {
-                    display: 'none',
-                  },
-                  '& .MuiDataGrid-columnHeaderCheckbox': {
-                    display: 'none',
-                  },
                   '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
             </Box>

@@ -67,9 +67,9 @@ const columnsRight = [
   { field: 'systemCode', headerName: '사양 코드', flex: 1 },
   { field: 'bbCode', headerName: 'BB코드', flex: 1 },
   { field: 'cbCode', headerName: 'CB코드', flex: 1 },
-  { field: 'bWidth', headerName: 'B 피치 (mm)', width: 60 },
-  { field: 'cWidth', headerName: 'C 피치 (mm)', width: 60 },
-  { field: 'bladeThickness', headerName: '톱날 두께 (mm)', width: 30 },
+  { field: 'bWidth', headerName: 'B 피치 (mm)', width: 80 },
+  { field: 'cWidth', headerName: 'C 피치 (mm)', width: 80 },
+  { field: 'bladeThickness', headerName: '톱날 두께 (mm)', width: 80 },
 ];
 
 const Setup = () => {
@@ -256,7 +256,7 @@ const Setup = () => {
             <ParentCard title="자재개요 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                 <DataGrid
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
                     '& .MuiDataGrid-cell': {
@@ -267,6 +267,8 @@ const Setup = () => {
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
                     },
                     '& .group0': { backgroundColor: '#ffffff' },
                     '& .group1': { backgroundColor: '#f5f5f5' },
@@ -277,6 +279,7 @@ const Setup = () => {
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   rows={leftTableData}
                   columns={columnsLeft}
@@ -311,7 +314,7 @@ const Setup = () => {
                   pageSize={5}
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
-                  columnHeaderHeight={30}
+                  columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
                     '& .MuiDataGrid-cell': {
@@ -322,6 +325,8 @@ const Setup = () => {
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
                     },
                     '& .group0': { backgroundColor: '#ffffff' },
                     '& .group1': { backgroundColor: '#f5f5f5' },
@@ -332,6 +337,7 @@ const Setup = () => {
                       lineHeight: '1.2',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
+                    '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   onRowClick={(params) => handleOpenModal('right', params.row)}
                 />
