@@ -5,10 +5,8 @@ const DrawingCanvas = ({ data }) => {
   const panels = data.result ? data.result.table : data.table;
   if (!Array.isArray(panels)) return null;
 
-  // 6200px의 내부 좌표계를 화면에 축소하기 위한 스케일 팩터 (예: 0.13 → 약 800px 폭)
   const scaleFactor = 0.13;
 
-  // 슬롯 높이 계산 (단일 슬롯: width_mm, 결합 슬롯: 각 width_mm 합 + 25*(슬롯 개수-1))
   const computeSlotHeight = (slot) => {
     if (slot.length === 1) return slot[0].width_mm;
     let total = 0;
@@ -19,9 +17,7 @@ const DrawingCanvas = ({ data }) => {
     return total;
   };
 
-  // 패널을 DOM 요소로 변환해 렌더링하는 함수
   const renderPanel = (panel, panelIndex) => {
-    // lCuttingNumber 기준으로 슬롯 그룹화
     const slotMap = {};
     panel.gratings_data.forEach((g) => {
       const slotKey = g.lCuttingNumber;
@@ -32,7 +28,6 @@ const DrawingCanvas = ({ data }) => {
     });
     const slots = Object.values(slotMap);
 
-    // 패널 내 최대 높이 계산
     let panelMaxHeight = 0;
     slots.forEach((slot) => {
       const h = computeSlotHeight(slot);
@@ -44,7 +39,6 @@ const DrawingCanvas = ({ data }) => {
       const first = slot[0];
       const leftCut = first.leftCut;
       const rightCut = first.rightCut;
-      // 원래 좌표에서 50px 여백 후 leftCut+5, rightCut-5 적용하고 스케일 팩터 적용
       const leftX = (50 + leftCut + 5) * scaleFactor;
       const rightX = (50 + rightCut - 5) * scaleFactor;
       let currentOffset = 0;
@@ -59,10 +53,14 @@ const DrawingCanvas = ({ data }) => {
           backgroundColor: '#7F7FFF',
           border: '1px solid #000',
           boxSizing: 'border-box',
-          // 3D 효과를 위해 더 강한 기울기 적용
           transform: 'rotateX(25deg)',
           transformOrigin: 'top left',
           transition: 'transform 0.3s ease, background-color 0.3s ease',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          color: '#fff',
         };
 
         const handleMouseEnter = (e) => {
@@ -80,13 +78,14 @@ const DrawingCanvas = ({ data }) => {
             style={rectStyle}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-          />,
+          >
+            {grating.id}
+          </div>,
         );
         currentOffset += w + 25;
       });
     });
 
-    // 패널 컨테이너 (내부 좌표계 6200px를 스케일 팩터로 축소)
     const panelStyle = {
       position: 'relative',
       width: 6200 * scaleFactor + 'px',
@@ -95,12 +94,10 @@ const DrawingCanvas = ({ data }) => {
       boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
       background:
         'repeating-linear-gradient(45deg, #e5e5e5, #e5e5e5 5px, #bfbfbf 5px, #bfbfbf 10px)',
-      // 패널 자체에 3D 기울기 적용
       transform: 'rotateX(25deg)',
       transformOrigin: 'top left',
     };
 
-    // 컨테이너에 perspective 적용해서 3D 효과 극대화
     const containerStyle = {
       perspective: '1000px',
       marginBottom: '20px',
@@ -108,13 +105,14 @@ const DrawingCanvas = ({ data }) => {
 
     return (
       <div key={`panel-${panelIndex}`} style={containerStyle}>
+        <h1 style={{ textAlign: 'left' }}>판번호: {panel.panelNumber}</h1>
         <div style={panelStyle}>{slotElements}</div>
       </div>
     );
   };
 
   return (
-    <div style={{ width: '100%', overflowX: 'auto', padding: '20px' }}>
+    <div style={{ width: '100%', overflowX: 'auto', padding: '100px' }}>
       {panels.map((panel, idx) => renderPanel(panel, idx))}
     </div>
   );
