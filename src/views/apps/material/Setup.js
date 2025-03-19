@@ -173,7 +173,11 @@ const Setup = () => {
       fetchRightTableData();
       handleCloseModal();
     } catch (error) {
-      console.error('Error saving row:', error);
+      if (error.response && error.response.status === 400 && error.response.data.detail) {
+        alert(error.response.data.detail);
+      } else {
+        console.error('Error saving row:', error);
+      }
     } finally {
       setIsLoading(false); // 로딩 끝
     }
@@ -473,8 +477,16 @@ const Setup = () => {
                   handleCloseModal();
                   alert('삭제되었습니다.');
                 } catch (error) {
-                  console.error('Error deleting row:', error);
-                  alert('삭제 중 오류가 발생했습니다.');
+                  if (
+                    error.response &&
+                    error.response.status === 400 &&
+                    error.response.data.detail
+                  ) {
+                    alert(error.response.data.detail);
+                  } else {
+                    console.error('Error deleting row:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
+                  }
                 }
               }}
               color="warning"
