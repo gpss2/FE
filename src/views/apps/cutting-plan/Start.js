@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Box,
   Button,
@@ -35,7 +35,16 @@ const topRightColumns = [
   { field: 'percentage', headerName: '짝수\n비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
-  { field: 'compressionSetting', headerName: '압접본수\n설정', flex: 1 },
+  {
+    field: 'compressionSetting',
+    headerName: '압접본수\n설정',
+    flex: 1,
+    renderCell: (params) => {
+      if (params.value === 'Optimized') return '2본 최적';
+      if (params.value === 'Basic') return '2본 기본';
+      return params.value;
+    },
+  },
   { field: 'baseLength', headerName: '기본\n로스', flex: 1 },
   { field: 'plusLAdjustment', headerName: '+L\n공차', flex: 1 },
   { field: 'minusLAdjustment', headerName: '-L\n공차', flex: 1 },
@@ -64,6 +73,13 @@ const bottomColumns = [
 ];
 
 const Start = () => {
+  // refs for modal fields (순서: 압전본 설정 -> +L -> -L -> +W -> -W)
+  const compressionSettingRef = useRef(null);
+  const plusLAdjustmentRef = useRef(null);
+  const minusLAdjustmentRef = useRef(null);
+  const plusWAdjustmentRef = useRef(null);
+  const minusWAdjustmentRef = useRef(null);
+
   const [topLeftData, setTopLeftData] = useState([]);
   const [topRightData, setTopRightData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
@@ -406,18 +422,24 @@ const Start = () => {
               width: 100%;
               border-collapse: collapse;
             }
-            th, td {
+            td {
               border: 1px solid black;
-              padding: 0px;
+              padding-right: 3px;
+              padding-top: 0px;
+              padding-bottom: 0px;
+              text-align: right;
+              line-height: 25px;
+              font-weight: bold;
+              height: 25px;
+            }
+            th {
+             border: 1px solid black;
+              background-color: #B2B2B2;
+              color: black;
               text-align: center;
               line-height: 25px;
               font-weight: bold;
               height: 25px;
-              text-deco
-            }
-            th {
-              background-color: #B2B2B2;
-              color: black;
             }
             tr {
               height: 25px;
@@ -429,46 +451,33 @@ const Start = () => {
           ${
             // IIFE를 사용하여 페이지 전체에서 그룹 배경색 관련 변수들을 유지합니다.
             (() => {
-              // 현재 그룹의 배경색과 이전 판번호를 저장할 변수
               let currentGroupColor = '';
               let prevGroupPanel = null;
-              // 토글 변수: false이면 새 그룹이면 "yellow", true이면 "white"를 할당 (첫 그룹은 yellow)
               let toggle = false;
 
               return pages.length > 0
                 ? pages
                     .map((pageRows, pageIndex, pagesArr) => {
-                      // 전체 행의 인덱스를 계산 (페이지 경계를 고려)
                       const cumulativeOffset = pagesArr
                         .slice(0, pageIndex)
                         .reduce((sum, p) => sum + p.length, 0);
-
-                      // 페이지 내 각 행에 대해 HTML 생성
                       const rowsHtml = pageRows
                         .map((row, rowIndex) => {
                           const globalIndex = cumulativeOffset + rowIndex;
-                          // 원래의 판번호 값 (표시용)
                           const rawPanel = row.panelNumberForDisplay || row.panelNumber || '';
-
-                          // 새로운 그룹 판번호이면 그룹 배경색을 변경 (loss row는 무시)
                           if (!row.isLossRow && rawPanel !== '' && rawPanel !== prevGroupPanel) {
                             toggle = !toggle;
                             currentGroupColor = toggle ? 'white' : 'yellow';
                             prevGroupPanel = rawPanel;
                           }
-                          // 전체 행에 적용할 그룹 배경 스타일
                           const rowStyle = currentGroupColor
                             ? ` style="background-color: ${currentGroupColor};"`
                             : '';
-                          // 왼쪽 번호 셀은 항상 테이블 헤더 배경색 사용
                           const leftCellStyle = ' style="background-color: #B2B2B2;"';
-
-                          // 중복 제거 로직 (판번호, 판수량, 수주번호, 수주처명 모두 동일하면 빈 문자열 처리)
                           let panelNumberValue = rawPanel;
                           let qtyValue = row.qtyForDisplay || row.qty;
                           let orderNumberValue = row.orderNumber;
                           let customerValue = row.customerCode;
-
                           if (globalIndex > 0) {
                             let prevRow;
                             if (rowIndex === 0) {
@@ -536,7 +545,6 @@ const Start = () => {
                           }
                         })
                         .join('');
-                      // 마지막 페이지일 경우 합계 행 추가
                       const sumHtml =
                         pageIndex === pagesArr.length - 1
                           ? `
@@ -601,8 +609,8 @@ const Start = () => {
                             <th>L 절단<br>번호</th>
                             <th>수주 번호</th>
                             <th>수주처명</th>
-                            <th>도면번호/\n품명</th>
-                            <th>품목\n번호</th>
+                            <th>도면번호/<br>품명</th>
+                            <th>품목<br>번호</th>
                             <th>폭</th>
                             <th>길이</th>
                             <th>LEP</th>
@@ -806,21 +814,38 @@ const Start = () => {
         <DialogTitle>설정 변경</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 2 }}>
+            {/* 압전본 설정 Select */}
             <Select
               label="압전본 설정"
               value={compressionSetting}
               onChange={(e) => setCompressionSetting(e.target.value)}
               fullWidth
+              inputRef={compressionSettingRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  plusLAdjustmentRef.current.focus();
+                }
+              }}
             >
               <MenuItem value="Optimized">2본-최적</MenuItem>
               <MenuItem value="Basic">2본-기본</MenuItem>
             </Select>
+            {/* +L 공차 */}
             <TextField
               label="+L 공차"
               type="number"
               value={plusLAdjustment}
               onChange={(e) => setPlusLAdjustment(parseFloat(e.target.value))}
+              inputRef={plusLAdjustmentRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  minusLAdjustmentRef.current.focus();
+                }
+              }}
             />
+            {/* -L 공차 */}
             <TextField
               label="-L 공차"
               type="number"
@@ -837,13 +862,29 @@ const Start = () => {
                   setMinusLAdjustment(parsed.toString());
                 }
               }}
+              inputRef={minusLAdjustmentRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  plusWAdjustmentRef.current.focus();
+                }
+              }}
             />
+            {/* +W 공차 */}
             <TextField
               label="+W 공차"
               type="number"
               value={plusWAdjustment}
               onChange={(e) => setPlusWAdjustment(parseFloat(e.target.value))}
+              inputRef={plusWAdjustmentRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  minusWAdjustmentRef.current.focus();
+                }
+              }}
             />
+            {/* -W 공차 */}
             <TextField
               label="-W 공차"
               type="number"
@@ -858,6 +899,13 @@ const Start = () => {
                 const parsed = parseFloat(minusWAdjustment);
                 if (!isNaN(parsed)) {
                   setMinusWAdjustment(parsed.toString());
+                }
+              }}
+              inputRef={minusWAdjustmentRef}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleModalSave();
                 }
               }}
             />

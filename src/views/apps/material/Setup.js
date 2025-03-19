@@ -19,6 +19,7 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
+import { width } from '@mui/system';
 
 axios.interceptors.request.use(
   (config) => {
@@ -42,8 +43,8 @@ axios.interceptors.response.use(
 );
 const indexColumn = {
   field: 'index',
-  headerName: 'No.',
-  width: 50,
+  headerName: '',
+  width: 20,
   sortable: false,
   filterable: false,
   disableColumnMenu: true,
@@ -66,9 +67,9 @@ const columnsRight = [
   { field: 'systemCode', headerName: '사양 코드', flex: 1 },
   { field: 'bbCode', headerName: 'BB코드', flex: 1 },
   { field: 'cbCode', headerName: 'CB코드', flex: 1 },
-  { field: 'bWidth', headerName: 'B 피치 (mm)', flex: 1 },
-  { field: 'cWidth', headerName: 'C 피치 (mm)', flex: 1 },
-  { field: 'bladeThickness', headerName: '톱날 두께 (mm)', flex: 1 },
+  { field: 'bWidth', headerName: 'B 피치 (mm)', width: 60 },
+  { field: 'cWidth', headerName: 'C 피치 (mm)', width: 60 },
+  { field: 'bladeThickness', headerName: '톱날 두께 (mm)', width: 30 },
 ];
 
 const Setup = () => {
