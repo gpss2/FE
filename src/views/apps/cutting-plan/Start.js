@@ -31,10 +31,10 @@ const topLeftColumns = [
 ];
 
 const topRightColumns = [
-  { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
+  { field: 'groupNumber', headerName: '그룹번호', width: 160 },
   { field: 'percentage', headerName: '짝수\n비율(%)', flex: 1 },
   { field: 'itemName', headerName: '품명', flex: 1 },
-  { field: 'specCode', headerName: '사양코드', flex: 1 },
+  { field: 'specCode', headerName: '사양코드', width: 140 },
   {
     field: 'compressionSetting',
     headerName: '압접본수\n설정',
@@ -60,7 +60,7 @@ const topRightColumns = [
 ];
 
 const bottomColumns = [
-  { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
+  { field: 'groupNumber', headerName: '그룹번호', width: 160 },
   { field: 'totalQuantity', headerName: '총판수', flex: 1 },
   { field: 'bbLossRate', headerName: 'BB 손실율(%)', flex: 1 },
   { field: 'cbLossRate', headerName: 'CB 손실율(%)', flex: 1 },
