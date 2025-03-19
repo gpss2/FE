@@ -523,6 +523,19 @@ const Condition = () => {
       .catch((error) => console.error('Error deleting row:', error));
   };
 
+  // 전체 삭제 핸들러 수정: 삭제 후 상단 테이블 갱신 추가
+  const handleDeleteAll = () => {
+    if (!selectedOrderId) return;
+    axios
+      .delete(`/api/plan/order-details/${selectedOrderId}`)
+      .then(() => {
+        setBottomData([]);
+        fetchTopData(); // 상단 테이블 데이터 갱신
+        alert('전체 삭제가 완료되었습니다.');
+      })
+      .catch((error) => console.error('Error deleting all rows:', error));
+  };
+
   const handleTemplateModalOpen = () => {
     setTemplateModalOpen(true);
     setSelectedSpecific('');
@@ -790,6 +803,14 @@ const Condition = () => {
                   disabled={!selectedDetailId}
                 >
                   삭제
+                </Button>
+                <Button
+                  variant="contained"
+                  startIcon={<DeleteIcon />}
+                  onClick={handleDeleteAll}
+                  disabled={!selectedOrderId}
+                >
+                  전체 삭제
                 </Button>
               </Stack>
             </ParentCard>
