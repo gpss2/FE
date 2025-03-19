@@ -40,8 +40,21 @@ axios.interceptors.response.use(
     return Promise.reject(error);
   },
 );
-
+const indexColumn = {
+  field: 'index',
+  headerName: 'No.',
+  width: 50,
+  sortable: false,
+  filterable: false,
+  disableColumnMenu: true,
+  cellClassName: 'index-cell',
+  renderCell: (params) => {
+    const sortedRowIds = params.api.getSortedRowIds();
+    return sortedRowIds.indexOf(params.id) + 1;
+  },
+};
 const columnsLeft = [
+  indexColumn,
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
   { field: 'materialType', headerName: '자재타입', flex: 1 },
   { field: 'length', headerName: '자재길이 (mm)', flex: 1 },
@@ -49,6 +62,7 @@ const columnsLeft = [
 ];
 
 const columnsRight = [
+  indexColumn,
   { field: 'systemCode', headerName: '사양 코드', flex: 1 },
   { field: 'bbCode', headerName: 'BB코드', flex: 1 },
   { field: 'cbCode', headerName: 'CB코드', flex: 1 },
@@ -238,7 +252,27 @@ const Setup = () => {
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                 <DataGrid
                   columnHeaderHeight={30}
-                  rowHeight={30}
+                  rowHeight={25}
+                  sx={{
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                    },
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                    },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
+                  }}
                   rows={leftTableData}
                   columns={columnsLeft}
                   pageSize={5}
@@ -273,7 +307,27 @@ const Setup = () => {
                   rowsPerPageOptions={[5, 10, 20]}
                   pagination
                   columnHeaderHeight={30}
-                  rowHeight={30}
+                  rowHeight={25}
+                  sx={{
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                    },
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                    },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
+                  }}
                   onRowClick={(params) => handleOpenModal('right', params.row)}
                 />
               </Box>

@@ -21,7 +21,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 
 const columns = [
-  { field: 'id', headerName: 'ID', width: 70 },
+  { field: 'id', headerName: 'No.', width: 70 },
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
   { field: 'pcs', headerName: '입고수량 (PCS)', flex: 1 },
   { field: 'kg', headerName: '입고중량 (Kg)', flex: 1 },
@@ -135,7 +135,27 @@ const Add = () => {
                   rowsPerPageOptions={[10, 20, 30]}
                   pagination
                   columnHeaderHeight={30}
-                  rowHeight={30}
+                  rowHeight={25}
+                  sx={{
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px', // 위쪽 패딩 조정
+                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                    },
+                    '& .group0': { backgroundColor: '#ffffff' },
+                    '& .group1': { backgroundColor: '#f5f5f5' },
+                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                    },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
+                  }}
                   onRowClick={(params) => handleOpenModal(params.row)}
                 />
               </Box>

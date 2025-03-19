@@ -1,22 +1,44 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
 import {
   Box,
   Grid,
-  IconButton,
   Stack,
+  Button,
+  CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  Button,
   TextField,
+  IconButton,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
+import { useNavigate } from 'react-router-dom';
+
+axios.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error),
+);
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 403) {
+      window.location.href = '/auth/login';
+    }
+    return Promise.reject(error);
+  },
+);
 
 const columns = [
   { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
@@ -36,26 +58,9 @@ const Orders = () => {
   const [currentRow, setCurrentRow] = useState({});
   const [isEditing, setIsEditing] = useState(false);
   const [dailyTaskCount, setDailyTaskCount] = useState(0);
-  axios.interceptors.request.use(
-    (config) => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      return config;
-    },
-    (error) => Promise.reject(error),
-  );
-
-  axios.interceptors.response.use(
-    (response) => response,
-    (error) => {
-      if (error.response && error.response.status === 403) {
-        window.location.href = '/auth/login';
-      }
-      return Promise.reject(error);
-    },
-  );
+  const navigate = useNavigate();
+  // 모달 입력 필드들을 관리할 ref 배열
+  const inputRefs = useRef([]);
 
   // 데이터 로드
   const fetchData = async () => {
@@ -63,8 +68,8 @@ const Orders = () => {
       const response = await axios.get('/api/order/list');
       const processedData = response.data.table.map((row) => ({
         ...row,
-        orderDate: row.orderDate.split('T')[0], // T 제거 후 YYYY-MM-DD 형식으로 변환
-        deliveryDate: row.deliveryDate.split('T')[0], // T 제거 후 YYYY-MM-DD 형식으로 변환
+        orderDate: row.orderDate.split('T')[0],
+        deliveryDate: row.deliveryDate.split('T')[0],
       }));
       setData(processedData);
       updateDailyTaskCount(processedData);
@@ -73,7 +78,14 @@ const Orders = () => {
     }
   };
 
-  // 오늘 날짜의 테스크 번호 생성
+  // 오늘 날짜 기준 태스크 번호 카운트 업데이트
+  const updateDailyTaskCount = (rows) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayTasks = rows.filter((row) => row.orderDate.startsWith(today));
+    setDailyTaskCount(todayTasks.length);
+  };
+
+  // 오늘 날짜의 태스크 번호 생성
   const generateTaskNumber = () => {
     const today = new Date();
     const year = today.getFullYear();
@@ -81,13 +93,6 @@ const Orders = () => {
     const day = String(today.getDate()).padStart(2, '0');
     const nextTaskNumber = dailyTaskCount + 1;
     return `${year}${month}${day}-T-${String(nextTaskNumber).padStart(2, '0')}`;
-  };
-
-  // 오늘 날짜 기준 테스크 번호 카운트 갱신
-  const updateDailyTaskCount = (rows) => {
-    const today = new Date().toISOString().slice(0, 10);
-    const todayTasks = rows.filter((row) => row.orderDate.startsWith(today));
-    setDailyTaskCount(todayTasks.length);
   };
 
   const handleOpenModal = (row = {}) => {
@@ -102,6 +107,12 @@ const Orders = () => {
     setCurrentRow(row);
     setIsEditing(!!row.id);
     setModalOpen(true);
+    // 모달 열릴 때 첫번째 입력 필드(태스크번호는 비활성화이므로 수주번호 필드에 포커스)
+    setTimeout(() => {
+      if (inputRefs.current[1]) {
+        inputRefs.current[1].focus();
+      }
+    }, 100);
   };
 
   const handleCloseModal = () => {
@@ -140,6 +151,18 @@ const Orders = () => {
     setCurrentRow((prev) => ({ ...prev, [field]: value }));
   };
 
+  // 엔터키 이벤트: Enter 누르면 다음 입력 필드로 포커스, 마지막(수주처)에서 Enter 누르면 저장
+  const handleKeyDown = (e, index) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (index < inputRefs.current.length - 1) {
+        inputRefs.current[index + 1].focus();
+      } else {
+        handleSave();
+      }
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -158,7 +181,17 @@ const Orders = () => {
                   rowsPerPageOptions={[10, 20, 30]}
                   pagination
                   columnHeaderHeight={30}
-                  rowHeight={30}
+                  rowHeight={25}
+                  sx={{
+                    '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px' },
+                    '& .MuiDataGrid-columnHeader': { fontSize: '12px', backgroundColor: '#f5f5f5' },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      textAlign: 'center',
+                      whiteSpace: 'pre-wrap',
+                      lineHeight: '1.2',
+                    },
+                    '& .MuiDataGrid-footerContainer': { display: '' },
+                  }}
                   onRowClick={(params) => handleOpenModal(params.row)}
                 />
               </Box>
@@ -190,7 +223,9 @@ const Orders = () => {
             label="태스크번호"
             fullWidth
             value={currentRow.taskNumber || ''}
-            disabled // 테스크 번호는 자동 생성
+            disabled
+            onKeyDown={(e) => handleKeyDown(e, 0)}
+            inputRef={(el) => (inputRefs.current[0] = el)}
           />
           <TextField
             margin="dense"
@@ -198,6 +233,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.orderNumber || ''}
             onChange={(e) => handleInputChange('orderNumber', e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, 1)}
+            inputRef={(el) => (inputRefs.current[1] = el)}
           />
           <TextField
             margin="dense"
@@ -205,6 +242,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.surfaceTreatment || ''}
             onChange={(e) => handleInputChange('surfaceTreatment', e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, 2)}
+            inputRef={(el) => (inputRefs.current[2] = el)}
           />
           <TextField
             margin="dense"
@@ -213,6 +252,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.coatingThickness || ''}
             onChange={(e) => handleInputChange('coatingThickness', parseFloat(e.target.value))}
+            onKeyDown={(e) => handleKeyDown(e, 3)}
+            inputRef={(el) => (inputRefs.current[3] = el)}
           />
           <TextField
             margin="dense"
@@ -220,6 +261,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.remarks || ''}
             onChange={(e) => handleInputChange('remarks', e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, 4)}
+            inputRef={(el) => (inputRefs.current[4] = el)}
           />
           <TextField
             margin="dense"
@@ -227,6 +270,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.category || ''}
             onChange={(e) => handleInputChange('category', e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, 5)}
+            inputRef={(el) => (inputRefs.current[5] = el)}
           />
           <Grid container spacing={2}>
             <Grid item xs={6}>
@@ -238,6 +283,8 @@ const Orders = () => {
                 InputLabelProps={{ shrink: true }}
                 value={currentRow.orderDate || ''}
                 onChange={(e) => handleInputChange('orderDate', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 6)}
+                inputRef={(el) => (inputRefs.current[6] = el)}
               />
             </Grid>
             <Grid item xs={6}>
@@ -249,6 +296,8 @@ const Orders = () => {
                 InputLabelProps={{ shrink: true }}
                 value={currentRow.deliveryDate || ''}
                 onChange={(e) => handleInputChange('deliveryDate', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 7)}
+                inputRef={(el) => (inputRefs.current[7] = el)}
               />
             </Grid>
           </Grid>
@@ -258,6 +307,8 @@ const Orders = () => {
             fullWidth
             value={currentRow.customerCode || ''}
             onChange={(e) => handleInputChange('customerCode', e.target.value)}
+            onKeyDown={(e) => handleKeyDown(e, 8)}
+            inputRef={(el) => (inputRefs.current[8] = el)}
           />
         </DialogContent>
         <DialogActions>

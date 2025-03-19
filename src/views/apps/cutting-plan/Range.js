@@ -5,6 +5,7 @@ import { Box, Grid, Stack, Button } from '@mui/material';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
+import { width } from '@mui/system';
 
 // 상단 테이블 컬럼 정의
 const topColumns = [
@@ -20,27 +21,27 @@ const topColumns = [
 
 // 하단 테이블 컬럼 정의
 const bottomColumns = [
-  { field: 'drawingNumber', headerName: '도면번호', flex: 1 },
-  { field: 'itemNo', headerName: '품목 번호', flex: 1 },
-  { field: 'itemType', headerName: '품목종류', flex: 1 },
-  { field: 'itemName', headerName: '품명', flex: 1 },
+  { field: 'drawingNumber', headerName: '도면\n번호', width: 60 },
+  { field: 'itemNo', headerName: '품목 번호', width: 60 },
+  { field: 'itemType', headerName: '품목\n종류', width: 60 },
+  { field: 'itemName', headerName: '품명', width: 60 },
   { field: 'specCode', headerName: '사양코드', flex: 1 },
   { field: 'endBar', headerName: 'EndBar', flex: 1 },
-  { field: 'width_mm', headerName: '폭(mm)', flex: 1 },
-  { field: 'length_mm', headerName: '길이(mm)', flex: 1 },
-  { field: 'cbCount', headerName: 'CB 수', flex: 1 },
-  { field: 'lep_mm', headerName: 'LEP(mm)', flex: 1 },
-  { field: 'rep_mm', headerName: 'REP(mm)', flex: 1 },
-  { field: 'quantity', headerName: '수량', flex: 1 },
-  { field: 'weight_kg', headerName: '중량(Kg)', flex: 1 },
-  { field: 'groupNumber', headerName: '그룹번호', flex: 1 },
+  { field: 'width_mm', headerName: '폭', width: 60 },
+  { field: 'length_mm', headerName: '길이', width: 60 },
+  { field: 'cbCount', headerName: 'CB 수', width: 60 },
+  { field: 'lep_mm', headerName: 'LEP', width: 60 },
+  { field: 'rep_mm', headerName: 'REP', width: 60 },
+  { field: 'quantity', headerName: '수량', width: 60 },
+  { field: 'weight_kg', headerName: '중량', width: 60 },
+  { field: 'groupNumber', headerName: '그룹번호', width: 160 },
 ];
 
 const Range = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
-  const [selectedDrawings, setSelectedDrawings] = useState([]);
-  const [selectOrderId, setSelectOrderId] = useState([]);
+  // 그룹번호를 기준으로 선택되므로 selectedDrawings 상태는 제거하거나 사용하지 않아도 됩니다.
+  const [selectOrderId, setSelectOrderId] = useState(null);
   const [selectGroupId, setSelectGroupId] = useState(null);
   const [selectionModel, setSelectionModel] = useState([]);
 
@@ -65,6 +66,7 @@ const Range = () => {
       return Promise.reject(error);
     },
   );
+
   // 페이지 로드시 상단 테이블 데이터 가져오기
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -102,37 +104,25 @@ const Range = () => {
   const handleRowClick = (params) => {
     const selectedOrderId = params.id;
     setSelectOrderId(selectedOrderId);
+    // 행 클릭 시 선택 초기화
+    setSelectGroupId(null);
+    setSelectionModel([]);
     fetchBottomData(selectedOrderId);
   };
 
-  // 하단 테이블에서 특정 셀(혹은 행) 클릭 시 -> 동일한 drawingNumber를 가진 모든 행 선택
+  // 하단 테이블에서 셀 클릭 시 -> 그룹번호(없으면 도면번호)를 기준으로 해당 그룹에 속한 모든 행 선택
   const handleCellClick = (params) => {
     const clickedRow = params.row;
-    const clickedDrawingNumber = clickedRow.drawingNumber;
-    const clickedGroupNumber = clickedRow.groupNumber;
-    setSelectGroupId(clickedGroupNumber);
-    // 1) 어떤 기준(field)으로 토글할지 결정
-    //   - groupNumber가 존재하면 groupNumber 기준으로 토글
-    //   - groupNumber가 null이면 drawingNumber 기준으로 토글
-    const isMerged = clickedGroupNumber !== null; // 병합된 상태인지 여부
-    const toggleField = isMerged ? 'groupNumber' : 'drawingNumber';
-    const toggleValue = isMerged ? clickedGroupNumber : clickedDrawingNumber;
+    // 그룹번호가 null이면 도면번호를 대체값으로 사용
+    const groupIdentifier =
+      clickedRow.groupNumber !== null ? clickedRow.groupNumber : clickedRow.drawingNumber;
+    setSelectGroupId(groupIdentifier);
 
-    // 2) selectedDrawings(혹은 selectedGroups 등) 토글 로직도 비슷하게 처리할 수 있음
-    //   - 여기서는 예시로 drawingNumber만 별도 저장한다고 가정
-    setSelectedDrawings((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(toggleValue)) {
-        newSet.delete(toggleValue);
-      } else {
-        newSet.add(toggleValue);
-      }
-      return Array.from(newSet);
-    });
-
-    // 3) selectionModel(행 ID) 토글 로직
     const sameRows = bottomData
-      .filter((row) => row[toggleField] === toggleValue) // groupNumber or drawingNumber
+      .filter((row) => {
+        const identifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
+        return identifier === groupIdentifier;
+      })
       .map((row) => row.id);
 
     setSelectionModel((prevSelection) => {
@@ -147,30 +137,50 @@ const Range = () => {
       return Array.from(newSet);
     });
   };
+
   // selectionModel 변경 핸들러
   const handleSelectionModelChange = (newSelection) => {
     setSelectionModel(newSelection);
   };
 
+  // 병합: 선택된 그룹번호에 해당하는 모든 도면번호를 중복제거하여 payload로 전송
   const handleMerge = async () => {
-    console.log('병합 시작');
-    console.log(selectedDrawings);
-    const response = await axios.post(`/api/plan/order-groups/${selectOrderId}/concat`, {
-      drawingNumbers: selectedDrawings, // 문자열 배열
-    });
-    setSelectedDrawings([]);
-    setSelectionModel([]);
-    fetchBottomData(selectOrderId);
+    if (selectionModel.length === 0) {
+      console.error('선택된 도면이 없습니다.');
+      return;
+    }
+    // 선택된 행들에서 도면번호 추출
+    const selectedRows = bottomData.filter((row) => selectionModel.includes(row.id));
+    const drawingNumbers = selectedRows.map((row) => row.drawingNumber);
+    const uniqueDrawingNumbers = Array.from(new Set(drawingNumbers));
+    try {
+      await axios.post(`/api/plan/order-groups/${selectOrderId}/concat`, {
+        drawingNumbers: uniqueDrawingNumbers,
+      });
+      setSelectionModel([]);
+      fetchBottomData(selectOrderId);
+    } catch (error) {
+      console.error('병합 에러:', error);
+    }
   };
 
+  // 분리: 선택된 그룹번호를 payload로 전송
   const handleSplit = async () => {
-    console.log('분리 버튼 클릭');
-    const response = await axios.post(`/api/plan/order-groups/${selectOrderId}/split`, {
-      groupNumber: selectGroupId, // 문자열 배열
-    });
-    setSelectionModel([]);
-    setSelectedDrawings([]);
-    fetchBottomData(selectOrderId);
+    if (!selectGroupId) {
+      console.error('분리할 그룹이 선택되지 않았습니다.');
+      return;
+    }
+    try {
+      await axios.post(`/api/plan/order-groups/${selectOrderId}/split`, {
+        groupNumber: selectGroupId,
+      });
+      // 분리 후 선택 상태 초기화
+      setSelectionModel([]);
+      setSelectGroupId(null);
+      fetchBottomData(selectOrderId);
+    } catch (error) {
+      console.error('분리 에러:', error);
+    }
   };
 
   return (
@@ -220,7 +230,7 @@ const Range = () => {
                 rowSelectionModel={selectionModel}
                 onSelectionModelChange={handleSelectionModelChange}
                 onRowClick={handleCellClick}
-                columnHeaderHeight={30}
+                columnHeaderHeight={40}
                 rowHeight={25}
                 sx={{
                   '& .MuiDataGrid-cell': {

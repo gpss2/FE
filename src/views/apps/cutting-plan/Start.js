@@ -198,9 +198,11 @@ const Start = () => {
           };
         });
 
+        // SSE 이벤트가 올 때마다 하단 테이블 업데이트
+        setBottomData(summaryData);
+
         if (allPlans.length === groups.length) {
           clearTimeout(timeout);
-          setBottomData(summaryData);
           setLoading(false);
           eventSource.close();
         }
@@ -223,6 +225,7 @@ const Start = () => {
       console.error('Error generating plans:', error);
     }
   };
+
   const handleViewDrawing = () => {
     if (!selectedGroup) return;
     setOpenDrawingWindow(true);
@@ -324,7 +327,7 @@ const Start = () => {
               panelNumber: panel.panelNumber,
               qty: panel.qty,
               lCuttingNumber: grating.lCuttingNumber, // 기존 번호 (식별용)
-              lCuttingQty: grating.item_qty || 0, // L 절단 수량 (숫자) <-- 심각한 버그, 말해야함
+              lCuttingQty: grating.item_qty || 0,
               orderNumber: grating.orderNumber,
               customerCode: grating.customerCode,
               drawingNumber: grating.drawingNumber,
@@ -345,7 +348,7 @@ const Start = () => {
             loss: panel.loss,
           });
         });
-        // 페이지 나누기 (15줄씩)
+        // 페이지 나누기 (22줄씩)
         const pages = allRows.reduce((pages, row, index) => {
           const pageIndex = Math.floor(index / 22);
           if (!pages[pageIndex]) pages[pageIndex] = [];
@@ -361,217 +364,269 @@ const Start = () => {
         }, 0);
         // HTML 생성 (페이지별)
         const htmlContent = `<!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</title>
-        <style>
-          @page {
-            size: A4 landscape;
-            margin: 10mm 5mm 5mm 5mm;
-          }
-          @media print {
-          .print-button {
-          display: none;
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>절단계획 상세 - 품목배치 리스트 (그룹번호: ${selectedGroup.groupNumber})</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 10mm 5mm 5mm 5mm;
             }
-          }
-          body {
+            @media print {
+              .print-button {
+                display: none;
+              }
+            }
+            body {
+              margin: 0;
+              padding: 0;
+              -webkit-print-color-adjust: exact;
+            }
+            .page {
+              page-break-after: always;
+            }
+            .header {
+              text-align: left;
+              padding-left: 10px;
+            }
+            .header h2 {
+              margin: 5px 0;
+              font-size: 20px;
+            }
+            .header-details {
+              display: flex;
+              justify-content: flex-start;
+            }
+            .header-details > h2{
+              padding-right: 30px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            th, td {
+              border: 1px solid black;
+              padding: 0px;
+              text-align: center;
+              line-height: 25px;
+              font-weight: bold;
+              height: 25px;
+              text-deco
+            }
+            th {
+              background-color: #B2B2B2;
+              color: black;
+            }
+            tr {
+              height: 25px;
+            }
+          </style>
+        </head>
+        <body>
+          <button class="print-button" onclick="window.print()">출력</button>
+          ${
+            // IIFE를 사용하여 페이지 전체에서 그룹 배경색 관련 변수들을 유지합니다.
+            (() => {
+              // 현재 그룹의 배경색과 이전 판번호를 저장할 변수
+              let currentGroupColor = '';
+              let prevGroupPanel = null;
+              // 토글 변수: false이면 새 그룹이면 "yellow", true이면 "white"를 할당 (첫 그룹은 yellow)
+              let toggle = false;
 
-            margin: 0;
-            padding: 0;
-            -webkit-print-color-adjust: exact;
+              return pages.length > 0
+                ? pages
+                    .map((pageRows, pageIndex, pagesArr) => {
+                      // 전체 행의 인덱스를 계산 (페이지 경계를 고려)
+                      const cumulativeOffset = pagesArr
+                        .slice(0, pageIndex)
+                        .reduce((sum, p) => sum + p.length, 0);
 
-          }
-          .page {
-            page-break-after: always;
-          }
-          .header {
-            text-align: left;
-            padding-left: 10px;
+                      // 페이지 내 각 행에 대해 HTML 생성
+                      const rowsHtml = pageRows
+                        .map((row, rowIndex) => {
+                          const globalIndex = cumulativeOffset + rowIndex;
+                          // 원래의 판번호 값 (표시용)
+                          const rawPanel = row.panelNumberForDisplay || row.panelNumber || '';
 
-          }
-          .header h2 {
-            margin: 5px 0;
-            font-size: 20px;
-          }
-          .header-details {
-            display: flex;
-            justify-content: flex-start;
+                          // 새로운 그룹 판번호이면 그룹 배경색을 변경 (loss row는 무시)
+                          if (!row.isLossRow && rawPanel !== '' && rawPanel !== prevGroupPanel) {
+                            toggle = !toggle;
+                            currentGroupColor = toggle ? 'white' : 'yellow';
+                            prevGroupPanel = rawPanel;
+                          }
+                          // 전체 행에 적용할 그룹 배경 스타일
+                          const rowStyle = currentGroupColor
+                            ? ` style="background-color: ${currentGroupColor};"`
+                            : '';
+                          // 왼쪽 번호 셀은 항상 테이블 헤더 배경색 사용
+                          const leftCellStyle = ' style="background-color: #B2B2B2;"';
 
-          }
-          .header-details > h2{
-            padding-right: 30px;
-          } 
-          table {
-            width: 100%;
-            border-collapse: collapse;
+                          // 중복 제거 로직 (판번호, 판수량, 수주번호, 수주처명 모두 동일하면 빈 문자열 처리)
+                          let panelNumberValue = rawPanel;
+                          let qtyValue = row.qtyForDisplay || row.qty;
+                          let orderNumberValue = row.orderNumber;
+                          let customerValue = row.customerCode;
 
-          }
-          th, td {
-            border: 1px solid black;
-            padding: 0px;
-            text-align: center;
-            line-height: 25px;   /* 텍스트의 높이와 셀 높이를 맞춤 */
-             height: 25px; 
-          }
-          th {
-            background-color: gray;
-            color: black;
-          }
-        tr {
-         height: 25px;
-         }
-     /* 변경: 홀수행의 배경색을 노란색으로 */
-          .row-odd { background-color: #ffffff; }
-          .row-even { background-color: yellow; }
-        </style>
-      </head>
-      <body>
-        <button class="print-button" onclick="window.print()">출력</button>
-        ${
-          pages.length > 0
-            ? pages
-                .map((pageRows, pageIndex, pagesArr) => {
-                  // 누적 오프셋 계산 (현재 페이지 이전의 총 행 수)
-                  const cumulativeOffset = pagesArr
-                    .slice(0, pageIndex)
-                    .reduce((sum, p) => sum + p.length, 0);
-                  // 페이지 내 행별 HTML 생성 (번호 칼럼 추가)
-                  const rowsHtml = pageRows
-                    .map((row, rowIndex) => {
-                      const rowNumber = cumulativeOffset + rowIndex + 1;
-                      const rowClass = row.isLossRow
-                        ? ''
-                        : row.panelNumber % 2 === 0
-                        ? 'row-even'
-                        : 'row-odd';
-                      if (row.isLossRow) {
-                        return `
-                <tr class="${rowClass}">
-                  <td>${rowNumber}</td>
-                  <td></td>
-                  <td></td>
-                  <td>Loss</td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td>${row.loss}</td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                  <td></td>
-                </tr>
-              `;
-                      } else {
-                        return `
-                <tr class="${rowClass}">
-                  <td>${rowNumber}</td>
-                  <td>${row.panelNumberForDisplay || row.panelNumber}</td>
-                  <td>${row.qtyForDisplay || row.qty}</td>
-                  <td>${row.lCuttingNumber}</td>
-                  <td>${row.orderNumber}</td>
-                  <td>${row.customerCode}</td>
-                  <td>${row.drawingNumber}</td>
-                  <td>${row.id}</td>
-                  <td>${row.width_mm}</td>
-                  <td>${row.length_mm}</td>
-                  <td>${row.lep_mm}</td>
-                  <td>${row.rep_mm}</td>
-                  <td>${row.lCuttingQty}</td>
-                  <td>${row.item_qty}</td>
-                </tr>
-              `;
-                      }
+                          if (globalIndex > 0) {
+                            let prevRow;
+                            if (rowIndex === 0) {
+                              prevRow = pages[pageIndex - 1][pages[pageIndex - 1].length - 1];
+                            } else {
+                              prevRow = pageRows[rowIndex - 1];
+                            }
+                            const prevRawPanel =
+                              prevRow.panelNumberForDisplay || prevRow.panelNumber || '';
+                            if (rawPanel === prevRawPanel) {
+                              panelNumberValue = '';
+                            }
+                            const prevQty = prevRow.qtyForDisplay || prevRow.qty;
+                            if (qtyValue === prevQty) {
+                              qtyValue = '';
+                            }
+                            const prevOrderNumber = prevRow.orderNumber;
+                            if (orderNumberValue === prevOrderNumber) {
+                              orderNumberValue = '';
+                            }
+                            const prevCustomer = prevRow.customerCode;
+                            if (customerValue === prevCustomer) {
+                              customerValue = '';
+                            }
+                          }
+
+                          if (row.isLossRow) {
+                            return `
+                            <tr${rowStyle}>
+                              <td${leftCellStyle}>${globalIndex + 1}</td>
+                              <td></td>
+                              <td></td>
+                              <td>Loss</td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td>${row.loss}</td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                              <td></td>
+                            </tr>
+                          `;
+                          } else {
+                            return `
+                            <tr${rowStyle}>
+                              <td${leftCellStyle}>${globalIndex + 1}</td>
+                              <td>${panelNumberValue}</td>
+                              <td>${qtyValue}</td>
+                              <td>${row.lCuttingNumber}</td>
+                              <td>${orderNumberValue}</td>
+                              <td>${customerValue}</td>
+                              <td>${row.drawingNumber}</td>
+                              <td>${row.id}</td>
+                              <td>${row.width_mm}</td>
+                              <td>${row.length_mm}</td>
+                              <td>${row.lep_mm}</td>
+                              <td>${row.rep_mm}</td>
+                              <td>${row.lCuttingQty}</td>
+                              <td>${row.item_qty}</td>
+                            </tr>
+                          `;
+                          }
+                        })
+                        .join('');
+                      // 마지막 페이지일 경우 합계 행 추가
+                      const sumHtml =
+                        pageIndex === pagesArr.length - 1
+                          ? `
+                    <tr style="color: black;">
+                      <th></th>
+                      <th>합계</th>
+                      <th>총판수</th>
+                      <th>절단수량</th>
+                      <th>총 CB수량</th>
+                      <th>총품목수량</th>
+                      <th colspan="8"></th>
+                    </tr>
+                    <tr style="background-color: white; color: black;">
+                      <td></td>
+                      <td></td>
+                      <td>${selectedGroup.result.table.length || 'N/A'}</td>
+                      <td>${totalLCuttingQty}</td>
+                      <td>${selectedGroup.totalCB || 0}</td>
+                      <td>${totalItemQty}</td>
+                      <td colspan="8"></td>
+                    </tr>
+                  `
+                          : '';
+                      return `
+                    <div class="page">
+                      <div class="header">
+                        <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                          selectedGroup.groupNumber
+                        })</h2>
+                        <div class="header-details">
+                          <h2>압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
+                          <h2>총중량: ${selectedGroup.result.totalWeight || 'N/A'}</h2>
+                          <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
+                        selectedGroup.minusLAdjustment || 'N/A'
+                      } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
+                        selectedGroup.minusWAdjustment || 'N/A'
+                      })</h2>
+                        </div>
+                        <div class="header-details">
+                          <h2>BB: ${
+                            specCodeDetailsMap.bbCode
+                              ? transformCode(specCodeDetailsMap.bbCode)
+                              : 'N/A'
+                          }</h2>
+                          <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
+                          <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
+                          <h2>CB: ${
+                            specCodeDetailsMap.cbCode
+                              ? transformCode(specCodeDetailsMap.cbCode)
+                              : 'N/A'
+                          }</h2>
+                          <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
+                          <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
+                        </div>
+                      </div>
+                      <table>
+                        <thead>
+                          <tr>
+                            <th></th>
+                            <th>판 번호</th>
+                            <th>판수량</th>
+                            <th>L 절단<br>번호</th>
+                            <th>수주 번호</th>
+                            <th>수주처명</th>
+                            <th>도면번호/\n품명</th>
+                            <th>품목\n번호</th>
+                            <th>폭</th>
+                            <th>길이</th>
+                            <th>LEP</th>
+                            <th>REP</th>
+                            <th>L 절단<br>수량</th>
+                            <th>품목<br>수량</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${rowsHtml}
+                          ${sumHtml}
+                        </tbody>
+                      </table>
+                    </div>
+                  `;
                     })
-                    .join('');
-                  // 마지막 페이지에 합계 행 추가
-                  const sumHtml =
-                    pageIndex === pagesArr.length - 1
-                      ? `
-            <tr style="background-color: gray; color: black;">
-              <th>번호</th>
-              <th>합계</th>
-              <th>총판수</th>
-              <th>절단수량</th>
-              <th>총 CB수량</th>
-              <th>총품목수량</th>
-              <th colspan="8"></th>
-            </tr>
-            <tr style="background-color: white; color: black;">
-              <td></td>
-              <td></td>
-              <td>${selectedGroup.result.table.length || 'N/A'}</td>
-              <td>${totalLCuttingQty}</td>
-              <td>${selectedGroup.totalCB || 0}</td>
-              <td>${totalItemQty}</td>
-              <td colspan="8"></td>
-            </tr>
-          `
-                      : '';
-                  return `
-            <div class="page">
-              <div class="header">
-                <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
-                  selectedGroup.groupNumber
-                })</h2>
-                <div class="header-details">
-                  <h2 >압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
-                  <h2>총중량: ${specCodeDetailsMap.totalWeight || 'N/A'}</h2>
-                  <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
-                    selectedGroup.minusLAdjustment || 'N/A'
-                  } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
-                    selectedGroup.minusWAdjustment || 'N/A'
-                  })</h2>
-                </div>
-                <div class="header-details">
-                  <h2>BB: ${
-                    specCodeDetailsMap.bbCode ? transformCode(specCodeDetailsMap.bbCode) : 'N/A'
-                  }</h2>
-                  <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
-                  <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
-                  <h2>CB: ${
-                    specCodeDetailsMap.cbCode ? transformCode(specCodeDetailsMap.cbCode) : 'N/A'
-                  }</h2>
-                  <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
-                  <h2>EB: ${specCodeDetailsMap.ebCode || 'SQ6*6'}</h2>
-                </div>
-              </div>
-              <table>
-                <thead>
-                  <tr>
-                    <th>번호</th>
-                    <th>판 번호</th>
-                    <th>판수량</th>
-                    <th>L 절단<br>번호</th>
-                    <th>수주 번호</th>
-                    <th>수주처명</th>
-                    <th>도면번호</th>
-                    <th>품목 번호</th>
-                    <th>폭</th>
-                    <th>길이</th>
-                    <th>LEP</th>
-                    <th>REP</th>
-                    <th>L 절단<br>수량</th>
-                    <th>품목<br>수량</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${rowsHtml}
-                  ${sumHtml}
-                </tbody>
-              </table>
-            </div>
-          `;
-                })
-                .join('')
-            : '<p>데이터가 없습니다.</p>'
-        }
-      </body>
-      </html>
-      `;
+                    .join('')
+                : '<p>데이터가 없습니다.</p>';
+            })()
+          }
+        </body>
+        </html>
+        `;
+
         printWindow.document.write(htmlContent);
         printWindow.document.close();
       }
@@ -627,18 +682,29 @@ const Start = () => {
                 rows={topLeftData}
                 columns={topLeftColumns}
                 columnHeaderHeight={45}
-                rowHeight={30}
                 disableSelectionOnClick
                 onRowClick={handleRowClick}
+                rowHeight={25}
                 sx={{
+                  '& .MuiDataGrid-cell': {
+                    border: '1px solid black',
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeader': {
+                    fontSize: '12px',
+                  },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': {
+                  '& .MuiDataGrid-cellCheckbox': {
                     display: 'none',
                   },
+                  '& .MuiDataGrid-columnHeaderCheckbox': {
+                    display: 'none',
+                  },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
             </Box>
@@ -651,7 +717,7 @@ const Start = () => {
           </ParentCard>
         </Grid>
 
-        {/* 상단 오른쪽 테이블   tq*/}
+        {/* 상단 오른쪽 테이블 */}
         <Grid item xs={7}>
           <ParentCard title="그룹별 계획조건 개별지정">
             <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
@@ -659,16 +725,27 @@ const Start = () => {
                 rows={topRightData}
                 columns={topRightColumns}
                 columnHeaderHeight={60}
-                rowHeight={30}
+                rowHeight={25}
                 sx={{
+                  '& .MuiDataGrid-cell': {
+                    border: '1px solid black',
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeader': {
+                    fontSize: '12px',
+                  },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': {
+                  '& .MuiDataGrid-cellCheckbox': {
                     display: 'none',
                   },
+                  '& .MuiDataGrid-columnHeaderCheckbox': {
+                    display: 'none',
+                  },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
             </Box>
@@ -690,8 +767,26 @@ const Start = () => {
                 }}
                 columns={bottomColumns}
                 columnHeaderHeight={30}
-                rowHeight={30}
+                rowHeight={25}
                 sx={{
+                  '& .MuiDataGrid-cell': {
+                    border: '1px solid black',
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeader': {
+                    fontSize: '12px',
+                  },
+                  '& .MuiDataGrid-columnHeaderTitle': {
+                    whiteSpace: 'pre-wrap',
+                    textAlign: 'center',
+                    lineHeight: '1.2',
+                  },
+                  '& .MuiDataGrid-cellCheckbox': {
+                    display: 'none',
+                  },
+                  '& .MuiDataGrid-columnHeaderCheckbox': {
+                    display: 'none',
+                  },
                   '& .MuiDataGrid-footerContainer': { display: '' },
                 }}
               />
