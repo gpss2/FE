@@ -735,7 +735,7 @@ const Condition = () => {
                   onClick={handleCurrentDataDownload}
                   disabled={!selectedOrderId}
                 >
-                  BOM 다운로드
+                  BOM Export
                 </Button>
               </Stack>
             </ParentCard>
@@ -842,7 +842,7 @@ const Condition = () => {
             <Typography variant="h6" mb={2}>
               데이터 수정
             </Typography>
-            <Grid container spacing={2}>
+            {/* <Grid container spacing={2}>
               <Grid item xs={3}>
                 <SearchableSelect
                   label="품목 종류"
@@ -940,7 +940,7 @@ const Condition = () => {
                   label="일괄 변경"
                 />
               </Grid>
-            </Grid>
+            </Grid> */}
             <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
               <Button variant="outlined" onClick={handleModalClose}>
                 취소
