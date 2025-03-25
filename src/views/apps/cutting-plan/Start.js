@@ -713,6 +713,7 @@ const Start = () => {
                 columns={topLeftColumns}
                 columnHeaderHeight={45}
                 disableSelectionOnClick
+                rowsPerPageOptions={[topLeftData.length]}
                 onRowClick={handleRowClick}
                 rowHeight={25}
                 sx={{
@@ -735,7 +736,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .MuiDataGrid-footerContainer': { display: 'none' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
@@ -756,6 +757,7 @@ const Start = () => {
               <DataGrid
                 rows={topRightData}
                 columns={topRightColumns}
+                rowsPerPageOptions={[topRightData.length]}
                 columnHeaderHeight={60}
                 rowHeight={25}
                 sx={{
@@ -778,7 +780,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .MuiDataGrid-footerContainer': { display: 'none' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
@@ -801,6 +803,7 @@ const Start = () => {
                 }}
                 columns={bottomColumns}
                 columnHeaderHeight={30}
+                rowsPerPageOptions={[bottomColumns.length]}
                 rowHeight={25}
                 sx={{
                   '& .MuiDataGrid-cell': {
@@ -822,7 +825,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: '' },
+                  '& .MuiDataGrid-footerContainer': { display: 'none' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
