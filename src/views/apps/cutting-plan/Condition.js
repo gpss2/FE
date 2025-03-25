@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
 import { Box, Grid, Stack, Button, Typography, Modal, CircularProgress } from '@mui/material';
-import { Checkbox, FormControlLabel } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
@@ -10,8 +9,88 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
+import MyDataGrid from './MyDataGrid';
 
-// 모달 스타일
+// ==================== (1) 중량 계산 로직 추가 예시 함수 ====================
+/**
+ * 자재정보를 찾아주는 헬퍼 함수 (예시).
+ * 실제로는 meterialCode 상태 등을 활용하거나,
+ * 필요하다면 별도 API 호출 등을 통해 재질/무게/두께를 찾으세요.
+ */
+function findMaterial(materialCode, meterialCodeState) {
+  // materialCodeState: [{ materialCode: 'END_BAR', weight: 7.85, maxWidth: 3, ...}, ...]
+  // 위와 같은 식이라 가정
+  return meterialCodeState.find((m) => m.materialCode === materialCode);
+}
+
+/**
+ * 프론트엔드용 중량 계산 (백엔드 calculate_weights 로직 참조)
+ * @param {Object} row - 그리드 한 행의 데이터
+ * @param {Array} meterialCodeState - 자재 정보 (예: useState로 저장한 meterialCode)
+ * @param {Array} specCodeState - 사양 정보 (예: useState로 저장한 specCode)
+ * @returns {{ totalWeight: number, neWeight: number }} 계산된 중량
+ */
+function calculateGratingWeightsFrontEnd(row, meterialCodeState, specCodeState) {
+  // 1) row에서 필요한 값 파싱
+  const width_mm = parseFloat(row.width_mm) || 0;
+  const length_mm = parseFloat(row.length_mm) || 0;
+  const cb_count = parseInt(row.cbCount) || 0;
+  const endBarCode = row.endBar || '';
+  // quantity는 최종 중량에 곱해줄 때 사용 (아래에서 처리)
+
+  // 2) specCode에서 bbCode, cbCode를 찾는다고 가정
+  //    실제로는 row.specCode를 키로 해서 specCodeState에서 bbCode, cbCode를 얻어와야 함
+  //    예: const specItem = specCodeState.find((s) => s.systemCode === row.specCode);
+  //    여기서는 예시로 specItem.bbCode, specItem.cbCode를 얻었다고 가정
+  const specItem = specCodeState.find((s) => s.systemCode === row.specCode);
+  if (!specItem || !specItem.bbCode || !specItem.cbCode) {
+    return { totalWeight: 0, neWeight: 0 };
+  }
+
+  // 3) 자재 정보 가져오기
+  const bb_material = findMaterial(specItem.bbCode, meterialCodeState);
+  const cb_material = findMaterial(specItem.cbCode, meterialCodeState);
+  const eb_material = findMaterial(endBarCode, meterialCodeState);
+
+  if (!bb_material || !cb_material || !eb_material) {
+    // 자재 정보가 없으면 0 리턴 (실제 로직에서는 에러 처리)
+    return { totalWeight: 0, neWeight: 0 };
+  }
+
+  // 4) BB 갯수 계산 (python 코드의 self.calculate_bb_count(width_mm))
+  //    실제 로직이 없으므로, 예시로 '폭 / 30' 정도로 가정
+  const bb_count = Math.floor(width_mm / 30) || 1;
+
+  // 5) EB의 두께는 eb_material.maxWidth 사용
+  const eb_thickness = parseFloat(eb_material.maxWidth) || 0;
+
+  // 6) BB 무게
+  //    (length_mm - eb_thickness * 2) / 1000: m 단위 길이
+  const bb_length = (length_mm - eb_thickness * 2) / 1000;
+  const bb_weight = bb_length * bb_material.weight * bb_count;
+
+  // 7) CB 무게
+  //    width_mm / 1000: m 단위 길이
+  const cb_length = width_mm / 1000;
+  const cb_weight = cb_length * cb_material.weight * cb_count;
+
+  // 8) EB 무게
+  //    EB는 양끝 2개
+  const eb_length = width_mm / 1000;
+  const eb_weight = eb_length * eb_material.weight * 2;
+
+  // 9) 합산 후 반올림
+  let total_weight = bb_weight + cb_weight + eb_weight;
+  let ne_weight = total_weight - eb_weight;
+
+  // 소수점 첫째자리 반올림 (python: self.mathematical_round(x, 1) 참고)
+  total_weight = Math.round(total_weight * 10) / 10;
+  ne_weight = Math.round(ne_weight * 10) / 10;
+
+  return { totalWeight: total_weight, neWeight: ne_weight };
+}
+
+// ==================== (2) 전체 컴포넌트 코드 ====================
 const modalStyle = {
   position: 'absolute',
   top: '50%',
@@ -23,6 +102,7 @@ const modalStyle = {
   boxShadow: 24,
   p: 4,
 };
+
 const indexColumn = {
   field: 'index',
   headerName: '',
@@ -49,15 +129,14 @@ const topColumns = [
   { field: 'totalWeight', headerName: '총중량(Kg)', flex: 1 },
 ];
 
+// 하단 테이블 컬럼 정의
 const bottomColumns = [
-  indexColumn,
   {
     field: 'drawingNumber',
     headerName: '도면번호',
     editable: true,
     flex: 1,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'itemNo',
@@ -65,7 +144,6 @@ const bottomColumns = [
     editable: true,
     width: 100,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'itemType',
@@ -73,7 +151,6 @@ const bottomColumns = [
     editable: true,
     width: 100,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'itemName',
@@ -81,21 +158,18 @@ const bottomColumns = [
     editable: true,
     flex: 1,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'specCode',
     headerName: '사양코드',
     flex: 1,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'endBar',
     headerName: 'EndBar',
     flex: 1,
     headerAlign: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'width_mm',
@@ -104,7 +178,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'length_mm',
@@ -113,7 +186,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'cbCount',
@@ -122,7 +194,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'lep_mm',
@@ -131,7 +202,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'rep_mm',
@@ -140,7 +210,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'quantity',
@@ -149,7 +218,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'weight_kg',
@@ -158,7 +226,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
   {
     field: 'neWeight_kg',
@@ -167,7 +234,6 @@ const bottomColumns = [
     width: 60,
     headerAlign: 'center',
     align: 'center',
-    cellClassName: (params) => (params.row.error ? 'error-cell' : ''),
   },
 ];
 
@@ -189,8 +255,10 @@ const recalcValues = (newData, oldData, C_PITCH) => {
   let errorFlag = false;
 
   if (source === 'length_mm') {
+    console.log('길이 수정함');
     length_mm = Number(newData.length_mm);
     cbCount = Math.floor(length_mm / C_PITCH) + 1;
+
     let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
@@ -203,6 +271,7 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     if (total >= 200) {
       errorFlag = true;
     }
+    console.log('CB수 :', cbCount);
   } else if (source === 'cbCount') {
     length_mm = Number(oldData.length_mm);
     cbCount = Number(newData.cbCount);
@@ -253,7 +322,6 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     error: errorFlag,
   };
 };
-
 const Condition = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
@@ -262,9 +330,14 @@ const Condition = () => {
   const [selectedDetailId, setSelectedDetailId] = useState(null);
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
+
+  // ----------------------
+  // 자재정보 / 사양정보 등
+  // ----------------------
   const [meterialCode, setMeterialCode] = useState([]);
   const [specCode, setSpecCode] = useState([]);
   const [standardItems, setStandardItems] = useState([]); // 품명 목록 상태 추가
+
   const navigate = useNavigate();
   const [pendingUpdates, setPendingUpdates] = useState({});
   const [applyLoading, setApplyLoading] = useState(false);
@@ -274,6 +347,7 @@ const Condition = () => {
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
 
+  // axios 인터셉터
   axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
@@ -295,91 +369,7 @@ const Condition = () => {
     },
   );
 
-  // 엔터키를 누를 때 기본 동작 대신 오른쪽 셀로 이동하는 핸들러
-  const handleCellKeyDown = (params, event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
-      const currentColIndex = bottomColumns.findIndex((col) => col.field === params.field);
-      if (currentColIndex >= 0 && currentColIndex < bottomColumns.length - 1) {
-        const nextCol = bottomColumns[currentColIndex + 1];
-        const nextCell = document.querySelector(
-          `[data-id="${params.id}"][data-field="${nextCol.field}"]`,
-        );
-        if (nextCell) {
-          nextCell.click();
-          nextCell.focus();
-        }
-      }
-    }
-  };
-
-  // 추가 버튼 클릭 시 모달 대신 데이터 그리드에 빈 행 추가
-  const handleAddRow = () => {
-    let newDrawingNumber = '01';
-    let newSpecCode = '';
-    let newEndBar = '';
-    if (bottomData.length > 0) {
-      newDrawingNumber = bottomData[bottomData.length - 1].drawingNumber;
-      newSpecCode = bottomData[bottomData.length - 1].specCode;
-      newEndBar = bottomData[bottomData.length - 1].endBar;
-    }
-    const sameDrawingRows = bottomData.filter((row) => row.drawingNumber === newDrawingNumber);
-    let newItemNo;
-    if (sameDrawingRows.length > 0) {
-      const maxItemNo = Math.max(...sameDrawingRows.map((row) => Number(row.itemNo) || 0));
-      newItemNo = String(maxItemNo + 1);
-    } else {
-      newItemNo = '1';
-    }
-    const newRow = {
-      id: 'new_' + new Date().getTime(),
-      drawingNumber: newDrawingNumber,
-      itemNo: newItemNo,
-      itemType: 'R', // 기본값
-      itemName: 'SteelGrating', // 기본값
-      specCode: newSpecCode,
-      endBar: newEndBar,
-      width_mm: '',
-      length_mm: '',
-      cbCount: '',
-      lep_mm: '',
-      rep_mm: '',
-      quantity: '',
-      weight_kg: '',
-      neWeight_kg: '',
-      error: false,
-    };
-    setBottomData([...bottomData, newRow]);
-  };
-
-  const fetchMeterialCode = async () => {
-    try {
-      const response = await axios.get('/api/item/material');
-      setMeterialCode(response.data.table);
-    } catch (error) {
-      console.error('Error fetching left table data:', error);
-    }
-  };
-
-  const fetchSpecCode = async () => {
-    try {
-      const response = await axios.get('/api/item/specific');
-      setSpecCode(response.data.table);
-    } catch (error) {
-      console.error('Error fetching right table data:', error);
-    }
-  };
-
-  // 표준 품명 데이터를 가져오는 함수 (SteelGrating은 항상 포함)
-  const fetchStandardItems = async () => {
-    try {
-      const response = await axios.get('/api/item/standard');
-      setStandardItems(response.data.table);
-    } catch (error) {
-      console.error('Error fetching standard items:', error);
-    }
-  };
-
+  // 초기 데이터 불러오기
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -406,6 +396,34 @@ const Condition = () => {
     }
   };
 
+  const fetchMeterialCode = async () => {
+    try {
+      const response = await axios.get('/api/item/material');
+      setMeterialCode(response.data.table);
+    } catch (error) {
+      console.error('Error fetching material data:', error);
+    }
+  };
+
+  const fetchSpecCode = async () => {
+    try {
+      const response = await axios.get('/api/item/specific');
+      setSpecCode(response.data.table);
+    } catch (error) {
+      console.error('Error fetching spec data:', error);
+    }
+  };
+
+  const fetchStandardItems = async () => {
+    try {
+      const response = await axios.get('/api/item/standard');
+      setStandardItems(response.data.table);
+    } catch (error) {
+      console.error('Error fetching standard items:', error);
+    }
+  };
+
+  // 하단 테이블 데이터 불러오기
   const fetchBottomData = async (orderId) => {
     try {
       const response = await axios.get(`/api/plan/order-details/${orderId}`);
@@ -428,6 +446,9 @@ const Condition = () => {
     }
   };
 
+  // ====================
+  // 이벤트 핸들러들
+  // ====================
   const handleRowClick = (params) => {
     const orderId = params.id;
     const orderNumber = params.row.taskNumber;
@@ -436,7 +457,7 @@ const Condition = () => {
     fetchBottomData(orderId);
   };
 
-  // 수정할 셀: specCode, endBar, itemType, itemName 모두 모달에서 편집하도록 수정
+  // 셀 더블클릭 시 모달(사양코드, EndBar, 품명 등) 편집
   const handleCellDoubleClick = (params) => {
     const { field, row } = params;
     if (['specCode', 'endBar', 'itemType', 'itemName'].includes(field)) {
@@ -445,25 +466,70 @@ const Condition = () => {
     }
   };
 
-  const handleProcessRowUpdate = (newRow, oldRow) => {
-    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-
-    // 현재 행의 specCode에 해당하는 cWidth 값을 구합니다.
-    const currentSpec = specCode.find((item) => item.systemCode === newRow.specCode);
-    // 해당 값이 없으면 기본값 100을 사용합니다.
-    const C_PITCH = currentSpec ? currentSpec.cWidth : 100;
-
-    const recalculatedRow = recalcValues(newRow, oldRow, C_PITCH);
-    setPendingUpdates((prev) => ({ ...prev, [newRow.id]: recalculatedRow }));
-    return recalculatedRow;
+  // 엔터키로 오른쪽 셀 이동
+  const handleCellKeyDown = (params, event) => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      const currentColIndex = bottomColumns.findIndex((col) => col.field === params.field);
+      if (currentColIndex >= 0 && currentColIndex < bottomColumns.length - 1) {
+        const nextCol = bottomColumns[currentColIndex + 1];
+        const nextCell = document.querySelector(
+          `[data-id="${params.id}"][data-field="${nextCol.field}"]`,
+        );
+        if (nextCell) {
+          nextCell.click();
+          nextCell.focus();
+        }
+      }
+    }
   };
 
+  // 새 행 추가
+  const handleAddRow = () => {
+    let newDrawingNumber = '01';
+    let newSpecCode = '';
+    let newEndBar = '';
+    if (bottomData.length > 0) {
+      newDrawingNumber = bottomData[bottomData.length - 1].drawingNumber;
+      newSpecCode = bottomData[bottomData.length - 1].specCode;
+      newEndBar = bottomData[bottomData.length - 1].endBar;
+    }
+    const sameDrawingRows = bottomData.filter((row) => row.drawingNumber === newDrawingNumber);
+    let newItemNo;
+    if (sameDrawingRows.length > 0) {
+      const maxItemNo = Math.max(...sameDrawingRows.map((row) => Number(row.itemNo) || 0));
+      newItemNo = String(maxItemNo + 1);
+    } else {
+      newItemNo = '1';
+    }
+    const newRow = {
+      id: 'new_' + new Date().getTime(),
+      drawingNumber: newDrawingNumber,
+      itemNo: newItemNo,
+      itemType: 'R', // 기본값
+      itemName: 'SteelGrating', // 기본값
+      specCode: newSpecCode,
+      endBar: newEndBar,
+      width_mm: 0,
+      length_mm: 0,
+      cbCount: 0,
+      lep_mm: 0,
+      rep_mm: 0,
+      quantity: 0,
+      weight_kg: 0,
+      neWeight_kg: 0,
+      error: false,
+    };
+    setBottomData([...bottomData, newRow]);
+  };
+
+  // 모달 닫기
   const handleModalClose = () => {
     setModalOpen(false);
     setModalData(null);
   };
 
-  // 모달에서 선택한 행만 업데이트하도록 수정 (일괄 변경 기능 제거)
+  // 모달 저장 (specCode, endBar, itemType, itemName)
   const handleSaveModal = () => {
     const { id, specCode, endBar, itemType, itemName } = modalData;
     const updatedRow = { ...modalData, specCode, endBar, itemType, itemName };
@@ -472,6 +538,7 @@ const Condition = () => {
     setModalOpen(false);
   };
 
+  // 삭제
   const handleDelete = () => {
     if (!selectedDetailId) return;
     axios
@@ -484,26 +551,26 @@ const Condition = () => {
       .catch((error) => console.error('Error deleting row:', error));
   };
 
-  // 전체 삭제 핸들러 수정: 삭제 후 상단 테이블 갱신 추가
+  // 전체 삭제
   const handleDeleteAll = () => {
     if (!selectedOrderId) return;
     axios
       .delete(`/api/plan/order-details/${selectedOrderId}`)
       .then(() => {
         setBottomData([]);
-        fetchTopData(); // 상단 테이블 데이터 갱신
+        fetchTopData();
         alert('전체 삭제가 완료되었습니다.');
       })
       .catch((error) => console.error('Error deleting all rows:', error));
   };
 
+  // 템플릿 모달 열기/닫기
   const handleTemplateModalOpen = () => {
     setTemplateModalOpen(true);
     setSelectedSpecific('');
     setSelectedMaterial('');
     setTemplateDownloaded(false);
   };
-
   const handleTemplateModalClose = () => {
     setTemplateModalOpen(false);
     setSelectedSpecific('');
@@ -511,6 +578,7 @@ const Condition = () => {
     setTemplateDownloaded(false);
   };
 
+  // 템플릿 다운로드
   const handleDownloadTemplate = async () => {
     const specificItem = specCode.find((item) => item.systemCode === selectedSpecific);
     const materialItem = meterialCode.find((item) => item.materialCode === selectedMaterial);
@@ -546,6 +614,7 @@ const Condition = () => {
     }
   };
 
+  // 현재 데이터 다운로드
   const handleCurrentDataDownload = async () => {
     if (!selectedOrderId) return;
     try {
@@ -568,6 +637,7 @@ const Condition = () => {
     }
   };
 
+  // 템플릿 업로드
   const handleTemplateUpload = async (event) => {
     if (!selectedOrderId) return;
     const file = event.target.files[0];
@@ -588,17 +658,51 @@ const Condition = () => {
     setUploadLoading(false);
   };
 
+  // ====================
+  // (중요) 행 변경 시 최종 계산 처리
+  // ====================
+  const handleProcessRowUpdate = (newRow, oldRow) => {
+    if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
+
+    // 1) 기존 LEP/REP 재계산
+    const currentSpec = specCode.find((item) => item.systemCode === newRow.specCode);
+    const C_PITCH = currentSpec ? currentSpec.cWidth : 100;
+    const recalculatedRow = recalcValues(newRow, oldRow, C_PITCH);
+    //console.log('line 671', recalculatedRow);
+    // 2) 중량 계산 (수량 반영)
+    const { totalWeight, neWeight } = calculateGratingWeightsFrontEnd(
+      recalculatedRow,
+      meterialCode,
+      specCode,
+    );
+    const quantity = parseFloat(recalculatedRow.quantity) || 0;
+    // 수량 * 단품 무게
+    const totalW = (totalWeight * quantity).toFixed(1);
+    const neW = (neWeight * quantity).toFixed(1);
+
+    // 3) row에 반영
+    const finalRow = {
+      ...recalculatedRow,
+      weight_kg: totalW, // 테이블에서 사용하는 weight_kg
+      neWeight_kg: neW, // 테이블에서 사용하는 neWeight_kg
+    };
+
+    setPendingUpdates((prev) => ({ ...prev, [finalRow.id]: finalRow }));
+    return finalRow;
+  };
+
+  // 적용 버튼 클릭 시 서버에 저장
   const handleBulkSave = async () => {
     setApplyLoading(true);
     const invalidMessages = [];
-    // bottomData 배열을 순회하면서 각 행에 대해 에러 체크를 진행합니다.
+    // bottomData 배열을 순회하면서 각 행에 대해 에러 체크를 진행
     const updatedBottomData = bottomData.map((row, index) => {
-      // pendingUpdates가 존재하면 해당 업데이트 내용을 병합합니다.
+      // pendingUpdates가 있으면 해당 업데이트 내용을 병합
       const updatedRow = pendingUpdates[row.id] ? { ...row, ...pendingUpdates[row.id] } : row;
       let hasError = false;
       const requiredFields = ['itemType', 'itemName', 'specCode', 'endBar'];
 
-      // 필수 필드에 대해 빈 값이 있는지 체크합니다.
+      // 필수 필드 빈 값 체크
       requiredFields.forEach((field) => {
         if (!updatedRow[field] || updatedRow[field].toString().trim() === '') {
           invalidMessages.push(`인덱스 ${index + 1} 에 대해 누락된 값이 있습니다. (${field})`);
@@ -606,7 +710,7 @@ const Condition = () => {
         }
       });
 
-      // 기존 조건: LEP와 REP의 합이 200 이상이면 에러 처리
+      // LEP+REP >= 200 에러 처리
       const sum = Number(updatedRow.lep_mm) + Number(updatedRow.rep_mm);
       if (sum >= 200) {
         invalidMessages.push(`인덱스 ${index + 1} (품목번호: ${updatedRow.itemNo}) - 잘못된 입력`);
@@ -616,7 +720,7 @@ const Condition = () => {
       return { ...updatedRow, error: hasError };
     });
 
-    // 에러 메시지가 하나라도 있다면 저장을 중단하고 에러 메시지를 출력합니다.
+    // 에러가 있다면 저장 중단
     if (invalidMessages.length > 0) {
       setBottomData(updatedBottomData);
       alert(invalidMessages.join('\n'));
@@ -643,6 +747,9 @@ const Condition = () => {
     setApplyLoading(false);
   };
 
+  // ====================
+  // 렌더링
+  // ====================
   return (
     <div>
       <PageContainer title="수주 및 품목 관리">
@@ -702,49 +809,25 @@ const Condition = () => {
             </ParentCard>
           </Grid>
         </Grid>
+
         <Grid container spacing={2}>
           <Grid item xs={12} mt={3}>
             <ParentCard
               title={`수주별 품목명세 입력 화면 ${selectedOrderNumber ? selectedOrderNumber : ''}`}
             >
               <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
-                <DataGrid
+                <MyDataGrid
                   rows={bottomData}
                   columns={bottomColumns}
                   processRowUpdate={handleProcessRowUpdate}
-                  disableSelectionOnClick
-                  getRowId={(row) => row.id}
-                  onRowClick={(params) => setSelectedDetailId(params.id)}
-                  experimentalFeatures={{ newEditingApi: true }}
+                  onRowUpdate={(updatedRow) =>
+                    setBottomData((prev) =>
+                      prev.map((row) => (row.id === updatedRow.id ? updatedRow : row)),
+                    )
+                  }
+                  onRowClick={(row) => setSelectedDetailId(row.id)}
                   onCellDoubleClick={handleCellDoubleClick}
                   onCellKeyDown={handleCellKeyDown}
-                  getRowClassName={(params) => (params.row.group === 0 ? 'group0' : 'group1')}
-                  columnHeaderHeight={40}
-                  pagination={false}
-                  rowHeight={25}
-                  sx={{
-                    '& .MuiDataGrid-cell': {
-                      border: '1px solid black',
-                      fontSize: '12px',
-                      paddingTop: '2px',
-                      paddingBottom: '2px',
-                    },
-                    '& .MuiDataGrid-columnHeader': {
-                      fontSize: '14px',
-                      backgroundColor: '#B2B2B2',
-                      border: '1px solid black',
-                    },
-                    '& .group0': { backgroundColor: '#ffffff' },
-                    '& .group1': { backgroundColor: '#f5f5f5' },
-                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
-                    '& .MuiDataGrid-columnHeaderTitle': {
-                      whiteSpace: 'pre-wrap',
-                      textAlign: 'center',
-                      lineHeight: '1.2',
-                    },
-                    '& .MuiDataGrid-footerContainer': { display: '' },
-                    '& .index-cell': { backgroundColor: '#B2B2B2' },
-                  }}
                 />
               </Box>
               <Stack direction="row" justifyContent="flex-end" mb={1} spacing={2}>
@@ -798,6 +881,7 @@ const Condition = () => {
         </Grid>
       </PageContainer>
 
+      {/* ==================== 모달 (specCode, endBar 등 수정) ==================== */}
       {modalData && (
         <Modal open={isModalOpen} onClose={handleModalClose}>
           <Box sx={modalStyle}>
@@ -859,11 +943,12 @@ const Condition = () => {
         </Modal>
       )}
 
+      {/* ==================== 템플릿 모달 ==================== */}
       {isTemplateModalOpen && (
         <Modal open={isTemplateModalOpen} onClose={handleTemplateModalClose}>
           <Box sx={modalStyle}>
             <Typography variant="h6" mb={2}>
-              수주번호 " {selectedOrderNumber} " 에서 사용할 사양코드와 EndBar를 선택해주세요.
+              수주번호 "{selectedOrderNumber}" 에서 사용할 사양코드와 EndBar를 선택해주세요.
             </Typography>
             <Stack spacing={2}>
               <SearchableSelect
