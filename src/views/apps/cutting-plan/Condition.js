@@ -273,13 +273,6 @@ const Condition = () => {
   const [selectedSpecific, setSelectedSpecific] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
-  // 일괄변경 여부를 관리하는 상태 추가
-  const [bulkUpdateOptions, setBulkUpdateOptions] = useState({
-    itemType: false,
-    itemName: false,
-    specCode: false,
-    endBar: false,
-  });
 
   axios.interceptors.request.use(
     (config) => {
@@ -470,45 +463,13 @@ const Condition = () => {
     setModalData(null);
   };
 
+  // 모달에서 선택한 행만 업데이트하도록 수정 (일괄 변경 기능 제거)
   const handleSaveModal = () => {
-    // 만약 하나라도 일괄 변경 체크가 되어있다면 모든 행에 반영
-    if (
-      bulkUpdateOptions.itemType ||
-      bulkUpdateOptions.itemName ||
-      bulkUpdateOptions.specCode ||
-      bulkUpdateOptions.endBar
-    ) {
-      const updatedBottomData = bottomData.map((row) => {
-        const newRow = { ...row };
-        if (bulkUpdateOptions.itemType) newRow.itemType = modalData.itemType;
-        if (bulkUpdateOptions.itemName) newRow.itemName = modalData.itemName;
-        if (bulkUpdateOptions.specCode) newRow.specCode = modalData.specCode;
-        if (bulkUpdateOptions.endBar) newRow.endBar = modalData.endBar;
-        return newRow;
-      });
-      setBottomData(updatedBottomData);
-
-      // pendingUpdates에도 동일하게 반영 (전체 행 업데이트)
-      const newPendingUpdates = {};
-      updatedBottomData.forEach((row) => {
-        newPendingUpdates[row.id] = row;
-      });
-      setPendingUpdates(newPendingUpdates);
-    } else {
-      // 일괄 변경이 아닌 경우 기존처럼 모달에서 선택한 행만 업데이트
-      const { id, specCode, endBar, itemType, itemName } = modalData;
-      const updatedRow = { ...modalData, specCode, endBar, itemType, itemName };
-      setPendingUpdates((prev) => ({ ...prev, [id]: updatedRow }));
-      setBottomData((prev) => prev.map((row) => (row.id === id ? updatedRow : row)));
-    }
+    const { id, specCode, endBar, itemType, itemName } = modalData;
+    const updatedRow = { ...modalData, specCode, endBar, itemType, itemName };
+    setPendingUpdates((prev) => ({ ...prev, [id]: updatedRow }));
+    setBottomData((prev) => prev.map((row) => (row.id === id ? updatedRow : row)));
     setModalOpen(false);
-    // 저장 후 일괄변경 체크 상태 초기화
-    setBulkUpdateOptions({
-      itemType: false,
-      itemName: false,
-      specCode: false,
-      endBar: false,
-    });
   };
 
   const handleDelete = () => {
@@ -700,8 +661,8 @@ const Condition = () => {
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
-                      paddingTop: '2px', // 위쪽 패딩 조정
-                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
@@ -759,13 +720,14 @@ const Condition = () => {
                   onCellKeyDown={handleCellKeyDown}
                   getRowClassName={(params) => (params.row.group === 0 ? 'group0' : 'group1')}
                   columnHeaderHeight={40}
+                  pagination={false}
                   rowHeight={25}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
-                      paddingTop: '2px', // 위쪽 패딩 조정
-                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
@@ -842,7 +804,7 @@ const Condition = () => {
             <Typography variant="h6" mb={2}>
               데이터 수정
             </Typography>
-            {/* <Grid container spacing={2}>
+            <Grid container spacing={2}>
               <Grid item xs={3}>
                 <SearchableSelect
                   label="품목 종류"
@@ -859,20 +821,6 @@ const Condition = () => {
                   value={modalData.itemType}
                   onChange={(e) => setModalData((prev) => ({ ...prev, itemType: e.target.value }))}
                 />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={bulkUpdateOptions.itemType}
-                      onChange={(e) =>
-                        setBulkUpdateOptions((prev) => ({
-                          ...prev,
-                          itemType: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="일괄 변경"
-                />
               </Grid>
               <Grid item xs={3}>
                 <SearchableSelect
@@ -880,20 +828,6 @@ const Condition = () => {
                   options={['SteelGrating', ...standardItems.map((row) => row.itemName)]}
                   value={modalData.itemName}
                   onChange={(e) => setModalData((prev) => ({ ...prev, itemName: e.target.value }))}
-                />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={bulkUpdateOptions.itemName}
-                      onChange={(e) =>
-                        setBulkUpdateOptions((prev) => ({
-                          ...prev,
-                          itemName: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="일괄 변경"
                 />
               </Grid>
               <Grid item xs={3}>
@@ -903,20 +837,6 @@ const Condition = () => {
                   value={modalData.specCode}
                   onChange={(e) => setModalData((prev) => ({ ...prev, specCode: e.target.value }))}
                 />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={bulkUpdateOptions.specCode}
-                      onChange={(e) =>
-                        setBulkUpdateOptions((prev) => ({
-                          ...prev,
-                          specCode: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="일괄 변경"
-                />
               </Grid>
               <Grid item xs={3}>
                 <SearchableSelect
@@ -925,22 +845,8 @@ const Condition = () => {
                   value={modalData.endBar}
                   onChange={(e) => setModalData((prev) => ({ ...prev, endBar: e.target.value }))}
                 />
-                <FormControlLabel
-                  control={
-                    <Checkbox
-                      checked={bulkUpdateOptions.endBar}
-                      onChange={(e) =>
-                        setBulkUpdateOptions((prev) => ({
-                          ...prev,
-                          endBar: e.target.checked,
-                        }))
-                      }
-                    />
-                  }
-                  label="일괄 변경"
-                />
               </Grid>
-            </Grid> */}
+            </Grid>
             <Stack direction="row" spacing={2} justifyContent="flex-end" mt={2}>
               <Button variant="outlined" onClick={handleModalClose}>
                 취소

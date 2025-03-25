@@ -404,7 +404,7 @@ const Start = () => {
           <style>
             @page {
               size: A4 landscape;
-              margin: 10mm 5mm 5mm 5mm;
+              margin: 10mm 5mm 10mm 5mm;
             }
             @media print {
               .print-button {
@@ -424,7 +424,7 @@ const Start = () => {
               padding-left: 10px;
             }
             .header h2 {
-              margin: 5px 0;
+              margin: 0;
               font-size: 20px;
             }
             .header-details {
@@ -459,9 +459,9 @@ const Start = () => {
               background-color: #B2B2B2;
               color: black;
               text-align: center;
-              line-height: 25px;
+              line-height: 20px;
               font-weight: bold;
-              height: 25px;
+              height: 20px;
             }
             tr {
               height: 25px;
@@ -537,8 +537,8 @@ const Start = () => {
                               <td></td>
                               <td></td>
                               <td></td>
-                              <td>${row.loss}</td>
                               <td></td>
+                              <td>${row.loss}</td>
                               <td></td>
                               <td></td>
                               <td></td>
