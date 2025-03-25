@@ -470,64 +470,72 @@ const Start = () => {
         </head>
         <body>
           <button class="print-button" onclick="window.print()">출력</button>
-          ${
-            // IIFE를 사용하여 페이지 전체에서 그룹 배경색 관련 변수들을 유지합니다.
-            (() => {
-              let currentGroupColor = '';
-              let prevGroupPanel = null;
-              let toggle = false;
+          ${(() => {
+            let currentGroupColor = '';
+            let prevGroupPanel = null;
+            let toggle = false;
 
-              return pages.length > 0
-                ? pages
-                    .map((pageRows, pageIndex, pagesArr) => {
-                      const cumulativeOffset = pagesArr
-                        .slice(0, pageIndex)
-                        .reduce((sum, p) => sum + p.length, 0);
-                      const rowsHtml = pageRows
-                        .map((row, rowIndex) => {
-                          const globalIndex = cumulativeOffset + rowIndex;
-                          const rawPanel = row.panelNumberForDisplay || row.panelNumber || '';
-                          if (!row.isLossRow && rawPanel !== '' && rawPanel !== prevGroupPanel) {
-                            toggle = !toggle;
-                            currentGroupColor = toggle ? 'white' : 'yellow';
-                            prevGroupPanel = rawPanel;
-                          }
-                          const rowStyle = currentGroupColor
-                            ? ` style="background-color: ${currentGroupColor};"`
-                            : '';
-                          const leftCellStyle = ' style="background-color: #B2B2B2;"';
-                          let panelNumberValue = rawPanel;
-                          let qtyValue = row.qtyForDisplay || row.qty;
-                          let orderNumberValue = row.orderNumber;
-                          let customerValue = row.customerCode;
-                          if (globalIndex > 0) {
-                            let prevRow;
-                            if (rowIndex === 0) {
-                              prevRow = pages[pageIndex - 1][pages[pageIndex - 1].length - 1];
-                            } else {
-                              prevRow = pageRows[rowIndex - 1];
-                            }
-                            const prevRawPanel =
-                              prevRow.panelNumberForDisplay || prevRow.panelNumber || '';
-                            if (rawPanel === prevRawPanel) {
-                              panelNumberValue = '';
-                            }
-                            const prevQty = prevRow.qtyForDisplay || prevRow.qty;
-                            if (qtyValue === prevQty) {
-                              qtyValue = '';
-                            }
-                            const prevOrderNumber = prevRow.orderNumber;
-                            if (orderNumberValue === prevOrderNumber) {
-                              orderNumberValue = '';
-                            }
-                            const prevCustomer = prevRow.customerCode;
-                            if (customerValue === prevCustomer) {
-                              customerValue = '';
-                            }
-                          }
+            return pages.length > 0
+              ? pages
+                  .map((pageRows, pageIndex, pagesArr) => {
+                    const cumulativeOffset = pagesArr
+                      .slice(0, pageIndex)
+                      .reduce((sum, p) => sum + p.length, 0);
+                    const rowsHtml = pageRows
+                      .map((row, rowIndex) => {
+                        const globalIndex = cumulativeOffset + rowIndex;
+                        const rawPanel = row.panelNumberForDisplay || row.panelNumber || '';
+                        if (!row.isLossRow && rawPanel !== '' && rawPanel !== prevGroupPanel) {
+                          toggle = !toggle;
+                          currentGroupColor = toggle ? 'white' : 'yellow';
+                          prevGroupPanel = rawPanel;
+                        }
+                        const rowStyle = currentGroupColor
+                          ? ` style="background-color: ${currentGroupColor};"`
+                          : '';
+                        const leftCellStyle = ' style="background-color: #B2B2B2;"';
+                        let panelNumberValue = rawPanel;
+                        let qtyValue = row.qtyForDisplay || row.qty;
+                        let orderNumberValue = row.orderNumber;
+                        let customerValue = row.customerCode;
+                        // L 절단 수량을 위한 변수 선언
+                        let lCuttingQtyValue = row.lCuttingQty;
 
-                          if (row.isLossRow) {
-                            return `
+                        if (globalIndex > 0) {
+                          let prevRow;
+                          if (rowIndex === 0) {
+                            prevRow = pages[pageIndex - 1][pages[pageIndex - 1].length - 1];
+                          } else {
+                            prevRow = pageRows[rowIndex - 1];
+                          }
+                          const prevRawPanel =
+                            prevRow.panelNumberForDisplay || prevRow.panelNumber || '';
+                          if (rawPanel === prevRawPanel) {
+                            panelNumberValue = '';
+                          }
+                          const prevQty = prevRow.qtyForDisplay || prevRow.qty;
+                          if (qtyValue === prevQty) {
+                            qtyValue = '';
+                          }
+                          const prevOrderNumber = prevRow.orderNumber;
+                          if (orderNumberValue === prevOrderNumber) {
+                            orderNumberValue = '';
+                          }
+                          const prevCustomer = prevRow.customerCode;
+                          if (customerValue === prevCustomer) {
+                            customerValue = '';
+                          }
+                          // 동일한 판번호 내에서 이전 행과 L 절단 번호가 같으면 L 절단 수량은 공백 처리
+                          if (
+                            rawPanel === prevRawPanel &&
+                            row.lCuttingNumber === prevRow.lCuttingNumber
+                          ) {
+                            lCuttingQtyValue = '';
+                          }
+                        }
+
+                        if (row.isLossRow) {
+                          return `
                             <tr${rowStyle}>
                               <td${leftCellStyle}>${globalIndex + 1}</td>
                               <td></td>
@@ -545,8 +553,8 @@ const Start = () => {
                               <td></td>
                             </tr>
                           `;
-                          } else {
-                            return `
+                        } else {
+                          return `
                             <tr${rowStyle}>
                               <td${leftCellStyle}>${globalIndex + 1}</td>
                               <td>${panelNumberValue}</td>
@@ -560,99 +568,98 @@ const Start = () => {
                               <td>${row.length_mm}</td>
                               <td>${row.lep_mm}</td>
                               <td>${row.rep_mm}</td>
-                              <td>${row.lCuttingQty}</td>
+                              <td>${lCuttingQtyValue}</td>
                               <td>${row.item_qty}</td>
                             </tr>
                           `;
-                          }
-                        })
-                        .join('');
-                      const sumHtml =
-                        pageIndex === pagesArr.length - 1
-                          ? `
-                    <tr style="color: black;">
-                      <th></th>
-                      <th>합계</th>
-                      <th>총판수</th>
-                      <th>절단수량</th>
-                      <th>총 CB수량</th>
-                      <th>총품목수량</th>
-                      <th colspan="8"></th>
-                    </tr>
-                    <tr style="background-color: white; color: black;">
-                      <td></td>
-                      <td></td>
-                      <td>${selectedGroup.totalQuantity || 'N/A'}</td>
-                      <td>${totalLCuttingQty}</td>
-                      <td>${selectedGroup.totalCB || 0}</td>
-                      <td>${totalItemQty}</td>
-                      <td colspan="8"></td>
-                    </tr>
-                  `
-                          : '';
-                      return `
-                    <div class="page">
-                      <div class="header">
-                        <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
-                          selectedGroup.groupNumber
-                        })</h2>
-                        <div class="header-details">
-                          <h2>압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
-                          <h2>총중량: ${selectedGroup.result.totalWeight || 'N/A'}</h2>
-                          <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
-                        selectedGroup.minusLAdjustment || 'N/A'
-                      } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
-                        selectedGroup.minusWAdjustment || 'N/A'
-                      })</h2>
+                        }
+                      })
+                      .join('');
+                    const sumHtml =
+                      pageIndex === pagesArr.length - 1
+                        ? `
+                        <tr style="color: black;">
+                          <th></th>
+                          <th>합계</th>
+                          <th>총판수</th>
+                          <th>절단수량</th>
+                          <th>총 CB수량</th>
+                          <th>총품목수량</th>
+                          <th colspan="8"></th>
+                        </tr>
+                        <tr style="background-color: white; color: black;">
+                          <td></td>
+                          <td></td>
+                          <td>${selectedGroup.totalQuantity || 'N/A'}</td>
+                          <td>${totalLCuttingQty}</td>
+                          <td>${selectedGroup.totalCB || 0}</td>
+                          <td>${totalItemQty}</td>
+                          <td colspan="8"></td>
+                        </tr>
+                      `
+                        : '';
+                    return `
+                        <div class="page">
+                          <div class="header">
+                            <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                              selectedGroup.groupNumber
+                            })</h2>
+                            <div class="header-details">
+                              <h2>압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
+                              <h2>총중량: ${selectedGroup.result.totalWeight || 'N/A'}</h2>
+                              <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
+                      selectedGroup.minusLAdjustment || 'N/A'
+                    } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
+                      selectedGroup.minusWAdjustment || 'N/A'
+                    })</h2>
+                            </div>
+                            <div class="header-details">
+                              <h2>BB: ${
+                                specCodeDetailsMap.bbCode
+                                  ? transformCode(specCodeDetailsMap.bbCode)
+                                  : 'N/A'
+                              }</h2>
+                              <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
+                              <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
+                              <h2>CB: ${
+                                specCodeDetailsMap.cbCode
+                                  ? transformCode(specCodeDetailsMap.cbCode)
+                                  : 'N/A'
+                              }</h2>
+                              <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
+                              <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
+                            </div>
+                          </div>
+                          <table>
+                            <thead>
+                              <tr>
+                                <th></th>
+                                <th>판 번호</th>
+                                <th>판수량</th>
+                                <th>L 절단<br>번호</th>
+                                <th>수주 번호</th>
+                                <th>수주처명</th>
+                                <th>도면번호/<br>품명</th>
+                                <th>품목<br>번호</th>
+                                <th>폭</th>
+                                <th>길이</th>
+                                <th>LEP</th>
+                                <th>REP</th>
+                                <th>L 절단<br>수량</th>
+                                <th>품목<br>수량</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              ${rowsHtml}
+                              ${sumHtml}
+                            </tbody>
+                          </table>
                         </div>
-                        <div class="header-details">
-                          <h2>BB: ${
-                            specCodeDetailsMap.bbCode
-                              ? transformCode(specCodeDetailsMap.bbCode)
-                              : 'N/A'
-                          }</h2>
-                          <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
-                          <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
-                          <h2>CB: ${
-                            specCodeDetailsMap.cbCode
-                              ? transformCode(specCodeDetailsMap.cbCode)
-                              : 'N/A'
-                          }</h2>
-                          <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
-                          <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
-                        </div>
-                      </div>
-                      <table>
-                        <thead>
-                          <tr>
-                            <th></th>
-                            <th>판 번호</th>
-                            <th>판수량</th>
-                            <th>L 절단<br>번호</th>
-                            <th>수주 번호</th>
-                            <th>수주처명</th>
-                            <th>도면번호/<br>품명</th>
-                            <th>품목<br>번호</th>
-                            <th>폭</th>
-                            <th>길이</th>
-                            <th>LEP</th>
-                            <th>REP</th>
-                            <th>L 절단<br>수량</th>
-                            <th>품목<br>수량</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          ${rowsHtml}
-                          ${sumHtml}
-                        </tbody>
-                      </table>
-                    </div>
-                  `;
-                    })
-                    .join('')
-                : '<p>데이터가 없습니다.</p>';
-            })()
-          }
+                      `;
+                  })
+                  .join('')
+              : '<p>데이터가 없습니다.</p>';
+          })()}
         </body>
         </html>
         `;
