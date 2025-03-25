@@ -582,7 +582,7 @@ const Start = () => {
                     <tr style="background-color: white; color: black;">
                       <td></td>
                       <td></td>
-                      <td>${selectedGroup.result.table.length || 'N/A'}</td>
+                      <td>${selectedGroup.totalQuantity || 'N/A'}</td>
                       <td>${totalLCuttingQty}</td>
                       <td>${selectedGroup.totalCB || 0}</td>
                       <td>${totalItemQty}</td>
