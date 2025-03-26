@@ -316,7 +316,41 @@ const Start = () => {
       console.error('Error fetching top-right data:', error);
     }
   };
-
+  const handleViewPastPlan = async () => {
+    if (!selectedOrderId) return;
+    setBottomData([]);
+    setLoading(true);
+    try {
+      const response = await axios.get(`/api/plan/cutting-plan?order_id=${selectedOrderId}`);
+      const pastPlans = response.data.table;
+      const summaryData = pastPlans.map((plan) => {
+        const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
+        return {
+          groupNumber: plan.group_id,
+          totalQuantity,
+          totalCB: plan.totalCB || 0,
+          bbLossRate: plan.bbLossRate,
+          cbLossRate: plan.cbLossRate,
+          bbCode: plan.bbCode,
+          bbUsage: plan.bbUsage,
+          cbUsage: plan.cbUsage,
+          bbLoss: plan.bbLoss,
+          cbCode: plan.cbCode,
+          cbLoss: plan.cbLoss,
+          result: plan.result,
+          minusLAdjustment: plan.minusLAdjustment,
+          minusWAdjustment: plan.minusWAdjustment,
+          plusLAdjustment: plan.plusLAdjustment,
+          plusWAdjustment: plan.plusWAdjustment,
+        };
+      });
+      setBottomData(summaryData);
+    } catch (error) {
+      console.error('Error fetching past cutting plan:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   const handlePrintInNewWindow = async () => {
     function transformCode(code) {
       // 첫 번째 숫자가 시작되는 인덱스 찾기
@@ -743,7 +777,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: 'none' },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
@@ -751,6 +785,9 @@ const Start = () => {
             <Stack direction="row" justifyContent="flex-start" spacing={1}>
               <Button disabled={!selectedOrderId || loading} onClick={handleGeneratePlan}>
                 {loading ? <CircularProgress size={24} /> : '계획 생성'}
+              </Button>
+              <Button disabled={!selectedOrderId || loading} onClick={handleViewPastPlan}>
+                {loading ? <CircularProgress size={24} /> : '기계획 보기'}
               </Button>
               <Button onClick={() => setModalOpen(true)}>설정 변경</Button>
             </Stack>
@@ -787,7 +824,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: 'none' },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
@@ -832,7 +869,7 @@ const Start = () => {
                     textAlign: 'center',
                     lineHeight: '1.2',
                   },
-                  '& .MuiDataGrid-footerContainer': { display: 'none' },
+                  '& .MuiDataGrid-footerContainer': { display: '' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
                 }}
               />
