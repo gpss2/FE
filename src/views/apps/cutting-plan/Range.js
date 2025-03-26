@@ -5,7 +5,6 @@ import { Box, Grid, Stack, Button } from '@mui/material';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
-import { width } from '@mui/system';
 import RangeDataGrid from './RangeDataGrid';
 
 const indexColumn = {
@@ -21,7 +20,7 @@ const indexColumn = {
     return sortedRowIds.indexOf(params.id) + 1;
   },
 };
-// 상단 테이블 컬럼 정의
+
 const topColumns = [
   indexColumn,
   { field: 'orderNumber', headerName: '수주번호', flex: 1 },
@@ -34,7 +33,6 @@ const topColumns = [
   { field: 'taskNumber', headerName: '태스크번호', flex: 1 },
 ];
 
-// 하단 테이블 컬럼 정의
 const bottomColumns = [
   indexColumn,
   { field: 'drawingNumber', headerName: '도면\n번호', width: 60 },
@@ -56,10 +54,10 @@ const bottomColumns = [
 const Range = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
-  // 그룹번호를 기준으로 선택되므로 selectedDrawings 상태는 제거하거나 사용하지 않아도 됩니다.
   const [selectOrderId, setSelectOrderId] = useState(null);
   const [selectGroupId, setSelectGroupId] = useState(null);
-  const [selectionModel, setSelectionModel] = useState([]);
+  const [selectionModel, setSelectionModel] = useState([]); // 일반 클릭 (회색)
+  const [mergeSelection, setMergeSelection] = useState([]); // CTRL+클릭으로 선택된 그룹(병합/분리용)
 
   const navigate = useNavigate();
   axios.interceptors.request.use(
@@ -83,7 +81,6 @@ const Range = () => {
     },
   );
 
-  // 페이지 로드시 상단 테이블 데이터 가져오기
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -98,7 +95,6 @@ const Range = () => {
       const response = await axios.get('/api/order/list');
       const processedData = response.data.table.map((row) => ({
         ...row,
-        // 날짜 문자열에서 'T' 이전까지만 잘라쓰기
         deliveryDate: row.deliveryDate.split('T')[0],
       }));
       setTopData(processedData);
@@ -116,64 +112,72 @@ const Range = () => {
     }
   };
 
-  // 상단 테이블에서 행 클릭 시 -> 해당 orderId로 하단 데이터 로드
+  // 상단 테이블 클릭 시 해당 order의 하단 데이터를 로드하며 모든 선택 초기화
   const handleRowClick = (params) => {
     const selectedOrderId = params.id;
     setSelectOrderId(selectedOrderId);
-    // 행 클릭 시 선택 초기화
     setSelectGroupId(null);
     setSelectionModel([]);
+    setMergeSelection([]);
     fetchBottomData(selectedOrderId);
   };
 
-  // 하단 테이블에서 셀 클릭 시 -> 그룹번호(없으면 도면번호)를 기준으로 해당 그룹에 속한 모든 행 선택
-  const handleCellClick = (params) => {
+  // 하단 테이블 셀 클릭: CTRL 여부에 따라 동작을 구분
+  const handleCellClick = (e, params) => {
     const clickedRow = params.row;
-    // 그룹번호가 null이면 도면번호를 대체값으로 사용
+    // 그룹 식별자: groupNumber가 있으면 그것, 없으면 drawingNumber 사용
     const groupIdentifier =
       clickedRow.groupNumber !== null ? clickedRow.groupNumber : clickedRow.drawingNumber;
     setSelectGroupId(groupIdentifier);
 
-    const sameRows = bottomData
-      .filter((row) => {
-        const identifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
-        return identifier === groupIdentifier;
-      })
-      .map((row) => row.id);
-
-    setSelectionModel((prevSelection) => {
-      const newSet = new Set(prevSelection);
-      sameRows.forEach((id) => {
-        if (newSet.has(id)) {
-          newSet.delete(id);
+    if (e.ctrlKey) {
+      // CTRL+클릭: 해당 그룹 전체가 병합/분리용 선택으로 반영
+      setMergeSelection((prev) => {
+        if (prev.includes(groupIdentifier)) {
+          return prev.filter((g) => g !== groupIdentifier);
         } else {
-          newSet.add(id);
+          return [...prev, groupIdentifier];
         }
       });
-      return Array.from(newSet);
-    });
+    } else {
+      // 일반 클릭: 같은 그룹의 모든 행 선택 (회색)
+      const sameRows = bottomData
+        .filter((row) => {
+          const idt = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
+          return idt === groupIdentifier;
+        })
+        .map((row) => row.id);
+      setSelectionModel((prevSelection) => {
+        const newSet = new Set(prevSelection);
+        sameRows.forEach((id) => {
+          if (newSet.has(id)) {
+            newSet.delete(id);
+          } else {
+            newSet.add(id);
+          }
+        });
+        return Array.from(newSet);
+      });
+    }
   };
 
-  // selectionModel 변경 핸들러
-  const handleSelectionModelChange = (newSelection) => {
-    setSelectionModel(newSelection);
-  };
-
-  // 병합: 선택된 그룹번호에 해당하는 모든 도면번호를 중복제거하여 payload로 전송
+  // 병합: CTRL 선택(mergeSelection에 포함된 그룹)에 해당하는 행들에서 도면번호 추출 후 payload 전송
   const handleMerge = async () => {
-    if (selectionModel.length === 0) {
+    if (mergeSelection.length === 0) {
       console.error('선택된 도면이 없습니다.');
       return;
     }
-    // 선택된 행들에서 도면번호 추출
-    const selectedRows = bottomData.filter((row) => selectionModel.includes(row.id));
+    const selectedRows = bottomData.filter((row) => {
+      const groupIdentifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
+      return mergeSelection.includes(groupIdentifier);
+    });
     const drawingNumbers = selectedRows.map((row) => row.drawingNumber);
     const uniqueDrawingNumbers = Array.from(new Set(drawingNumbers));
     try {
       await axios.post(`/api/plan/order-groups/${selectOrderId}/concat`, {
         drawingNumbers: uniqueDrawingNumbers,
       });
-      setSelectionModel([]);
+      setMergeSelection([]);
       fetchBottomData(selectOrderId);
     } catch (error) {
       console.error('병합 에러:', error);
@@ -190,8 +194,8 @@ const Range = () => {
       await axios.post(`/api/plan/order-groups/${selectOrderId}/split`, {
         groupNumber: selectGroupId,
       });
-      // 분리 후 선택 상태 초기화
       setSelectionModel([]);
+      setMergeSelection([]);
       setSelectGroupId(null);
       fetchBottomData(selectOrderId);
     } catch (error) {
@@ -217,17 +221,14 @@ const Range = () => {
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
                     fontSize: '12px',
-                    paddingTop: '2px', // 위쪽 패딩 조정
-                    paddingBottom: '2px', // 아래쪽 패딩 조정
+                    paddingTop: '2px',
+                    paddingBottom: '2px',
                   },
                   '& .MuiDataGrid-columnHeader': {
                     fontSize: '14px',
                     backgroundColor: '#B2B2B2',
                     border: '1px solid black',
                   },
-                  '& .group0': { backgroundColor: '#ffffff' },
-                  '& .group1': { backgroundColor: '#f5f5f5' },
-                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
                   '& .MuiDataGrid-columnHeaderTitle': {
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
@@ -251,6 +252,7 @@ const Range = () => {
                 rows={bottomData}
                 columns={bottomColumns}
                 selectionModel={selectionModel}
+                mergeSelection={mergeSelection}
                 onRowClick={handleCellClick}
               />
             </Box>

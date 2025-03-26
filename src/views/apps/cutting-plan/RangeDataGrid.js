@@ -10,7 +10,7 @@ import {
   Paper,
 } from '@mui/material';
 
-const RangeDataGrid = ({ rows, columns, selectionModel, onRowClick }) => {
+const RangeDataGrid = ({ rows, columns, selectionModel, mergeSelection, onRowClick }) => {
   // 헤더 및 셀 기본 스타일
   const headerCellStyle = {
     fontSize: '14px',
@@ -20,9 +20,9 @@ const RangeDataGrid = ({ rows, columns, selectionModel, onRowClick }) => {
     whiteSpace: 'pre-wrap',
     lineHeight: '1.2',
     padding: '4px 8px',
-    position: 'sticky', // 상단 고정을 위한 sticky
-    top: 0, // 화면 상단에서 0px 위치에 고정
-    zIndex: 2, // 본문보다 위에 표시되도록 zIndex 부여
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
   };
 
   const cellStyle = {
@@ -33,27 +33,32 @@ const RangeDataGrid = ({ rows, columns, selectionModel, onRowClick }) => {
     whiteSpace: 'nowrap',
   };
 
-  // 선택된 행 스타일 (선택 시 배경색 변경)
-  const rowStyle = (rowId) => ({
-    backgroundColor: selectionModel.includes(rowId) ? '#f0f0f0' : 'inherit',
-    cursor: 'pointer',
-    height: '25px',
-  });
+  // 행 스타일: 각 행의 그룹 식별자( row.groupNumber 또는 row.drawingNumber )를 기준으로 mergeSelection에 포함되면 연두/보라, 그렇지 않으면 일반 선택(회색)
+  const rowStyle = (row) => {
+    const groupIdentifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
+    let backgroundColor = 'inherit';
+    if (mergeSelection && mergeSelection.includes(groupIdentifier)) {
+      const idx = mergeSelection.indexOf(groupIdentifier);
+      backgroundColor = idx % 2 === 0 ? 'lightgreen' : 'yellow';
+    } else if (selectionModel && selectionModel.includes(row.id)) {
+      backgroundColor = '#f0f0f0';
+    }
+    return { backgroundColor, cursor: 'pointer', height: '25px' };
+  };
 
-  // 각 컬럼의 너비를 관리하는 상태 (초기값은 로컬스토리지 또는 columns의 width/default 100)
+  // 각 컬럼의 너비 관리 (로컬스토리지에서 불러오거나 기본값 사용)
   const [columnWidths, setColumnWidths] = useState({});
 
   useEffect(() => {
     const savedWidths = JSON.parse(localStorage.getItem('rangeDataGridColumnWidths') || '{}');
     const initialWidths = {};
     columns.forEach((col) => {
-      // col.width가 없으면 기본 100px 적용
       initialWidths[col.field] = savedWidths[col.field] || col.width || 100;
     });
     setColumnWidths(initialWidths);
   }, [columns]);
 
-  // 드래그로 컬럼 너비 조절 함수
+  // 드래그로 컬럼 너비 조절
   const handleMouseDown = (e, field) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -113,8 +118,8 @@ const RangeDataGrid = ({ rows, columns, selectionModel, onRowClick }) => {
           {rows.map((row, index) => (
             <TableRow
               key={row.id || index}
-              style={rowStyle(row.id)}
-              onClick={() => onRowClick && onRowClick({ row })}
+              style={rowStyle(row)}
+              onClick={(e) => onRowClick && onRowClick(e, { row })}
             >
               {columns.map((col) => {
                 const cellStyles = { ...cellStyle, width: columnWidths[col.field] };
@@ -153,11 +158,13 @@ RangeDataGrid.propTypes = {
   rows: PropTypes.array.isRequired,
   columns: PropTypes.array.isRequired,
   selectionModel: PropTypes.array,
+  mergeSelection: PropTypes.array,
   onRowClick: PropTypes.func,
 };
 
 RangeDataGrid.defaultProps = {
   selectionModel: [],
+  mergeSelection: [],
   onRowClick: null,
 };
 
