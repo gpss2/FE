@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Modal, Box, Typography } from '@mui/material';
+import { Modal, Box, Typography, Autocomplete, TextField } from '@mui/material';
 
 const MyDataGrid = ({
   rows = [],
@@ -24,8 +24,14 @@ const MyDataGrid = ({
   const [currentSpecEditing, setCurrentSpecEditing] = useState(null); // { row, col }
   const [specSearch, setSpecSearch] = useState(''); // 검색어
 
+  // 추가: itemName, endBar 의 옵션 상태
+  const [standardItems, setStandardItems] = useState([]);
+  const [meterialCode, setMeterialCode] = useState([]);
+
   // 편집 가능한 필드 목록 (더블클릭으로 편집 가능)
   const editableFields = [
+    'drawingNumber',
+    'itemNo',
     'itemType',
     'itemName',
     // 'specCode', // specCode는 별도 모달로 처리
@@ -37,6 +43,14 @@ const MyDataGrid = ({
     'rep_mm',
     'quantity',
   ];
+
+  // 기본값 적용을 위한 헬퍼 함수
+  const getInitialEditingValue = (row, field) => {
+    if (field === 'itemName') {
+      return row[field] && row[field].trim() !== '' ? row[field] : 'Steel Grating';
+    }
+    return row[field] ?? '';
+  };
 
   // ---------------------------
   // 1) 컬럼 너비 상태 & 로컬 스토리지 연동
@@ -123,7 +137,7 @@ const MyDataGrid = ({
     }
     if (!editableFields.includes(col.field)) return;
     setEditingCell({ rowId: row.id, field: col.field });
-    setEditingValue(row[col.field] ?? '');
+    setEditingValue(getInitialEditingValue(row, col.field));
     if (onCellDoubleClick) {
       onCellDoubleClick({ row, field: col.field });
     }
@@ -148,7 +162,7 @@ const MyDataGrid = ({
       event.preventDefault();
       if (!editingCell || editingCell.rowId !== row.id || editingCell.field !== col.field) {
         setEditingCell({ rowId: row.id, field: col.field });
-        setEditingValue(row[col.field] ?? '');
+        setEditingValue(getInitialEditingValue(row, col.field));
       } else {
         commitEdit(row, col);
       }
@@ -178,8 +192,8 @@ const MyDataGrid = ({
       const currentRowIndex = rows.findIndex((r) => r.id === row.id);
       if (currentRowIndex !== -1 && currentRowIndex < rows.length - 1) {
         const nextRow = rows[currentRowIndex + 1];
-        setEditingCell({ rowId: nextRow.id, field: 'width_mm' });
-        setEditingValue(nextRow['width_mm'] ?? '');
+        setEditingCell({ rowId: nextRow.id, field: 'drawingNumber' });
+        setEditingValue(getInitialEditingValue(nextRow, 'drawingNumber'));
       } else {
         setEditingCell(null);
       }
@@ -188,7 +202,7 @@ const MyDataGrid = ({
       if (currentIndex !== -1 && currentIndex < editableFields.length - 1) {
         const nextField = editableFields[currentIndex + 1];
         setEditingCell({ rowId: row.id, field: nextField });
-        setEditingValue(row[nextField] ?? '');
+        setEditingValue(getInitialEditingValue(row, nextField));
       } else {
         setEditingCell(null);
       }
@@ -285,7 +299,38 @@ const MyDataGrid = ({
   });
 
   // ---------------------------
-  // 6) 렌더링
+  // 6) 옵션 데이터 로드 (itemName, endBar)
+  // ---------------------------
+  useEffect(() => {
+    axios
+      .get('/api/item/standard')
+      .then((response) => {
+        if (response.data && response.data.table) {
+          // itemName의 목록만 추출 (객체 그대로 사용)
+          setStandardItems(response.data.table);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching standard items:', error);
+      });
+  }, []);
+
+  useEffect(() => {
+    axios
+      .get('/api/item/material')
+      .then((response) => {
+        if (response.data && response.data.table) {
+          // materialCode의 목록만 추출 (객체 그대로 사용)
+          setMeterialCode(response.data.table);
+        }
+      })
+      .catch((error) => {
+        console.error('Error fetching meterial code:', error);
+      });
+  }, []);
+
+  // ---------------------------
+  // 7) 렌더링
   // ---------------------------
   return (
     <div style={{ height: '100%', overflow: 'auto' }}>
@@ -415,9 +460,13 @@ const MyDataGrid = ({
                     </td>
                   );
                 }
+                // itemName 셀의 경우 기본값 "Steel Grating"을 표시
+                const cellValue =
+                  col.field === 'itemName' && (!row[col.field] || row[col.field].trim() === '')
+                    ? 'Steel Grating'
+                    : row[col.field];
                 const isEditing =
                   editingCell && editingCell.rowId === row.id && editingCell.field === col.field;
-                const cellValue = row[col.field];
                 const cellClassName =
                   typeof col.cellClassName === 'function' ? col.cellClassName({ row }) : '';
                 const colWidth = columnWidths[col.field] ?? parseInt(col.width || 100, 10);
@@ -445,40 +494,91 @@ const MyDataGrid = ({
                     }
                   >
                     {isEditing ? (
-                      <input
-                        ref={inputRef}
-                        value={editingValue}
-                        onChange={(e) => {
-                          const newVal = e.target.value;
-                          setEditingValue(newVal);
-                          // 즉시 업데이트: 현재 row의 값을 갱신
-                          const newRow = { ...row, [col.field]: newVal };
-                          let updatedRow = newRow;
-                          if (processRowUpdate) {
-                            updatedRow = processRowUpdate(newRow, row);
+                      ['itemType', 'itemName', 'endBar'].includes(col.field) ? (
+                        <Autocomplete
+                          options={
+                            col.field === 'itemType'
+                              ? [
+                                  'R',
+                                  'C',
+                                  'Angle 대',
+                                  'Angle 소',
+                                  'EndBar',
+                                  'GB',
+                                  '각 Pipe',
+                                  '특수 Type',
+                                ]
+                              : col.field === 'itemName'
+                              ? standardItems.map((item) => item.itemName)
+                              : meterialCode.map((item) => item.materialCode)
                           }
-                          if (onRowUpdate) {
-                            onRowUpdate(updatedRow);
+                          freeSolo={col.field === 'itemName'}
+                          getOptionLabel={(option) => option.toString()}
+                          value={
+                            col.field === 'itemType'
+                              ? editingValue
+                              : col.field === 'itemName'
+                              ? editingValue
+                              : editingValue
                           }
-                        }}
-                        onBlur={() => handleInputBlur(row, col)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            commitEdit(row, col);
-                          }
-                        }}
-                        style={{
-                          display: 'block',
-                          width: '100%',
-                          boxSizing: 'border-box',
-                          fontSize: '12px',
-                          padding: '2px',
-                          margin: 0,
-                          border: 'none',
-                          outline: 'none',
-                        }}
-                      />
+                          onChange={(event, newValue) => {
+                            const newVal =
+                              col.field === 'itemType'
+                                ? newValue
+                                : col.field === 'itemName'
+                                ? newValue
+                                : newValue;
+                            setEditingValue(newVal);
+                            const newRow = { ...row, [col.field]: newVal };
+                            let updatedRow = newRow;
+                            if (processRowUpdate) {
+                              updatedRow = processRowUpdate(newRow, row);
+                            }
+                            if (onRowUpdate) {
+                              onRowUpdate(updatedRow);
+                            }
+                          }}
+                          renderInput={(params) => (
+                            <TextField {...params} autoFocus size="small" variant="standard" />
+                          )}
+                          onBlur={() => handleInputBlur(row, col)}
+                          style={{ width: '100%' }}
+                        />
+                      ) : (
+                        <input
+                          ref={inputRef}
+                          value={editingValue}
+                          onChange={(e) => {
+                            const newVal = e.target.value;
+                            setEditingValue(newVal);
+                            const newRow = { ...row, [col.field]: newVal };
+                            let updatedRow = newRow;
+                            if (processRowUpdate) {
+                              updatedRow = processRowUpdate(newRow, row);
+                            }
+                            if (onRowUpdate) {
+                              onRowUpdate(updatedRow);
+                            }
+                          }}
+                          onBlur={() => handleInputBlur(row, col)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              commitEdit(row, col);
+                            }
+                          }}
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            fontSize: '12px',
+                            padding: '2px',
+                            margin: 0,
+                            border: 'none',
+                            outline: 'none',
+                          }}
+                        />
+                      )
                     ) : (
                       cellValue
                     )}

@@ -6,6 +6,7 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import { width } from '@mui/system';
+import RangeDataGrid from './RangeDataGrid';
 
 const indexColumn = {
   field: 'index',
@@ -246,39 +247,11 @@ const Range = () => {
         <Grid item xs={12} mt={3}>
           <ParentCard title="그룹범위 지정 화면">
             <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
-              <DataGrid
+              <RangeDataGrid
                 rows={bottomData}
                 columns={bottomColumns}
-                checkboxSelection
-                rowSelectionModel={selectionModel}
-                onSelectionModelChange={handleSelectionModelChange}
+                selectionModel={selectionModel}
                 onRowClick={handleCellClick}
-                columnHeaderHeight={40}
-                rowHeight={25}
-                sx={{
-                  '& .MuiDataGrid-cell': {
-                    border: '1px solid black',
-                    fontSize: '12px',
-                  },
-                  '& .MuiDataGrid-columnHeader': {
-                    fontSize: '14px',
-                    backgroundColor: '#B2B2B2',
-                    border: '1px solid black',
-                  },
-                  '& .MuiDataGrid-columnHeaderTitle': {
-                    whiteSpace: 'pre-wrap',
-                    textAlign: 'center',
-                    lineHeight: '1.2',
-                  },
-                  '& .MuiDataGrid-cellCheckbox': {
-                    display: 'none',
-                  },
-                  '& .MuiDataGrid-columnHeaderCheckbox': {
-                    display: 'none',
-                  },
-                  '& .MuiDataGrid-footerContainer': { display: '' },
-                  '& .index-cell': { backgroundColor: '#B2B2B2' },
-                }}
               />
             </Box>
             <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
