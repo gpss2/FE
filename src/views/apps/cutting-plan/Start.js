@@ -18,6 +18,7 @@ import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import DrawingCanvas from './DrawingCanvas.js';
+import StartDataGrid from './StartDataGRid.js';
 const indexColumn = {
   field: 'index',
   headerName: '',
@@ -783,6 +784,7 @@ const Start = () => {
     );
     setModalOpen(false);
   };
+  const [selectedTopRightId, setSelectedTopRightId] = useState(null);
 
   return (
     <PageContainer title="절단 계획 생성">
@@ -792,7 +794,8 @@ const Start = () => {
         <Grid item xs={5}>
           <ParentCard title="절단계획 생성 대상">
             <Box sx={{ height: 'calc(30vh - 32px)', width: '100%' }}>
-              <DataGrid
+              <StartDataGrid
+                id="top-left-grid"
                 rows={topLeftData}
                 columns={topLeftColumns}
                 columnHeaderHeight={45}
@@ -849,36 +852,19 @@ const Start = () => {
         <Grid item xs={7}>
           <ParentCard title="그룹별 계획조건 개별지정">
             <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
-              <DataGrid
+              <StartDataGrid
+                id="top-right-grid"
                 rows={topRightData}
                 columns={topRightColumns}
                 rowsPerPageOptions={[topRightData.length]}
-                columnHeaderHeight={60}
+                columnHeaderHeight={45}
                 rowHeight={25}
                 loading={loadingTopRight}
-                sx={{
-                  '& .MuiDataGrid-cell': {
-                    border: '1px solid black',
-                    fontSize: '12px',
-                    paddingTop: '2px', // 위쪽 패딩 조정
-                    paddingBottom: '2px', // 아래쪽 패딩 조정
-                  },
-                  '& .MuiDataGrid-columnHeader': {
-                    fontSize: '12px',
-                    backgroundColor: '#B2B2B2',
-                    border: '1px solid black',
-                  },
-                  '& .group0': { backgroundColor: '#ffffff' },
-                  '& .group1': { backgroundColor: '#f5f5f5' },
-                  '& .error-cell': { backgroundColor: 'red', color: 'white' },
-                  '& .MuiDataGrid-columnHeaderTitle': {
-                    whiteSpace: 'pre-wrap',
-                    textAlign: 'center',
-                    lineHeight: '1.2',
-                  },
-                  '& .MuiDataGrid-footerContainer': { display: '' },
-                  '& .index-cell': { backgroundColor: '#B2B2B2' },
+                onRowClick={(params) => {
+                  setSelectedTopRightId(params.row.id);
                 }}
+                selectionModel={selectedTopRightId ? [selectedTopRightId] : []}
+                rowSelectionModel={selectedTopRightId ? [selectedTopRightId] : []}
               />
             </Box>
           </ParentCard>
@@ -890,7 +876,8 @@ const Start = () => {
         <Grid item xs={12}>
           <ParentCard title="절단 계획 결과: 그룹별 사용자재">
             <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
-              <DataGrid
+              <StartDataGrid
+                id="bottom-grid"
                 rows={bottomData}
                 getRowId={(row) => row.groupNumber}
                 onRowSelectionModelChange={(ids) => {
@@ -901,6 +888,9 @@ const Start = () => {
                 columnHeaderHeight={30}
                 rowsPerPageOptions={[bottomColumns.length]}
                 rowHeight={25}
+                selectionModel={selectedGroup ? [selectedGroup.groupNumber] : []} // Add this line
+                rowSelectionModel={selectedGroup ? [selectedGroup.groupNumber] : []}
+                keepNonExistentRowsSelected={false} // Add this
                 sx={{
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
