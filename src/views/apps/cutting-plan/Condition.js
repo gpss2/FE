@@ -32,6 +32,7 @@ import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import MyDataGrid from './MyDataGrid';
+import StartDataGrid from './StartDataGRid';
 
 // 사양코드 선택 다이얼로그 컴포넌트
 const SpecCodeDialog = ({ open, onClose, specCodes, onSelect, currentValue }) => {
@@ -920,7 +921,7 @@ const Condition = () => {
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주 선택">
               <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
-                <DataGrid
+                <StartDataGrid
                   rows={topData}
                   columns={topColumns}
                   columnHeaderHeight={30}

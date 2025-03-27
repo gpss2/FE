@@ -28,6 +28,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import RangeDataGrid from './RangeDataGrid';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
+import StartDataGrid from './StartDataGRid';
 
 const modalStyle = {
   position: 'absolute',
@@ -528,7 +529,7 @@ const Range = () => {
         <Grid item xs={12} mt={3}>
           <ParentCard title="태스크범위 지정 화면">
             <Box sx={{ height: 'calc(50vh)', width: '100%' }}>
-              <DataGrid
+              <StartDataGrid
                 rows={topData}
                 columns={topColumns}
                 columnHeaderHeight={30}
