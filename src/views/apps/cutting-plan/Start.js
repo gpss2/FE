@@ -799,7 +799,9 @@ const Start = () => {
                 {loading ? <CircularProgress size={24} /> : '계획 생성'}
               </Button>
               <Button
-                disabled={!selectedOrderId || topRightData.length === 0 || loading}
+                disabled={
+                  !selectedOrderId || topRightData.length === 0 || loadingTopRight || loading
+                }
                 onClick={handleViewPastPlan}
               >
                 {loading ? <CircularProgress size={24} /> : '기계획 보기'}
