@@ -318,10 +318,14 @@ const Start = () => {
   };
   const handleViewPastPlan = async () => {
     if (!selectedOrderId) return;
+    const group_id_list = topRightData.map((item) => item.groupNumber).join(',');
+    console.log('line 322:', group_id_list);
     setBottomData([]);
     setLoading(true);
     try {
-      const response = await axios.get(`/api/plan/cutting-plan?order_id=${selectedOrderId}`);
+      const response = await axios.get(
+        `/api/plan/cutting-plan?order_id=${selectedOrderId}&group_id_list=${group_id_list}`,
+      );
       const pastPlans = response.data.table;
       const summaryData = pastPlans.map((plan) => {
         const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
@@ -786,7 +790,10 @@ const Start = () => {
               <Button disabled={!selectedOrderId || loading} onClick={handleGeneratePlan}>
                 {loading ? <CircularProgress size={24} /> : '계획 생성'}
               </Button>
-              <Button disabled={!selectedOrderId || loading} onClick={handleViewPastPlan}>
+              <Button
+                disabled={!selectedOrderId || topRightData.length === 0 || loading}
+                onClick={handleViewPastPlan}
+              >
                 {loading ? <CircularProgress size={24} /> : '기계획 보기'}
               </Button>
               <Button onClick={() => setModalOpen(true)}>설정 변경</Button>
