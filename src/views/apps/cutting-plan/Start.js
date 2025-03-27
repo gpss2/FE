@@ -109,6 +109,7 @@ const Start = () => {
   const [minusLAdjustment, setMinusLAdjustment] = useState('-3');
   const [plusWAdjustment, setPlusWAdjustment] = useState(3.0);
   const [minusWAdjustment, setMinusWAdjustment] = useState('-3');
+  const [loadingTopRight, setLoadingTopRight] = useState(false);
 
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
@@ -274,6 +275,7 @@ const Start = () => {
 
   const fetchTopRightData = async (orderId) => {
     try {
+      setLoadingTopRight(true);
       const settingsResponse = await axios.get('/api/settings');
       const settings = settingsResponse.data;
       const response = await axios.get(`/api/plan/order-details/${orderId}/groups`);
@@ -314,8 +316,11 @@ const Start = () => {
       setTopRightData(processedData);
     } catch (error) {
       console.error('Error fetching top-right data:', error);
+    } finally {
+      setLoadingTopRight(false);
     }
   };
+
   const handleViewPastPlan = async () => {
     if (!selectedOrderId) return;
     const group_id_list = topRightData.map((item) => item.groupNumber).join(',');
@@ -327,8 +332,11 @@ const Start = () => {
         `/api/plan/cutting-plan?order_id=${selectedOrderId}&group_id_list=${group_id_list}`,
       );
       const pastPlans = response.data.table;
+      console.log(pastPlans);
       const summaryData = pastPlans.map((plan) => {
-        const totalQuantity = plan.result?.table.reduce((sum, item) => sum + item.qty, 0) || 0;
+        const totalQuantity = Array.isArray(plan.result?.table)
+          ? plan.result.table.reduce((sum, item) => sum + item.qty, 0)
+          : 0;
         return {
           groupNumber: plan.group_id,
           totalQuantity,
@@ -811,6 +819,7 @@ const Start = () => {
                 rowsPerPageOptions={[topRightData.length]}
                 columnHeaderHeight={60}
                 rowHeight={25}
+                loading={loadingTopRight}
                 sx={{
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
