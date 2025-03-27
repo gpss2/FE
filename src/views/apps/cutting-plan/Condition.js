@@ -1,7 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DataGrid } from '@mui/x-data-grid';
-import { Box, Grid, Stack, Button, Typography, Modal, CircularProgress } from '@mui/material';
+import {
+  Box,
+  Grid,
+  Stack,
+  Button,
+  Typography,
+  Modal,
+  CircularProgress,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  InputAdornment,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
@@ -10,6 +32,84 @@ import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import MyDataGrid from './MyDataGrid';
+
+// 사양코드 선택 다이얼로그 컴포넌트
+const SpecCodeDialog = ({ open, onClose, specCodes, onSelect, currentValue }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredCodes = specCodes.filter((code) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      code.systemCode.toLowerCase().includes(term) ||
+      code.bbCode.toLowerCase().includes(term) ||
+      code.cbCode.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>사양코드 선택</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          fullWidth
+          placeholder="검색어를 입력하세요"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ mb: 2 }}
+        />
+        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>사양코드</TableCell>
+                <TableCell>BB 코드</TableCell>
+                <TableCell>CB 코드</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCodes.length > 0 ? (
+                filteredCodes.map((code) => (
+                  <TableRow
+                    key={code.systemCode}
+                    hover
+                    onClick={() => onSelect(code.systemCode)}
+                    sx={{
+                      cursor: 'pointer',
+                      bgcolor:
+                        currentValue === code.systemCode ? 'rgba(25, 118, 210, 0.12)' : 'inherit',
+                    }}
+                  >
+                    <TableCell>{code.systemCode}</TableCell>
+                    <TableCell>{code.bbCode}</TableCell>
+                    <TableCell>{code.cbCode}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    검색 결과가 없습니다
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>취소</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 // ==================== (1) 중량 계산 로직 추가 예시 함수 ====================
 /**
@@ -349,6 +449,10 @@ const Condition = () => {
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [templateDownloaded, setTemplateDownloaded] = useState(false);
 
+  // 사양코드 선택 다이얼로그 상태
+  const [mainSpecCodeDialogOpen, setMainSpecCodeDialogOpen] = useState(false);
+  const [templateSpecCodeDialogOpen, setTemplateSpecCodeDialogOpen] = useState(false);
+
   // axios 인터셉터
   axios.interceptors.request.use(
     (config) => {
@@ -563,6 +667,20 @@ const Condition = () => {
     setModalData(null);
   };
 
+  // 모달 사양코드 선택 다이얼로그 열기
+  const handleOpenMainSpecCodeDialog = () => {
+    setMainSpecCodeDialogOpen(true);
+  };
+
+  // 메인 다이얼로그에서 사양코드 선택
+  const handleSelectMainSpecCode = (code) => {
+    setModalData((prev) => ({
+      ...prev,
+      specCode: code,
+    }));
+    setMainSpecCodeDialogOpen(false);
+  };
+
   // 모달 저장 (specCode, endBar, itemType, itemName)
   const handleSaveModal = () => {
     const { id, specCode, endBar, itemType, itemName } = modalData;
@@ -610,6 +728,17 @@ const Condition = () => {
     setSelectedSpecific('');
     setSelectedMaterial('');
     setTemplateDownloaded(false);
+  };
+
+  // 템플릿 사양코드 선택 다이얼로그 열기
+  const handleOpenTemplateSpecCodeDialog = () => {
+    setTemplateSpecCodeDialogOpen(true);
+  };
+
+  // 템플릿 다이얼로그에서 사양코드 선택
+  const handleSelectTemplateSpecCode = (code) => {
+    setSelectedSpecific(code);
+    setTemplateSpecCodeDialogOpen(false);
   };
 
   // 템플릿 다운로드
@@ -960,12 +1089,26 @@ const Condition = () => {
                 />
               </Grid>
               <Grid item xs={3}>
-                <SearchableSelect
-                  label="사양코드"
-                  options={specCode.map((row) => row.systemCode)}
-                  value={modalData.specCode}
-                  onChange={(e) => setModalData((prev) => ({ ...prev, specCode: e.target.value }))}
-                />
+                {/* 사양코드 - 직접 구현한 버튼/텍스트 필드 조합으로 대체 */}
+                <Typography variant="body2" mb={1}>
+                  사양코드
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <TextField
+                    value={modalData.specCode || ''}
+                    fullWidth
+                    InputProps={{
+                      readOnly: true,
+                    }}
+                  />
+                  <Button
+                    variant="contained"
+                    onClick={handleOpenMainSpecCodeDialog}
+                    sx={{ ml: 1, height: '40px' }}
+                  >
+                    선택
+                  </Button>
+                </Box>
               </Grid>
               <Grid item xs={3}>
                 <SearchableSelect
@@ -996,15 +1139,26 @@ const Condition = () => {
               수주번호 "{selectedOrderNumber}" 에서 사용할 사양코드와 EndBar를 선택해주세요.
             </Typography>
             <Stack spacing={2}>
-              <SearchableSelect
-                label="사양코드"
-                options={specCode.map((row) => ({
-                  value: row.systemCode,
-                  label: `${row.systemCode} ( BB: ${row.bbCode}, CB: ${row.cbCode} )`,
-                }))}
-                value={selectedSpecific}
-                onChange={(e) => setSelectedSpecific(e.target.value)}
-              />
+              {/* 템플릿 모달의 사양코드 선택 UI */}
+              <Typography variant="body2" mb={1}>
+                사양코드
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <TextField
+                  value={selectedSpecific || ''}
+                  fullWidth
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleOpenTemplateSpecCodeDialog}
+                  sx={{ ml: 1, height: '40px' }}
+                >
+                  선택
+                </Button>
+              </Box>
 
               <SearchableSelect
                 label="EndBar"
@@ -1028,6 +1182,24 @@ const Condition = () => {
           </Box>
         </Modal>
       )}
+
+      {/* 메인 모달용 사양코드 선택 다이얼로그 */}
+      <SpecCodeDialog
+        open={mainSpecCodeDialogOpen}
+        onClose={() => setMainSpecCodeDialogOpen(false)}
+        specCodes={specCode}
+        onSelect={handleSelectMainSpecCode}
+        currentValue={modalData?.specCode || ''}
+      />
+
+      {/* 템플릿 모달용 사양코드 선택 다이얼로그 */}
+      <SpecCodeDialog
+        open={templateSpecCodeDialogOpen}
+        onClose={() => setTemplateSpecCodeDialogOpen(false)}
+        specCodes={specCode}
+        onSelect={handleSelectTemplateSpecCode}
+        currentValue={selectedSpecific}
+      />
     </div>
   );
 };

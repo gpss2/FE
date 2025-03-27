@@ -1,11 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import axios from 'axios';
-import { Box, Grid, Stack, Button } from '@mui/material';
+import {
+  Box,
+  Grid,
+  Stack,
+  Button,
+  Modal,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  InputAdornment,
+} from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import RangeDataGrid from './RangeDataGrid';
+import SearchableSelect from '../../../components/shared/SearchableSelect';
+
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 1000,
+  bgcolor: 'background.paper',
+  boxShadow: 24,
+  p: 4,
+  borderRadius: 2,
+};
 
 const indexColumn = {
   field: 'index',
@@ -51,6 +85,84 @@ const bottomColumns = [
   { field: 'groupNumber', headerName: '그룹번호', width: 160 },
 ];
 
+// 사양코드 선택 다이얼로그 컴포넌트
+const SpecCodeDialog = ({ open, onClose, specCodes, onSelect, currentValue }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredCodes = specCodes.filter((code) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      code.systemCode.toLowerCase().includes(term) ||
+      code.bbCode.toLowerCase().includes(term) ||
+      code.cbCode.toLowerCase().includes(term)
+    );
+  });
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>사양코드 선택</DialogTitle>
+      <DialogContent>
+        <TextField
+          autoFocus
+          margin="dense"
+          fullWidth
+          placeholder="검색어를 입력하세요"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ mb: 2 }}
+        />
+        <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell>사양코드</TableCell>
+                <TableCell>BB 코드</TableCell>
+                <TableCell>CB 코드</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredCodes.length > 0 ? (
+                filteredCodes.map((code) => (
+                  <TableRow
+                    key={code.systemCode}
+                    hover
+                    onClick={() => onSelect(code.systemCode)}
+                    sx={{
+                      cursor: 'pointer',
+                      bgcolor:
+                        currentValue === code.systemCode ? 'rgba(25, 118, 210, 0.12)' : 'inherit',
+                    }}
+                  >
+                    <TableCell>{code.systemCode}</TableCell>
+                    <TableCell>{code.bbCode}</TableCell>
+                    <TableCell>{code.cbCode}</TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    검색 결과가 없습니다
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>취소</Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
 const Range = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
@@ -58,6 +170,25 @@ const Range = () => {
   const [selectGroupId, setSelectGroupId] = useState(null);
   const [selectionModel, setSelectionModel] = useState([]); // 일반 클릭 (회색)
   const [mergeSelection, setMergeSelection] = useState([]); // CTRL+클릭으로 선택된 그룹(병합/분리용)
+
+  // 모달 상태 변수
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState(''); // 'all' 또는 'group'
+  const [modalData, setModalData] = useState({
+    itemType: '',
+    itemName: '',
+    specCode: '',
+    endBar: '',
+  });
+
+  // 항목 목록을 위한 상태 변수
+  const [standardItems, setStandardItems] = useState([]);
+  const [specCode, setSpecCode] = useState([]);
+  const [meterialCode, setMeterialCode] = useState([]);
+  const [selectedOrderNumber, setSelectedOrderNumber] = useState('');
+
+  // 사양코드 선택 다이얼로그
+  const [specCodeDialogOpen, setSpecCodeDialogOpen] = useState(false);
 
   const navigate = useNavigate();
   axios.interceptors.request.use(
@@ -88,7 +219,27 @@ const Range = () => {
       return;
     }
     fetchTopData();
+    fetchItemOptions(); // 항목 옵션 데이터 불러오기
   }, [navigate]);
+
+  // 항목 옵션 불러오기
+  const fetchItemOptions = async () => {
+    try {
+      // 품명 목록 가져오기
+      const standardResponse = await axios.get('/api/item/standard');
+      setStandardItems(standardResponse.data.table);
+
+      // 사양코드 목록 가져오기
+      const specResponse = await axios.get('/api/item/specific');
+      setSpecCode(specResponse.data.table);
+
+      // EndBar 목록 가져오기
+      const materialResponse = await axios.get('/api/item/material');
+      setMeterialCode(materialResponse.data.table);
+    } catch (error) {
+      console.error('Error fetching item options:', error);
+    }
+  };
 
   // 상단 테이블 데이터를 불러온 후 로컬 스토리지에서 선택된 행 정보 복원
   useEffect(() => {
@@ -103,6 +254,12 @@ const Range = () => {
         if (orderExists) {
           // 저장된 ID가 존재하면 상태 복원
           setSelectOrderId(parseInt(savedOrderId));
+
+          // 선택된 주문 번호 저장
+          const selectedOrder = topData.find((order) => order.id === parseInt(savedOrderId));
+          if (selectedOrder) {
+            setSelectedOrderNumber(selectedOrder.orderNumber);
+          }
 
           // 하단 테이블 데이터 불러오기
           fetchBottomData(parseInt(savedOrderId));
@@ -136,6 +293,11 @@ const Range = () => {
   // 상단 테이블 클릭 시 해당 order의 하단 데이터를 로드하며 모든 선택 초기화
   const handleRowClick = (params) => {
     const selectedOrderId = params.id;
+    const selectedOrder = topData.find((order) => order.id === selectedOrderId);
+
+    if (selectedOrder) {
+      setSelectedOrderNumber(selectedOrder.orderNumber);
+    }
 
     // 로컬 스토리지에 선택한 주문 ID 저장
     localStorage.setItem('rangeSelectedOrderId', selectedOrderId);
@@ -192,10 +354,28 @@ const Range = () => {
       console.error('선택된 도면이 없습니다.');
       return;
     }
+
+    // 선택된 그룹의 사양코드, 엔드바, 품명, 품목 종류가 다를 경우 에러 처리
     const selectedRows = bottomData.filter((row) => {
       const groupIdentifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
       return mergeSelection.includes(groupIdentifier);
     });
+
+    // 선택된 그룹의 데이터가 일치하는지 검사
+    const firstRow = selectedRows[0];
+    const hasDifferentValues = selectedRows.some(
+      (row) =>
+        row.itemType !== firstRow.itemType ||
+        row.itemName !== firstRow.itemName ||
+        row.specCode !== firstRow.specCode ||
+        row.endBar !== firstRow.endBar,
+    );
+
+    if (hasDifferentValues) {
+      alert('서로 다른 사양코드나 엔드바, 품명, 품목 종류를 가진 그룹은 병합할 수 없습니다.');
+      return;
+    }
+
     const drawingNumbers = selectedRows.map((row) => row.drawingNumber);
     const uniqueDrawingNumbers = Array.from(new Set(drawingNumbers));
     try {
@@ -226,6 +406,119 @@ const Range = () => {
     } catch (error) {
       console.error('분리 에러:', error);
     }
+  };
+
+  // 모달 관련 함수
+  // 모달 열기 핸들러 - 미리 현재 값들을 가져와서 설정
+  const handleOpenModal = (type) => {
+    // 모달 타입 설정 ('all' 또는 'group')
+    setModalType(type);
+
+    // 데이터 설정을 위한 기본값 준비
+    let selectedData = {
+      itemType: '',
+      itemName: '',
+      specCode: '',
+      endBar: '',
+    };
+
+    // 선택된 데이터에서 값 가져오기
+    if (type === 'all' && bottomData.length > 0) {
+      // 전체 일괄 변경의 경우 첫 번째 행의 값을 기본값으로 사용
+      selectedData = {
+        itemType: bottomData[0].itemType || '',
+        itemName: bottomData[0].itemName || '',
+        specCode: bottomData[0].specCode || '',
+        endBar: bottomData[0].endBar || '',
+      };
+    } else if (type === 'group' && mergeSelection.length > 0) {
+      // 그룹 일괄 변경의 경우 선택된 첫 번째 그룹의 값을 사용
+      const selectedGroupId = mergeSelection[0];
+      const groupRow = bottomData.find((row) => {
+        const groupIdentifier = row.groupNumber !== null ? row.groupNumber : row.drawingNumber;
+        return groupIdentifier === selectedGroupId;
+      });
+
+      if (groupRow) {
+        selectedData = {
+          itemType: groupRow.itemType || '',
+          itemName: groupRow.itemName || '',
+          specCode: groupRow.specCode || '',
+          endBar: groupRow.endBar || '',
+        };
+      }
+    }
+
+    // 모달 데이터 설정
+    setModalData(selectedData);
+
+    // 모달 열기
+    setIsModalOpen(true);
+  };
+
+  // 모달 닫기 핸들러
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+  };
+
+  // 모달 저장 핸들러
+  const handleSaveModal = async () => {
+    // 변경할 데이터 준비
+    const changedData = {};
+
+    // 값이 입력된 필드만 포함
+    if (modalData.itemType) changedData.itemType = modalData.itemType;
+    if (modalData.itemName) changedData.itemName = modalData.itemName;
+    if (modalData.specCode) changedData.specCode = modalData.specCode;
+    if (modalData.endBar) changedData.endBar = modalData.endBar;
+
+    // 변경할 데이터가 없으면 저장하지 않음
+    if (Object.keys(changedData).length === 0) {
+      alert('변경할 데이터를 입력하세요.');
+      return;
+    }
+
+    try {
+      if (modalType === 'all') {
+        // 전체 일괄 변경
+        await axios.put(`/api/plan/order-details/${selectOrderId}`, changedData);
+      } else if (modalType === 'group') {
+        // 선택된 그룹들에 대해 개별적으로 API 호출
+        for (const groupId of mergeSelection) {
+          await axios.put(`/api/plan/order-details/${selectOrderId}`, {
+            ...changedData,
+            group_id: groupId,
+          });
+        }
+      }
+
+      // 성공 후 모달 닫고 데이터 다시 불러오기
+      setIsModalOpen(false);
+      fetchBottomData(selectOrderId);
+    } catch (error) {
+      console.error('데이터 저장 에러:', error);
+      alert('데이터 저장 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 모달 폼 필드 값 변경 핸들러
+  const handleModalFieldChange = (field, value) => {
+    console.log(`Updating ${field} to:`, value);
+    setModalData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  // 사양코드 선택 다이얼로그 열기
+  const handleOpenSpecCodeDialog = () => {
+    setSpecCodeDialogOpen(true);
+  };
+
+  // 사양코드 선택
+  const handleSelectSpecCode = (code) => {
+    handleModalFieldChange('specCode', code);
+    setSpecCodeDialogOpen(false);
   };
 
   return (
@@ -292,6 +585,25 @@ const Range = () => {
               />
             </Box>
             <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
+              {/* 새로운 버튼 추가 */}
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={!selectOrderId}
+                onClick={() => handleOpenModal('all')}
+                sx={{ marginRight: '10px' }}
+              >
+                전체 일괄 변경
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                disabled={mergeSelection.length === 0}
+                onClick={() => handleOpenModal('group')}
+                sx={{ marginRight: '10px' }}
+              >
+                그룹 일괄 변경
+              </Button>
               <Button
                 variant="contained"
                 color="primary"
@@ -312,6 +624,89 @@ const Range = () => {
           </ParentCard>
         </Grid>
       </Grid>
+
+      {/* 일괄 변경 모달 */}
+      <Modal open={isModalOpen} onClose={handleModalClose}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6" mb={3}>
+            {modalType === 'all' ? (
+              <>선택한 수주번호 '{selectedOrderNumber}' 에 대한 모든 값을 다음과 같이 바꿉니다.</>
+            ) : (
+              <>
+                선택한 수주 번호 '{selectedOrderNumber}'에 대한 {mergeSelection.length}개의 그룹 [
+                {mergeSelection.join(', ')}] 에 대한 값을 다음과 같이 바꿉니다.
+              </>
+            )}
+          </Typography>
+          <Grid container spacing={2}>
+            <Grid item xs={3}>
+              <SearchableSelect
+                label="품목 종류"
+                options={['R', 'C', 'Angle 대', 'Angle 소', 'EndBar', 'GB', '각 Pipe', '특수 Type']}
+                value={modalData.itemType}
+                onChange={(e) => handleModalFieldChange('itemType', e.target.value)}
+              />
+            </Grid>
+            <Grid item xs={3}>
+              <SearchableSelect
+                label="품명"
+                options={['SteelGrating', ...standardItems.map((row) => row.itemName)]}
+                value={modalData.itemName}
+                onChange={(e) => handleModalFieldChange('itemName', e.target.value)}
+              />
+            </Grid>
+
+            {/* 사양코드 - 직접 구현한 버튼/텍스트 필드 조합으로 대체 */}
+            <Grid item xs={3}>
+              <Typography variant="body2" mb={1}>
+                사양코드
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <TextField
+                  value={modalData.specCode || ''}
+                  fullWidth
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
+                <Button
+                  variant="contained"
+                  onClick={handleOpenSpecCodeDialog}
+                  sx={{ ml: 1, height: '40px' }}
+                >
+                  보기
+                </Button>
+              </Box>
+            </Grid>
+
+            <Grid item xs={3}>
+              <SearchableSelect
+                label="EndBar"
+                options={meterialCode.map((row) => row.materialCode)}
+                value={modalData.endBar}
+                onChange={(e) => handleModalFieldChange('endBar', e.target.value)}
+              />
+            </Grid>
+          </Grid>
+          <Stack direction="row" spacing={2} justifyContent="flex-end" mt={4}>
+            <Button variant="outlined" onClick={handleModalClose}>
+              취소
+            </Button>
+            <Button variant="contained" onClick={handleSaveModal}>
+              저장
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
+
+      {/* 사양코드 선택 다이얼로그 */}
+      <SpecCodeDialog
+        open={specCodeDialogOpen}
+        onClose={() => setSpecCodeDialogOpen(false)}
+        specCodes={specCode}
+        onSelect={handleSelectSpecCode}
+        currentValue={modalData.specCode}
+      />
     </PageContainer>
   );
 };
