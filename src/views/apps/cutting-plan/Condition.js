@@ -953,10 +953,14 @@ const Condition = () => {
             <Stack spacing={2}>
               <SearchableSelect
                 label="사양코드"
-                options={specCode.map((row) => row.systemCode)}
+                options={specCode.map((row) => ({
+                  value: row.systemCode,
+                  label: `${row.systemCode} ( BB: ${row.bbCode}, CB: ${row.cbCode} )`,
+                }))}
                 value={selectedSpecific}
                 onChange={(e) => setSelectedSpecific(e.target.value)}
               />
+
               <SearchableSelect
                 label="EndBar"
                 options={meterialCode.map((row) => row.materialCode)}

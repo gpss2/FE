@@ -8,7 +8,11 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
     setSearchValue(event.target.value.toLowerCase());
   };
 
-  const filteredOptions = options.filter((option) => option.toLowerCase().includes(searchValue));
+  // 옵션이 객체라면 option.label을, 문자열이면 option 자체를 사용
+  const filteredOptions = options.filter((option) => {
+    const text = typeof option === 'object' ? option.label : option;
+    return text.toLowerCase().includes(searchValue);
+  });
 
   return (
     <Select
@@ -31,8 +35,8 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
       </ListSubheader>
       {filteredOptions.length > 0 ? (
         filteredOptions.map((option, index) => (
-          <MenuItem key={index} value={option}>
-            {option}
+          <MenuItem key={index} value={typeof option === 'object' ? option.value : option}>
+            {typeof option === 'object' ? option.label : option}
           </MenuItem>
         ))
       ) : (
