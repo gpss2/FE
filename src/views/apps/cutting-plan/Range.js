@@ -90,6 +90,27 @@ const Range = () => {
     fetchTopData();
   }, [navigate]);
 
+  // 상단 테이블 데이터를 불러온 후 로컬 스토리지에서 선택된 행 정보 복원
+  useEffect(() => {
+    if (topData.length > 0) {
+      // 로컬 스토리지에서 선택된 주문 ID 가져오기
+      const savedOrderId = localStorage.getItem('rangeSelectedOrderId');
+
+      if (savedOrderId) {
+        // 저장된 ID가 현재 데이터에 존재하는지 확인
+        const orderExists = topData.some((order) => order.id === parseInt(savedOrderId));
+
+        if (orderExists) {
+          // 저장된 ID가 존재하면 상태 복원
+          setSelectOrderId(parseInt(savedOrderId));
+
+          // 하단 테이블 데이터 불러오기
+          fetchBottomData(parseInt(savedOrderId));
+        }
+      }
+    }
+  }, [topData]);
+
   const fetchTopData = async () => {
     try {
       const response = await axios.get('/api/order/list');
@@ -115,6 +136,10 @@ const Range = () => {
   // 상단 테이블 클릭 시 해당 order의 하단 데이터를 로드하며 모든 선택 초기화
   const handleRowClick = (params) => {
     const selectedOrderId = params.id;
+
+    // 로컬 스토리지에 선택한 주문 ID 저장
+    localStorage.setItem('rangeSelectedOrderId', selectedOrderId);
+
     setSelectOrderId(selectedOrderId);
     setSelectGroupId(null);
     setSelectionModel([]);
@@ -215,8 +240,11 @@ const Range = () => {
                 columns={topColumns}
                 columnHeaderHeight={30}
                 rowHeight={25}
-                disableSelectionOnClick
                 onRowClick={handleRowClick}
+                // 선택된 행 하이라이트를 위한 속성 추가
+                selectionModel={selectOrderId ? [selectOrderId] : []}
+                rowSelectionModel={selectOrderId ? [selectOrderId] : []}
+                keepNonExistentRowsSelected={false}
                 sx={{
                   '& .MuiDataGrid-cell': {
                     border: '1px solid black',
@@ -236,6 +264,13 @@ const Range = () => {
                   },
                   '& .MuiDataGrid-footerContainer': { display: '' },
                   '& .index-cell': { backgroundColor: '#B2B2B2' },
+                  // 선택된 행에 대한 스타일 강화
+                  '& .Mui-selected': {
+                    backgroundColor: 'rgba(25, 118, 210, 0.12) !important',
+                    '&:hover': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.2) !important',
+                    },
+                  },
                 }}
               />
             </Box>

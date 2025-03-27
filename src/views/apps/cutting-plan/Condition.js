@@ -322,6 +322,8 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     error: errorFlag,
   };
 };
+// Add imports and existing code...
+
 const Condition = () => {
   const [topData, setTopData] = useState([]);
   const [bottomData, setBottomData] = useState([]);
@@ -376,11 +378,35 @@ const Condition = () => {
       navigate('/auth/login');
       return;
     }
+
     fetchTopData();
     fetchMeterialCode();
     fetchSpecCode();
     fetchStandardItems();
   }, [navigate]);
+
+  // 상단 테이블 데이터를 불러온 후 로컬 스토리지에서 선택된 행 정보 복원
+  useEffect(() => {
+    if (topData.length > 0) {
+      // 로컬 스토리지에서 선택된 주문 ID와 번호 가져오기
+      const savedOrderId = localStorage.getItem('selectedOrderId');
+      const savedOrderNumber = localStorage.getItem('selectedOrderNumber');
+
+      if (savedOrderId) {
+        // 저장된 ID가 현재 데이터에 존재하는지 확인
+        const orderExists = topData.some((order) => order.id === parseInt(savedOrderId));
+
+        if (orderExists) {
+          // 저장된 ID가 존재하면 상태 복원
+          setSelectedOrderId(parseInt(savedOrderId));
+          setSelectedOrderNumber(savedOrderNumber || '');
+
+          // 하단 테이블 데이터 불러오기
+          fetchBottomData(parseInt(savedOrderId));
+        }
+      }
+    }
+  }, [topData]);
 
   const fetchTopData = async () => {
     try {
@@ -452,8 +478,16 @@ const Condition = () => {
   const handleRowClick = (params) => {
     const orderId = params.id;
     const orderNumber = params.row.taskNumber;
+
+    // 상태 업데이트
     setSelectedOrderId(orderId);
     setSelectedOrderNumber(orderNumber);
+
+    // 로컬 스토리지에 저장
+    localStorage.setItem('selectedOrderId', orderId);
+    localStorage.setItem('selectedOrderNumber', orderNumber);
+
+    // 하단 테이블 데이터 불러오기
     fetchBottomData(orderId);
   };
 
@@ -668,7 +702,7 @@ const Condition = () => {
     const currentSpec = specCode.find((item) => item.systemCode === newRow.specCode);
     const C_PITCH = currentSpec ? currentSpec.cWidth : 100;
     const recalculatedRow = recalcValues(newRow, oldRow, C_PITCH);
-    //console.log('line 671', recalculatedRow);
+
     // 2) 중량 계산 (수량 반영)
     const { totalWeight, neWeight } = calculateGratingWeightsFrontEnd(
       recalculatedRow,
@@ -763,7 +797,11 @@ const Condition = () => {
                   columnHeaderHeight={30}
                   rowHeight={25}
                   onRowClick={handleRowClick}
-                  disableSelectionOnClick
+                  // Use both props to support different MUI DataGrid versions
+                  selectionModel={selectedOrderId ? [selectedOrderId] : []}
+                  rowSelectionModel={selectedOrderId ? [selectedOrderId] : []}
+                  // Enable single selection and show that a row is selected
+                  keepNonExistentRowsSelected={false}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
@@ -786,6 +824,13 @@ const Condition = () => {
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
                     '& .index-cell': { backgroundColor: '#B2B2B2' },
+                    // 선택된 행에 대한 스타일 강화
+                    '& .Mui-selected': {
+                      backgroundColor: 'rgba(25, 118, 210, 0.12) !important',
+                      '&:hover': {
+                        backgroundColor: 'rgba(25, 118, 210, 0.2) !important',
+                      },
+                    },
                   }}
                 />
               </Box>

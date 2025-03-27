@@ -150,11 +150,41 @@ const Start = () => {
       return Promise.reject(error);
     },
   );
-
+  // 첫 로드시에만 데이터 불러오기
   useEffect(() => {
     fetchTopLeftData();
-  }, [specCodeDetailsMap]);
+  }, []);
 
+  // topLeftData가 변경되었을 때 로컬 스토리지 확인
+  useEffect(() => {
+    if (topLeftData.length > 0) {
+      // Get saved order ID from local storage
+      const savedOrderId = localStorage.getItem('startSelectedOrderId');
+
+      if (savedOrderId) {
+        // Check if the saved ID exists in the current data
+        const orderExists = topLeftData.some((order) => order.id === parseInt(savedOrderId));
+
+        if (orderExists) {
+          // Find the selected order data
+          const selectedOrder = topLeftData.find((order) => order.id === parseInt(savedOrderId));
+
+          // Restore state
+          setSelectedOrderId(parseInt(savedOrderId));
+
+          // Update specCodeDetailsMap
+          setSpecCodeDetailsMap((prevState) => ({
+            ...prevState,
+            totalWeight: selectedOrder.totalWeight,
+            totalQuantity: selectedOrder.totalQuantity,
+          }));
+
+          // Load top-right table data
+          fetchTopRightData(parseInt(savedOrderId));
+        }
+      }
+    }
+  }, [topLeftData]);
   const handleGeneratePlan = async () => {
     if (!selectedOrderId) return;
     setLoading(true);
@@ -720,6 +750,7 @@ const Start = () => {
 
   const handleRowClick = (params) => {
     const orderId = params.row.id;
+    localStorage.setItem('startSelectedOrderId', orderId);
     const totalWeight = params.row.totalWeight;
     const totalQuantity = params.row.totalQuantity;
     setSpecCodeDetailsMap((prevState) => ({
@@ -768,6 +799,9 @@ const Start = () => {
                 disableSelectionOnClick
                 rowsPerPageOptions={[topLeftData.length]}
                 onRowClick={handleRowClick}
+                selectionModel={selectedOrderId ? [selectedOrderId] : []}
+                rowSelectionModel={selectedOrderId ? [selectedOrderId] : []}
+                keepNonExistentRowsSelected={false}
                 rowHeight={25}
                 sx={{
                   '& .MuiDataGrid-cell': {
