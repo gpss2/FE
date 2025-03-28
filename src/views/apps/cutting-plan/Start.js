@@ -18,7 +18,7 @@ import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import DrawingCanvas from './DrawingCanvas.js';
-import StartDataGrid from './StartDataGRid.js';
+import StartDataGrid from './StartDataGrid.js';
 const indexColumn = {
   field: 'index',
   headerName: '',
