@@ -28,7 +28,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import RangeDataGrid from './RangeDataGrid';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
-import StartDataGrid from './StartDataGRid';
+import StartDataGrid from './StartDataGrid';
 
 const modalStyle = {
   position: 'absolute',
