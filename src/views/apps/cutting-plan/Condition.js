@@ -391,25 +391,57 @@ const recalcValues = (newData, oldData, C_PITCH) => {
   } else if (source === 'lep_mm') {
     length_mm = Number(oldData.length_mm);
     cbCount = Number(oldData.cbCount);
-    const total = length_mm - (cbCount - 1) * C_PITCH;
-    const newLep = Number(newData.lep_mm);
-    const newRep = total - newLep;
-    lep = newLep;
-    rep = newRep;
+    let total = length_mm - (cbCount - 1) * C_PITCH;
+    let newLep = Number(newData.lep_mm);
+
+    // 수정된 부분: lep가 total보다 크면 CB 수를 줄여서 total을 키운다
+    while (newLep > total && cbCount > 1) {
+      cbCount--;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+    }
+
+    // 여전히 lep가 total보다 크면 최대값으로 설정
+    if (newLep > total) {
+      newLep = total;
+      errorFlag = true;
+    }
+
+    let newRep = total - newLep;
+
+    // 최소값 검사
     if (newLep < 40 || newRep < 40 || total >= 200) {
       errorFlag = true;
     }
+
+    lep = newLep;
+    rep = newRep;
   } else if (source === 'rep_mm') {
     length_mm = Number(oldData.length_mm);
     cbCount = Number(oldData.cbCount);
-    const total = length_mm - (cbCount - 1) * C_PITCH;
-    const newRep = Number(newData.rep_mm);
-    const newLep = total - newRep;
-    lep = newLep;
-    rep = newRep;
+    let total = length_mm - (cbCount - 1) * C_PITCH;
+    let newRep = Number(newData.rep_mm);
+
+    // 수정된 부분: rep가 total보다 크면 CB 수를 줄여서 total을 키운다
+    while (newRep > total && cbCount > 1) {
+      cbCount--;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+    }
+
+    // 여전히 rep가 total보다 크면 최대값으로 설정
+    if (newRep > total) {
+      newRep = total;
+      errorFlag = true;
+    }
+
+    let newLep = total - newRep;
+
+    // 최소값 검사
     if (newRep < 40 || newLep < 40 || total >= 200) {
       errorFlag = true;
     }
+
+    lep = newLep;
+    rep = newRep;
   } else {
     return { ...oldData, ...newData };
   }
