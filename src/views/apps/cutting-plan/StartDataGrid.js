@@ -151,6 +151,25 @@ const StartDataGrid = ({
     return effectiveSelectionModel.includes(rowId);
   };
 
+  // 추가: 특정 열에 대한 모든 행의 합계 계산
+  const calculateColumnSum = (field) => {
+    // 숫자가 아닌 컬럼이면 합계를 계산하지 않음
+    if (field === 'index' || field === 'groupNumber' || field === 'bbCode' || field === 'cbCode') {
+      return '';
+    }
+
+    let sum = 0;
+    rows.forEach((row) => {
+      const value = Number(row[field]);
+      if (!isNaN(value)) {
+        sum += value;
+      }
+    });
+
+    // 소수점 2자리까지 표현
+    return Number.isInteger(sum) ? sum : sum.toFixed(2);
+  };
+
   return (
     <Box
       sx={{
@@ -224,50 +243,93 @@ const StartDataGrid = ({
                 </TableCell>
               </TableRow>
             ) : (
-              rows.map((row, rowIndex) => (
-                <TableRow
-                  key={getRowId(row) || rowIndex}
-                  onClick={(event) => handleRowClick(event, row)}
-                  style={{
-                    height: rowHeight,
-                    backgroundColor: isRowSelected(row)
-                      ? 'rgba(25, 118, 210, 0.12)'
-                      : row.group === 1
-                      ? '#f5f5f5'
-                      : '#ffffff',
-                    cursor: 'pointer',
-                  }}
-                  hover
-                >
-                  {columns.map((column) => (
-                    <TableCell
-                      key={`${getRowId(row)}-${column.field}`}
-                      align={column.align || (column.field === 'index' ? 'center' : 'left')}
-                      className={column.cellClassName}
-                      style={{
-                        width: `${colWidths[column.field] || 100}px`,
-                        minWidth: `${colWidths[column.field] || 100}px`,
-                        border: '1px solid black',
-                        fontSize: '12px',
-                        paddingTop: '2px',
-                        paddingBottom: '2px',
-                        padding: '2px 6px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        ...(column.cellClassName === 'index-cell'
-                          ? { backgroundColor: '#B2B2B2' }
-                          : {}),
-                        ...(row.error && column.field === 'error'
-                          ? { backgroundColor: 'red', color: 'white' }
-                          : {}),
-                      }}
-                    >
-                      {getCellContent(row, column, rowIndex)}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              <>
+                {rows.map((row, rowIndex) => (
+                  <TableRow
+                    key={getRowId(row) || rowIndex}
+                    onClick={(event) => handleRowClick(event, row)}
+                    style={{
+                      height: rowHeight,
+                      backgroundColor: isRowSelected(row)
+                        ? 'rgba(25, 118, 210, 0.12)'
+                        : row.group === 1
+                        ? '#f5f5f5'
+                        : '#ffffff',
+                      cursor: 'pointer',
+                    }}
+                    hover
+                  >
+                    {columns.map((column) => (
+                      <TableCell
+                        key={`${getRowId(row)}-${column.field}`}
+                        align={column.align || (column.field === 'index' ? 'center' : 'left')}
+                        className={column.cellClassName}
+                        style={{
+                          width: `${colWidths[column.field] || 100}px`,
+                          minWidth: `${colWidths[column.field] || 100}px`,
+                          border: '1px solid black',
+                          fontSize: '12px',
+                          paddingTop: '2px',
+                          paddingBottom: '2px',
+                          padding: '2px 6px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          ...(column.cellClassName === 'index-cell'
+                            ? { backgroundColor: '#B2B2B2' }
+                            : {}),
+                          ...(row.error && column.field === 'error'
+                            ? { backgroundColor: 'red', color: 'white' }
+                            : {}),
+                        }}
+                      >
+                        {getCellContent(row, column, rowIndex)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+
+                {/* bottom-grid일 때만 합계 행 추가 */}
+                {id === 'bottom-grid' && rows.length > 0 && (
+                  <TableRow
+                    style={{
+                      height: rowHeight,
+                      backgroundColor: '#f0f0f0',
+                      fontWeight: 'bold',
+                    }}
+                  >
+                    {columns.map((column, colIndex) => (
+                      <TableCell
+                        key={`total-${column.field}`}
+                        align={column.align || (column.field === 'index' ? 'center' : 'left')}
+                        style={{
+                          width: `${colWidths[column.field] || 100}px`,
+                          minWidth: `${colWidths[column.field] || 100}px`,
+                          border: '1px solid black',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          paddingTop: '2px',
+                          paddingBottom: '2px',
+                          padding: '2px 6px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          backgroundColor: '#E0E0E0',
+                        }}
+                      >
+                        {/* 첫 번째 열 (index)에는 빈 값 */}
+                        {column.field === 'index'
+                          ? ''
+                          : /* 그룹번호 열에는 'TOTAL' 표시 */
+                          column.field === 'groupNumber'
+                          ? 'TOTAL'
+                          : /* 나머지 열에는 합계 표시 */
+                            calculateColumnSum(column.field)}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                )}
+              </>
             )}
           </TableBody>
         </Table>
