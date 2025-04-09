@@ -351,7 +351,7 @@ const recalcValues = (newData, oldData, C_PITCH) => {
   } else {
     source = 'none';
   }
-
+  console.log(source, C_PITCH);
   let length_mm, cbCount, lep, rep;
   let errorFlag = false;
 
@@ -379,12 +379,7 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
-    while ((lep < 40 || rep < 40) && cbCount > 1) {
-      cbCount--;
-      total = length_mm - (cbCount - 1) * C_PITCH;
-      lep = total / 2;
-      rep = total / 2;
-    }
+
     if (total >= 200) {
       errorFlag = true;
     }
@@ -394,19 +389,56 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     let total = length_mm - (cbCount - 1) * C_PITCH;
     let newLep = Number(newData.lep_mm);
 
-    // 수정된 부분: lep가 total보다 크면 CB 수를 줄여서 total을 키운다
-    while (newLep > total && cbCount > 1) {
+    // 새로운 요구사항: rep 또는 lep가 C_PITCH를 넘기는 경우 CB 수를 조절
+    let newRep = total - newLep;
+
+    // rep가 C_PITCH를 넘는 경우 CB수를 늘림
+    while (newRep > C_PITCH && cbCount < Math.floor(length_mm / C_PITCH) + 1) {
+      cbCount++;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+      newRep = total - newLep;
+
+      // total이 newLep보다 작아지면 newLep 조정
+      if (total < newLep) {
+        newLep = Math.min(newLep, total);
+        newRep = total - newLep;
+        break;
+      }
+    }
+
+    // 반대로, 양쪽 값이 모두 작고 여유가 있는 경우 CB수를 줄여서 원래 비율로 돌아갈 수 있도록 함
+    while (
+      newLep < C_PITCH &&
+      newRep < C_PITCH &&
+      newLep + newRep + C_PITCH <= length_mm &&
+      cbCount > 1
+    ) {
+      // 다음 단계의 total 계산해서 미리 검사
+      let nextTotal = length_mm - (cbCount - 1 - 1) * C_PITCH;
+      let nextNewRep = nextTotal - newLep;
+
+      // 만약 다음 스텝에서 C_PITCH를 넘게 된다면 현재 상태 유지
+      if (nextNewRep > C_PITCH || nextTotal >= 200) {
+        break;
+      }
+
+      // 줄여도 안전하면 CB 수 줄임
       cbCount--;
       total = length_mm - (cbCount - 1) * C_PITCH;
+      newRep = total - newLep;
+    }
+
+    // 여전히 rep가 C_PITCH를 넘으면 에러 표시
+    if (newRep > C_PITCH) {
+      errorFlag = true;
     }
 
     // 여전히 lep가 total보다 크면 최대값으로 설정
     if (newLep > total) {
       newLep = total;
+      newRep = 0;
       errorFlag = true;
     }
-
-    let newRep = total - newLep;
 
     // 최소값 검사
     if (newLep < 40 || newRep < 40 || total >= 200) {
@@ -421,19 +453,56 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     let total = length_mm - (cbCount - 1) * C_PITCH;
     let newRep = Number(newData.rep_mm);
 
-    // 수정된 부분: rep가 total보다 크면 CB 수를 줄여서 total을 키운다
-    while (newRep > total && cbCount > 1) {
+    // 새로운 요구사항: lep 또는 rep가 C_PITCH를 넘기는 경우 CB 수를 조절
+    let newLep = total - newRep;
+
+    // lep가 C_PITCH를 넘는 경우 CB수를 늘림
+    while (newLep > C_PITCH && cbCount < Math.floor(length_mm / C_PITCH) + 1) {
+      cbCount++;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+      newLep = total - newRep;
+
+      // total이 newRep보다 작아지면 newRep 조정
+      if (total < newRep) {
+        newRep = Math.min(newRep, total);
+        newLep = total - newRep;
+        break;
+      }
+    }
+
+    // 반대로, 양쪽 값이 모두 작고 여유가 있는 경우 CB수를 줄여서 원래 비율로 돌아갈 수 있도록 함
+    while (
+      newLep < C_PITCH &&
+      newRep < C_PITCH &&
+      newLep + newRep + C_PITCH <= length_mm &&
+      cbCount > 1
+    ) {
+      // 다음 단계의 total 계산해서 미리 검사
+      let nextTotal = length_mm - (cbCount - 1 - 1) * C_PITCH;
+      let nextNewLep = nextTotal - newRep;
+
+      // 만약 다음 스텝에서 C_PITCH를 넘게 된다면 현재 상태 유지
+      if (nextNewLep > C_PITCH || nextTotal >= 200) {
+        break;
+      }
+
+      // 줄여도 안전하면 CB 수 줄임
       cbCount--;
       total = length_mm - (cbCount - 1) * C_PITCH;
+      newLep = total - newRep;
+    }
+
+    // 여전히 lep가 C_PITCH를 넘으면 에러 표시
+    if (newLep > C_PITCH) {
+      errorFlag = true;
     }
 
     // 여전히 rep가 total보다 크면 최대값으로 설정
     if (newRep > total) {
       newRep = total;
+      newLep = 0;
       errorFlag = true;
     }
-
-    let newLep = total - newRep;
 
     // 최소값 검사
     if (newRep < 40 || newLep < 40 || total >= 200) {
