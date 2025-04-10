@@ -38,7 +38,16 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
         return (
           (option.systemCode || '').toLowerCase().includes(searchValue) ||
           (option.bbCode || '').toLowerCase().includes(searchValue) ||
-          (option.cbCode || '').toLowerCase().includes(searchValue)
+          (option.cbCode || '').toLowerCase().includes(searchValue) ||
+          String(option.bWidth || '')
+            .toLowerCase()
+            .includes(searchValue) ||
+          String(option.cWidth || '')
+            .toLowerCase()
+            .includes(searchValue) ||
+          String(option.bladeThickness || '')
+            .toLowerCase()
+            .includes(searchValue)
         );
       }
       // 일반 객체 형태인 경우
@@ -91,7 +100,7 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
           PaperProps: {
             style: {
               maxHeight: 450,
-              width: isTableView ? 550 : 'auto', // 테이블 형태일 때 더 넓게
+              width: isTableView ? 750 : 'auto', // 테이블 형태일 때 더 넓게 조정
             },
           },
         }}
@@ -115,9 +124,12 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
               <Table size="small" stickyHeader>
                 <TableHead>
                   <TableRow>
-                    <TableCell width="33%">사양코드</TableCell>
-                    <TableCell width="33%">BB코드</TableCell>
-                    <TableCell width="33%">CB코드</TableCell>
+                    <TableCell>사양코드</TableCell>
+                    <TableCell>BB코드</TableCell>
+                    <TableCell>CB코드</TableCell>
+                    <TableCell>BB피치</TableCell>
+                    <TableCell>CB피치</TableCell>
+                    <TableCell>톱날두께</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -136,11 +148,14 @@ const SearchableSelect = ({ label, options, value, onChange }) => {
                         <TableCell>{option.systemCode}</TableCell>
                         <TableCell>{option.bbCode}</TableCell>
                         <TableCell>{option.cbCode}</TableCell>
+                        <TableCell>{option.bWidth}</TableCell>
+                        <TableCell>{option.cWidth}</TableCell>
+                        <TableCell>{option.bladeThickness}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} align="center">
+                      <TableCell colSpan={6} align="center">
                         검색 결과 없음
                       </TableCell>
                     </TableRow>
