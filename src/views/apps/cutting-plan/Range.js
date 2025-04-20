@@ -280,6 +280,7 @@ const Range = () => {
       const response = await axios.get('/api/order/list');
       const processedData = response.data.table.map((row) => ({
         ...row,
+        orderDate: row.orderDate.split('T')[0],
         deliveryDate: row.deliveryDate.split('T')[0],
       }));
       setTopData(processedData);
