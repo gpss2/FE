@@ -126,6 +126,9 @@ const SpecCodeDialog = ({ open, onClose, specCodes, onSelect, currentValue }) =>
                 <TableCell>사양코드</TableCell>
                 <TableCell>BB 코드</TableCell>
                 <TableCell>CB 코드</TableCell>
+                <TableCell>BB피치</TableCell>
+                <TableCell>CB피치</TableCell>
+                <TableCell>톱날두께</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -144,6 +147,9 @@ const SpecCodeDialog = ({ open, onClose, specCodes, onSelect, currentValue }) =>
                     <TableCell>{code.systemCode}</TableCell>
                     <TableCell>{code.bbCode}</TableCell>
                     <TableCell>{code.cbCode}</TableCell>
+                    <TableCell>{code.bWidth}</TableCell>
+                    <TableCell>{code.cWidth}</TableCell>
+                    <TableCell>{code.bladeThickness}</TableCell>
                   </TableRow>
                 ))
               ) : (
