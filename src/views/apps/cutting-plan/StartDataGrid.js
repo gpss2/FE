@@ -12,7 +12,7 @@ import {
 
 /**
  * Custom DataGrid replacement that mimics MUI DataGrid functionality
- * with properly working resizable columns
+ * with properly working resizable columns and fixed headers
  */
 const StartDataGrid = ({
   rows = [],
@@ -151,9 +151,9 @@ const StartDataGrid = ({
     return effectiveSelectionModel.includes(rowId);
   };
 
-  // 추가: 특정 열에 대한 모든 행의 합계 계산
+  // Calculate sum for each column
   const calculateColumnSum = (field) => {
-    // 숫자가 아닌 컬럼이면 합계를 계산하지 않음
+    // Don't calculate sum for non-numeric columns
     if (field === 'index' || field === 'groupNumber' || field === 'bbCode' || field === 'cbCode') {
       return '';
     }
@@ -166,7 +166,7 @@ const StartDataGrid = ({
       }
     });
 
-    // 소수점 2자리까지 표현
+    // Show up to 2 decimal places
     return Number.isInteger(sum) ? sum : sum.toFixed(2);
   };
 
@@ -187,6 +187,7 @@ const StartDataGrid = ({
           height: '100%',
           boxShadow: 'none',
           overflow: 'auto',
+          position: 'relative', // Added for proper stacking context
         }}
       >
         <Table stickyHeader size="small">
@@ -199,9 +200,11 @@ const StartDataGrid = ({
                   style={{
                     width: `${colWidths[column.field] || 100}px`,
                     minWidth: `${colWidths[column.field] || 100}px`,
-                    position: 'relative',
+                    position: 'sticky', // Ensure stickiness
+                    top: 0, // Stick to the top
+                    zIndex: 10, // Higher than regular content
                     fontSize: '12px',
-                    backgroundColor: '#B2B2B2',
+                    backgroundColor: '#B2B2B2', // Background color for header
                     border: '1px solid black',
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
@@ -221,7 +224,7 @@ const StartDataGrid = ({
                       height: '100%',
                       width: '10px',
                       cursor: 'col-resize',
-                      zIndex: 10,
+                      zIndex: 11, // Higher than header cells
                     }}
                     onMouseDown={(e) => handleResizeMouseDown(e, column.field)}
                   />
@@ -289,7 +292,7 @@ const StartDataGrid = ({
                   </TableRow>
                 ))}
 
-                {/* bottom-grid일 때만 합계 행 추가 */}
+                {/* Show totals row only for bottom-grid */}
                 {id === 'bottom-grid' && rows.length > 0 && (
                   <TableRow
                     style={{
@@ -298,7 +301,7 @@ const StartDataGrid = ({
                       fontWeight: 'bold',
                     }}
                   >
-                    {columns.map((column, colIndex) => (
+                    {columns.map((column) => (
                       <TableCell
                         key={`total-${column.field}`}
                         align={column.align || (column.field === 'index' ? 'center' : 'left')}
@@ -317,13 +320,13 @@ const StartDataGrid = ({
                           backgroundColor: '#E0E0E0',
                         }}
                       >
-                        {/* 첫 번째 열 (index)에는 빈 값 */}
+                        {/* First column (index) is empty */}
                         {column.field === 'index'
                           ? ''
-                          : /* 그룹번호 열에는 'TOTAL' 표시 */
+                          : /* Show 'TOTAL' in the groupNumber column */
                           column.field === 'groupNumber'
                           ? 'TOTAL'
-                          : /* 나머지 열에는 합계 표시 */
+                          : /* Show sum for other columns */
                             calculateColumnSum(column.field)}
                       </TableCell>
                     ))}

@@ -396,23 +396,53 @@ const Start = () => {
   };
   const handlePrintInNewWindow = async () => {
     function transformCode(code) {
-      // 첫 번째 숫자가 시작되는 인덱스 찾기
-      const firstDigitIndex = code.search(/\d/);
-      // 숫자가 없거나 최소한 7자리(길이 3 + 너비 정수 3 + 너비 소수 1)가 없으면 원본 반환
-      if (firstDigitIndex === -1 || code.length < firstDigitIndex + 7) return code;
+      // Remove everything after dash if it exists
+      const dashIndex = code.indexOf('-');
+      let mainPart = code;
+      if (dashIndex !== -1) {
+        mainPart = code.substring(0, dashIndex);
+      }
 
-      // 타입 부분: 첫 번째 숫자 전까지
-      const typePart = code.substring(0, firstDigitIndex);
+      // Find first digit index
+      const firstDigitIndex = mainPart.search(/\d/);
+      if (firstDigitIndex === -1) return code;
 
-      // 뒤쪽 7자리는 각각: 길이(3자리), 너비 정수부(3자리), 너비 소수부(1자리)
-      const lengthPart = parseInt(code.substring(firstDigitIndex, firstDigitIndex + 3), 10);
-      const widthInt = parseInt(code.substring(firstDigitIndex + 3, firstDigitIndex + 6), 10);
-      const widthDec = code.substring(firstDigitIndex + 6, firstDigitIndex + 7);
+      // Get type part and numeric part
+      const typePart = mainPart.substring(0, firstDigitIndex);
+      const numericPart = mainPart.substring(firstDigitIndex);
 
-      // 소수부가 '0'이면 소수점 없이, 아니라면 정수부와 소수부를 '.'로 연결
-      const widthPart = widthDec === '0' ? widthInt.toString() : `${widthInt}.${widthDec}`;
+      // Check if we have enough digits
+      if (numericPart.length < 6) return code;
 
-      return `${typePart}${lengthPart}*${widthPart}`;
+      // Parse length (first 3 digits)
+      const lengthPart = parseInt(numericPart.substring(0, 3), 10);
+
+      // Parse width part
+      let widthPart;
+      if (numericPart.length === 7 && numericPart.charAt(6) !== '0') {
+        // Case like F0190045 (Format: Type + 3 digits length + 3 digits width + 1 digit decimal)
+        const widthInt = parseInt(numericPart.substring(3, 6), 10);
+        const widthDec = numericPart.substring(6, 7);
+        widthPart = widthDec === '0' ? widthInt.toString() : `${widthInt}.${widthDec}`;
+
+        // Return the format with 2 dimensions (length*width)
+        return `${typePart}${lengthPart}*${widthPart}`;
+      } else if (numericPart.length >= 9) {
+        // Case like L030030030 or I060007040 (Format: Type + 3 digits length + 3 digits width + 3 digits height)
+        const widthInt = parseInt(numericPart.substring(3, 6), 10);
+        // For height, take the middle digit from the last 3 digits
+        const heightPart = parseInt(numericPart.substring(7, 8), 10);
+
+        // Return the format with 3 dimensions (length*width*height)
+        return `${typePart}${lengthPart}*${widthInt}*${heightPart}`;
+      } else {
+        // Standard case (just use the original logic)
+        const widthInt = parseInt(numericPart.substring(3, 6), 10);
+        const widthDec = numericPart.length > 6 ? numericPart.substring(6, 7) : '0';
+        widthPart = widthDec === '0' ? widthInt.toString() : `${widthInt}.${widthDec}`;
+
+        return `${typePart}${lengthPart}*${widthPart}`;
+      }
     }
     if (!selectedGroup) return;
     try {
@@ -683,11 +713,11 @@ const Start = () => {
                             })</h2>
                             <div class="header-details">
                               <h2>압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
-                              <h2>총중량: ${selectedGroup.result.totalWeight || 'N/A'}</h2>
-                              <h2>공차(+L: ${selectedGroup.plusLAdjustment || 'N/A'} -L: ${
-                      selectedGroup.minusLAdjustment || 'N/A'
-                    } +W: ${selectedGroup.plusWAdjustment || 'N/A'} -W: ${
-                      selectedGroup.minusWAdjustment || 'N/A'
+                              <h2>총중량: ${selectedGroup.result.totalWeight || '3'}</h2>
+                              <h2>공차(+L: ${selectedGroup.plusLAdjustment || '3'} -L: ${
+                      selectedGroup.minusLAdjustment || '-3'
+                    } +W: ${selectedGroup.plusWAdjustment || '3'} -W: ${
+                      selectedGroup.minusWAdjustment || '-3'
                     })</h2>
                             </div>
                             <div class="header-details">
