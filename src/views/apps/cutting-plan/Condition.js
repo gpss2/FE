@@ -402,6 +402,11 @@ const recalcValues = (newData, oldData, C_PITCH) => {
       total = length_mm - (cbCount - 1) * C_PITCH;
       newRep = total - newLep;
     }
+    if (newRep > C_PITCH || newRep > total) {
+      cbCount += 1;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+      newRep = total - newLep;
+    }
     if (total >= 200) {
       errorFlag = true;
     }
@@ -418,6 +423,11 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     let newLep = total - newRep;
     if (newRep > C_PITCH || newRep > total) {
       cbCount -= 1;
+      total = length_mm - (cbCount - 1) * C_PITCH;
+      newLep = total - newRep;
+    }
+    if (newLep > C_PITCH || newLep > total) {
+      cbCount += 1;
       total = length_mm - (cbCount - 1) * C_PITCH;
       newLep = total - newRep;
     }
