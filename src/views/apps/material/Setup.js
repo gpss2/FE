@@ -106,19 +106,26 @@ const Setup = () => {
     return materialCode;
   };
 
-  const generateSystemCode = (bbCode, cbCode, bWidth, cWidth, bladeThickness) => {
+  const generateSystemCode = (bbCode) => {
     if (!bbCode) return '';
-    const filteredRows = rightTableData.filter(
-      (row) =>
-        row.bbCode === bbCode &&
-        (row.cbCode !== cbCode ||
-          row.bWidth !== bWidth ||
-          row.cWidth !== cWidth ||
-          row.bladeThickness !== bladeThickness),
-    );
 
-    const nextSerialNumber = (filteredRows.length + 1).toString().padStart(3, '0');
-    return `MS-${bbCode.split('-')[0]}-${nextSerialNumber}`;
+    // 1) 하이픈 앞 접두사
+    const prefix = bbCode.split('-')[0];
+
+    // 2) 정규식으로 기존 systemCode 중 같은 prefix 그룹만 추출
+    const pattern = new RegExp(`^MS-${prefix}-(\\d{3})$`);
+    const existingNums = rightTableData.reduce((acc, row) => {
+      const m = row.systemCode.match(pattern);
+      if (m) acc.push(parseInt(m[1], 10));
+      return acc;
+    }, []);
+
+    // 3) max+1 계산 (없으면 1)
+    const next = existingNums.length ? Math.max(...existingNums) + 1 : 1;
+
+    // 4) 3자리로 포맷팅
+    const nextSerial = String(next).padStart(3, '0');
+    return `MS-${prefix}-${nextSerial}`;
   };
 
   const fetchLeftTableData = async () => {
