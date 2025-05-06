@@ -298,7 +298,13 @@ const Start = () => {
   const fetchTopLeftData = async () => {
     try {
       const response = await axios.get('/api/order/list');
-      setTopLeftData(response.data.table);
+      // 날짜 필드 가공: "2025-04-10T00:00:00" → "2025-04-10"
+      const formatted = response.data.table.map((row) => ({
+        ...row,
+        orderDate: row.orderDate?.split('T')[0] || '',
+        deliveryDate: row.deliveryDate?.split('T')[0] || '',
+      }));
+      setTopLeftData(formatted);
     } catch (error) {
       console.error('Error fetching top-left data:', error);
     }
