@@ -106,6 +106,7 @@ const Start = () => {
   const [modalOpen, setModalOpen] = useState(false);
   // 모달에서 변경하는 값들
   const [compressionSetting, setCompressionSetting] = useState('Optimized');
+  const [baseLength, setBaseLength] = useState(50);
   const [plusLAdjustment, setPlusLAdjustment] = useState(3.0);
   const [minusLAdjustment, setMinusLAdjustment] = useState('-3');
   const [plusWAdjustment, setPlusWAdjustment] = useState(3.0);
@@ -127,6 +128,7 @@ const Start = () => {
     minusLAdjustment: -3.0,
     plusWAdjustment: 3.0,
     minusWAdjustment: -3.0,
+    baseLength: 50,
   });
   const [openDrawingWindow, setOpenDrawingWindow] = useState(false);
 
@@ -799,27 +801,50 @@ const Start = () => {
     fetchTopRightData(orderId);
   };
 
-  const handleModalSave = () => {
-    setSpecCodeDetailsMap((prev) => ({
-      ...prev,
-      compressionSetting,
-      plusLAdjustment,
-      minusLAdjustment,
-      plusWAdjustment,
-      minusWAdjustment,
-    }));
-    setTopRightData((prevData) =>
-      prevData.map((row) => ({
-        ...row,
-        compressionSetting: compressionSetting,
-        plusLAdjustment: plusLAdjustment,
-        minusLAdjustment: minusLAdjustment,
-        plusWAdjustment: plusWAdjustment,
-        minusWAdjustment: minusWAdjustment,
-      })),
-    );
-    setModalOpen(false);
+  const handleModalSave = async () => {
+    if (!selectedOrderId) return;
+
+    try {
+      // 서버에 변경된 설정 저장
+      await axios.post(`/api/plan/settings/${selectedOrderId}`, {
+        compressionSetting,
+        plusLAdjustment,
+        minusLAdjustment,
+        plusWAdjustment,
+        minusWAdjustment,
+        baseLength,
+      });
+
+      // 로컬 상태에도 반영
+      setSpecCodeDetailsMap((prev) => ({
+        ...prev,
+        compressionSetting,
+        plusLAdjustment,
+        minusLAdjustment,
+        plusWAdjustment,
+        minusWAdjustment,
+        baseLength,
+      }));
+
+      setTopRightData((prev) =>
+        prev.map((row) => ({
+          ...row,
+          compressionSetting,
+          plusLAdjustment,
+          minusLAdjustment,
+          plusWAdjustment,
+          minusWAdjustment,
+          baseLength,
+        })),
+      );
+
+      setModalOpen(false);
+    } catch (e) {
+      console.error('설정 저장 오류:', e);
+      alert('설정 저장에 실패했습니다.');
+    }
   };
+
   const [selectedTopRightId, setSelectedTopRightId] = useState(null);
 
   return (
@@ -1061,6 +1086,14 @@ const Start = () => {
                   handleModalSave();
                 }
               }}
+            />
+            {/* baseLength 입력 필드 추가 */}
+            <TextField
+              label="기본 로스 (baseLength)"
+              type="number"
+              value={baseLength}
+              onChange={(e) => setBaseLength(parseFloat(e.target.value))}
+              onKeyDown={(e) => e.key === 'Enter' && handleModalSave()}
             />
             <Button variant="contained" onClick={handleModalSave}>
               저장
