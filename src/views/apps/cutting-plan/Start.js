@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import NewWindow from 'react-new-window';
 import { DataGrid } from '@mui/x-data-grid';
+import SearchableSelect from '../../../components/shared/SearchableSelect.js';
 import axios from 'axios';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
@@ -113,6 +114,15 @@ const Start = () => {
   const [minusWAdjustment, setMinusWAdjustment] = useState('-3');
   const [loadingTopRight, setLoadingTopRight] = useState(false);
 
+  // 모달 open/close
+  const [specModalOpen, setSpecModalOpen] = useState(false);
+  // API에서 가져올 옵션들
+  const [specOptions, setSpecOptions] = useState([]);
+  // 모달에서 선택한 specCode
+  const [selectedSpecCode, setSelectedSpecCode] = useState('');
+  // 저장 버튼 로딩 상태
+  const [specSaveLoading, setSpecSaveLoading] = useState(false);
+
   const [specCodeDetailsMap, setSpecCodeDetailsMap] = useState({
     bbCode: '',
     cbCode: '',
@@ -188,6 +198,36 @@ const Start = () => {
       }
     }
   }, [topLeftData]);
+
+  const handleOpenSpecModal = async () => {
+    if (!selectedTopRightId) return;
+    setSpecModalOpen(true);
+    try {
+      const res = await axios.get('/api/item/specific');
+      setSpecOptions(res.data.table);
+    } catch (e) {
+      console.error('사양코드 목록 로드 실패:', e);
+    }
+  };
+
+  const handleSpecSave = async () => {
+    if (!selectedOrderId || !selectedTopRightId || !selectedSpecCode) return;
+    setSpecSaveLoading(true);
+    try {
+      await axios.put(`/api/plan/order-details/${selectedOrderId}`, {
+        specCode: selectedSpecCode,
+        group_id: selectedTopRightId,
+      });
+      // 변경 후 테이블 리프레시
+      fetchTopRightData(selectedOrderId);
+      setSpecModalOpen(false);
+    } catch (e) {
+      console.error('사양코드 저장 실패:', e);
+    } finally {
+      setSpecSaveLoading(false);
+    }
+  };
+
   const handleGeneratePlan = async () => {
     if (!selectedOrderId) return;
     setLoading(true);
@@ -363,7 +403,6 @@ const Start = () => {
   const handleViewPastPlan = async () => {
     if (!selectedOrderId) return;
     const group_id_list = topRightData.map((item) => item.groupNumber).join(',');
-    console.log('line 322:', group_id_list);
     setBottomData([]);
     setLoading(true);
     try {
@@ -912,7 +951,7 @@ const Start = () => {
         {/* 상단 오른쪽 테이블 */}
         <Grid item xs={7}>
           <ParentCard title="그룹별 계획조건 개별지정">
-            <Box sx={{ height: 'calc(30vh)', width: '100%' }}>
+            <Box sx={{ height: 'calc(30vh - 32px)', width: '100%' }}>
               <StartDataGrid
                 id="top-right-grid"
                 rows={topRightData}
@@ -928,6 +967,11 @@ const Start = () => {
                 rowSelectionModel={selectedTopRightId ? [selectedTopRightId] : []}
               />
             </Box>
+            <Stack direction="row" justifyContent="flex-start" spacing={1}>
+              <Button disabled={!selectedTopRightId} onClick={handleOpenSpecModal}>
+                사양코드 변경
+              </Button>
+            </Stack>
           </ParentCard>
         </Grid>
       </Grid>
@@ -988,6 +1032,29 @@ const Start = () => {
           </ParentCard>
         </Grid>
       </Grid>
+      <Dialog open={specModalOpen} onClose={() => setSpecModalOpen(false)}>
+        <DialogTitle>사양코드 변경</DialogTitle>
+        <DialogContent>
+          <SearchableSelect
+            label="사양코드 선택"
+            options={specOptions}
+            value={selectedSpecCode}
+            onChange={(e) => setSelectedSpecCode(e.target.value)}
+          />
+          <Box mt={2} display="flex" justifyContent="flex-end">
+            <Button onClick={() => setSpecModalOpen(false)}>취소</Button>
+            <Button
+              variant="contained"
+              onClick={handleSpecSave}
+              disabled={!selectedSpecCode || specSaveLoading}
+              startIcon={specSaveLoading && <CircularProgress size={20} />}
+            >
+              저장
+            </Button>
+          </Box>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={modalOpen} onClose={() => setModalOpen(false)}>
         <DialogTitle>설정 변경</DialogTitle>
         <DialogContent>
