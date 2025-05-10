@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Box,
   Table,
@@ -12,7 +12,8 @@ import {
 
 /**
  * Custom DataGrid replacement that mimics MUI DataGrid functionality
- * with properly working resizable columns and fixed headers
+ * with properly working resizable columns, fixed headers, sorting,
+ * and a sticky TOTAL row at the bottom
  */
 const StartDataGrid = ({
   rows = [],
@@ -34,13 +35,17 @@ const StartDataGrid = ({
   // State for column widths
   const [colWidths, setColWidths] = useState({});
 
+  // State for sorting
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+
   // References for resize operation
   const resizeColRef = useRef(null);
   const resizeStartXRef = useRef(0);
   const resizeStartWidthRef = useRef(0);
   const tableRef = useRef(null);
 
-  // Effect to load saved column widths
+  // Load saved column widths
   useEffect(() => {
     const storageKey = `${id}-col-widths`;
     try {
@@ -48,7 +53,6 @@ const StartDataGrid = ({
       if (saved) {
         setColWidths(JSON.parse(saved));
       } else {
-        // Initialize with default widths
         const initialWidths = {};
         columns.forEach((col) => {
           initialWidths[col.field] = col.width || (col.flex ? col.flex * 100 : 100);
@@ -60,7 +64,7 @@ const StartDataGrid = ({
     }
   }, [id, columns]);
 
-  // Save column widths to localStorage when they change
+  // Save column widths
   useEffect(() => {
     if (Object.keys(colWidths).length > 0) {
       const storageKey = `${id}-col-widths`;
@@ -68,107 +72,90 @@ const StartDataGrid = ({
     }
   }, [colWidths, id]);
 
-  // Event handlers for column resizing
+  // Sorting logic
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const sortedRows = useMemo(() => {
+    if (!sortField) return rows;
+    return [...rows].sort((a, b) => {
+      const aValue = a[sortField];
+      const bValue = b[sortField];
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      return sortDirection === 'asc'
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue));
+    });
+  }, [rows, sortField, sortDirection]);
+
+  // Resize handlers
   const handleResizeMouseDown = (e, field) => {
     e.preventDefault();
     e.stopPropagation();
-
     resizeColRef.current = field;
     resizeStartXRef.current = e.clientX;
     resizeStartWidthRef.current = colWidths[field] || 100;
-
     document.addEventListener('mousemove', handleResizeMouseMove);
     document.addEventListener('mouseup', handleResizeMouseUp);
-
-    // Add a class to the body to indicate resizing
     document.body.style.cursor = 'col-resize';
     document.body.style.userSelect = 'none';
   };
-
   const handleResizeMouseMove = (e) => {
     if (!resizeColRef.current) return;
-
     const diffX = e.clientX - resizeStartXRef.current;
     const newWidth = Math.max(50, resizeStartWidthRef.current + diffX);
-
-    setColWidths((prev) => ({
-      ...prev,
-      [resizeColRef.current]: newWidth,
-    }));
+    setColWidths((prev) => ({ ...prev, [resizeColRef.current]: newWidth }));
   };
-
   const handleResizeMouseUp = () => {
     resizeColRef.current = null;
-
     document.removeEventListener('mousemove', handleResizeMouseMove);
     document.removeEventListener('mouseup', handleResizeMouseUp);
-
-    // Reset body styles
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
   };
 
-  // Handle row click
+  // Row click and selection
   const handleRowClick = (event, row) => {
-    if (onRowClick) {
-      // Mimic DataGrid params structure
-      onRowClick({ row, id: getRowId(row) });
-    }
-
-    if (onRowSelectionModelChange) {
-      const rowId = getRowId(row);
-      onRowSelectionModelChange([rowId]);
-    }
+    if (onRowClick) onRowClick({ row, id: getRowId(row) });
+    if (onRowSelectionModelChange) onRowSelectionModelChange([getRowId(row)]);
   };
+  const isRowSelected = (row) => effectiveSelectionModel.includes(getRowId(row));
 
-  // Generate cell content based on column definition or index
+  // Cell content and sums
   const getCellContent = (row, column, index) => {
-    // Special handling for index column
-    if (column.field === 'index') {
-      return index + 1;
-    }
-
-    // If column has renderCell function
+    if (column.field === 'index') return index + 1;
     if (column.renderCell) {
       return column.renderCell({
         value: row[column.field],
         row,
         field: column.field,
-        api: {
-          getSortedRowIds: () => rows.map((r) => getRowId(r)),
-        },
+        api: { getSortedRowIds: () => rows.map((r) => getRowId(r)) },
         id: getRowId(row),
       });
     }
-
-    // Default: return cell value
     return row[column.field];
   };
-
-  // Check if a row is selected
-  const isRowSelected = (row) => {
-    const rowId = getRowId(row);
-    return effectiveSelectionModel.includes(rowId);
-  };
-
-  // Calculate sum for each column
   const calculateColumnSum = (field) => {
-    // Don't calculate sum for non-numeric columns
-    if (field === 'index' || field === 'groupNumber' || field === 'bbCode' || field === 'cbCode') {
-      return '';
-    }
-
+    if (['index', 'groupNumber', 'bbCode', 'cbCode'].includes(field)) return '';
     let sum = 0;
     rows.forEach((row) => {
-      const value = Number(row[field]);
-      if (!isNaN(value)) {
-        sum += value;
-      }
+      const v = Number(row[field]);
+      if (!isNaN(v)) sum += v;
     });
-
-    // Show up to 2 decimal places
     return Number.isInteger(sum) ? sum : sum.toFixed(2);
   };
+
+  const displayRows = sortedRows;
 
   return (
     <Box
@@ -190,7 +177,7 @@ const StartDataGrid = ({
           backgroundColor: '#f5f5f5',
           boxShadow: 'none',
           overflow: 'auto',
-          position: 'relative', // Added for proper stacking context
+          position: 'relative',
         }}
       >
         <Table stickyHeader size="small">
@@ -200,14 +187,15 @@ const StartDataGrid = ({
                 <TableCell
                   key={column.field}
                   align={column.headerAlign || 'center'}
+                  onClick={column.field === 'groupNumber' ? () => handleSort(column.field) : undefined}
                   style={{
                     width: `${colWidths[column.field] || 100}px`,
                     minWidth: `${colWidths[column.field] || 100}px`,
-                    position: 'sticky', // Ensure stickiness
-                    top: 0, // Stick to the top
-                    zIndex: 10, // Higher than regular content
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10,
                     fontSize: '12px',
-                    backgroundColor: '#B2B2B2', // Background color for header
+                    backgroundColor: '#B2B2B2',
                     border: '1px solid black',
                     whiteSpace: 'pre-wrap',
                     textAlign: 'center',
@@ -215,10 +203,11 @@ const StartDataGrid = ({
                     padding: '2px 6px',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    ...(column.field === 'groupNumber' ? { cursor: 'pointer' } : {}),
                   }}
                 >
                   {column.headerName}
-                  {/* Resize handle */}
+                  {column.field === sortField && (sortDirection === 'asc' ? ' ▲' : ' ▼')}
                   <div
                     style={{
                       position: 'absolute',
@@ -227,7 +216,7 @@ const StartDataGrid = ({
                       height: '100%',
                       width: '10px',
                       cursor: 'col-resize',
-                      zIndex: 11, // Higher than header cells
+                      zIndex: 11,
                     }}
                     onMouseDown={(e) => handleResizeMouseDown(e, column.field)}
                   />
@@ -242,7 +231,7 @@ const StartDataGrid = ({
                   로딩 중...
                 </TableCell>
               </TableRow>
-            ) : rows.length === 0 ? (
+            ) : displayRows.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} align="center">
                   데이터가 없습니다
@@ -250,14 +239,14 @@ const StartDataGrid = ({
               </TableRow>
             ) : (
               <>
-                {rows.map((row, rowIndex) => (
+                {displayRows.map((row, rowIndex) => (
                   <TableRow
-                    key={getRowId(row) || rowIndex}
-                    onClick={(event) => handleRowClick(event, row)}
+                    key={getRowId(row) ?? rowIndex}
+                    onClick={(e) => handleRowClick(e, row)}
                     style={{
                       height: rowHeight,
                       backgroundColor: isRowSelected(row)
-                        ? 'rgba(25, 118, 210, 0.12)'
+                        ? 'rgba(25,118,210,0.12)'
                         : row.group === 1
                         ? '#f5f5f5'
                         : '#ffffff',
@@ -275,8 +264,6 @@ const StartDataGrid = ({
                           minWidth: `${colWidths[column.field] || 100}px`,
                           border: '1px solid black',
                           fontSize: '12px',
-                          paddingTop: '2px',
-                          paddingBottom: '2px',
                           padding: '2px 6px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -294,11 +281,13 @@ const StartDataGrid = ({
                     ))}
                   </TableRow>
                 ))}
-
-                {/* Show totals row only for bottom-grid */}
+                {/* Sticky Totals row at bottom for bottom-grid */}
                 {id === 'bottom-grid' && rows.length > 0 && (
                   <TableRow
                     style={{
+                      position: 'sticky',
+                      bottom: 0,
+                      zIndex: 9,
                       height: rowHeight,
                       backgroundColor: '#f0f0f0',
                       fontWeight: 'bold',
@@ -314,8 +303,6 @@ const StartDataGrid = ({
                           border: '1px solid black',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          paddingTop: '2px',
-                          paddingBottom: '2px',
                           padding: '2px 6px',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -323,14 +310,11 @@ const StartDataGrid = ({
                           backgroundColor: '#E0E0E0',
                         }}
                       >
-                        {/* First column (index) is empty */}
                         {column.field === 'index'
                           ? ''
-                          : /* Show 'TOTAL' in the groupNumber column */
-                          column.field === 'groupNumber'
+                          : column.field === 'groupNumber'
                           ? 'TOTAL'
-                          : /* Show sum for other columns */
-                            calculateColumnSum(column.field)}
+                          : calculateColumnSum(column.field)}
                       </TableCell>
                     ))}
                   </TableRow>
