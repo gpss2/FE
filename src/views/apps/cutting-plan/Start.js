@@ -67,13 +67,13 @@ const topRightColumns = [
   { field: 'minusLAdjustment', headerName: '-L\n공차', width: 50 },
   { field: 'plusWAdjustment', headerName: '+W\n공차', width: 50 },
   { field: 'minusWAdjustment', headerName: '-W\n공차', width: 50 },
-  {
-    field: 'effectiveWidthLength',
-    headerName: '폭묶음 길이비(%)',
-    flex: 1,
-    headerClassName: 'multi-line-header',
-  },
-  { field: 'iofdLimit', headerName: 'IOFD\n탐색제한\n(mm)', flex: 1 },
+  // {
+  //   field: 'effectiveWidthLength',
+  //   headerName: '폭묶음 길이비(%)',
+  //   flex: 1,
+  //   headerClassName: 'multi-line-header',
+  // },
+  // { field: 'iofdLimit', headerName: 'IOFD\n탐색제한\n(mm)', flex: 1 },
 ];
 
 const bottomColumns = [
@@ -355,44 +355,21 @@ const Start = () => {
   const fetchTopRightData = async (orderId) => {
     try {
       setLoadingTopRight(true);
-      const settingsResponse = await axios.get('/api/settings');
-      const settings = settingsResponse.data;
-      const response = await axios.get(`/api/plan/order-details/${orderId}/groups`);
-      const data = response.data.table;
-      const specCodes = [...new Set(data.map((item) => item.specCode))][0];
-      const specificResponse = await axios.get('/api/item/specific');
-      const specificData = specificResponse.data.table;
-      const matchingSpec = specificData.find((item) => item.systemCode === specCodes);
-      if (matchingSpec) {
-        setSpecCodeDetailsMap((prevState) => ({
-          ...prevState,
-          length: matchingSpec.bbCode.split('-')[1],
-          bbCode: matchingSpec.bbCode,
-          cbCode: matchingSpec.cbCode,
-          bWidth: matchingSpec.bWidth,
-          cWidth: matchingSpec.cWidth,
-          compressionSetting: settings.compressionSetting,
-          plusLAdjustment: settings.plusLAdjustment || 3.0,
-          minusLAdjustment: settings.minusLAdjustment || -3.0,
-          plusWAdjustment: settings.plusWAdjustment || 3.0,
-          minusWAdjustment: settings.minusWAdjustment || -3.0,
-        }));
-      } else {
-        console.warn('No matching specCode found in /api/item/specific');
-      }
-      const processedData = data.map((item, index) => ({
+
+      // 1) 수주별 설정 한 번에 가져오기
+      const { data: settings } = await axios.get(`/api/plan/settings/${orderId}`);
+      // 2) 그룹별 항목 가져오기
+      const { data: groupsRes } = await axios.get(`/api/plan/order-details/${orderId}/groups`);
+      const groups = groupsRes.table;
+
+      // 3) 각 그룹에 settings 필드 병합
+      const processed = groups.map((item, idx) => ({
         ...item,
-        id: item.groupNumber || index,
-        compressionSetting: compressionSetting,
-        baseLength: settings.baseLength || 50,
-        plusLAdjustment: plusLAdjustment,
-        minusLAdjustment: minusLAdjustment,
-        plusWAdjustment: plusWAdjustment,
-        minusWAdjustment: minusWAdjustment,
-        effectiveWidthLength: settings.effectiveWidthLength || 100,
-        iofdLimit: settings.iofdLimit || 300,
+        id: item.groupNumber || idx,
+        ...settings,
       }));
-      setTopRightData(processedData);
+
+      setTopRightData(processed);
     } catch (error) {
       console.error('Error fetching top-right data:', error);
     } finally {
@@ -845,7 +822,7 @@ const Start = () => {
 
     try {
       // 서버에 변경된 설정 저장
-      await axios.post(`/api/plan/settings/${selectedOrderId}`, {
+      await axios.put(`/api/plan/settings/${selectedOrderId}`, {
         compressionSetting,
         plusLAdjustment,
         minusLAdjustment,
@@ -956,15 +933,25 @@ const Start = () => {
                 id="top-right-grid"
                 rows={topRightData}
                 columns={topRightColumns}
+                getRowId={(row) => row.groupNumber}
                 rowsPerPageOptions={[topRightData.length]}
                 columnHeaderHeight={45}
                 rowHeight={25}
                 loading={loadingTopRight}
-                onRowClick={(params) => {
-                  setSelectedTopRightId(params.row.id);
+                onRowSelectionModelChange={(newModel) => {
+                  setSelectedTopRightId(newModel[0]);
                 }}
-                selectionModel={selectedTopRightId ? [selectedTopRightId] : []}
                 rowSelectionModel={selectedTopRightId ? [selectedTopRightId] : []}
+                selectedOrderId={selectedOrderId}
+                sx={{
+                  '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px', py: 0.5 },
+                  '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: '#B2B2B2',
+                    fontSize: '12px',
+                    border: '1px solid black',
+                  },
+                  '& .index-cell': { backgroundColor: '#B2B2B2' },
+                }}
               />
             </Box>
             <Stack direction="row" justifyContent="flex-start" spacing={1}>
