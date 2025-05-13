@@ -200,13 +200,37 @@ const Start = () => {
   }, [topLeftData]);
 
   const handleOpenSpecModal = async () => {
-    if (!selectedTopRightId) return;
+    if (!selectedSpecCode) return; // specCode가 있어야 로직 실행
     setSpecModalOpen(true);
+
     try {
       const res = await axios.get('/api/item/specific');
-      setSpecOptions(res.data.table);
+      const allSpecs = res.data.table;
+
+      // 1) 선택된 specCode(systemCode)로 현재 spec 객체 찾기
+      const currentSpec = allSpecs.find((item) => item.systemCode === selectedSpecCode);
+      if (!currentSpec) {
+        console.warn('해당 systemCode를 찾을 수 없습니다:', selectedSpecCode);
+        setSpecOptions([]);
+        return;
+      }
+
+      // 2) currentSpec의 필드를 기준으로 allSpecs 필터링
+      const filtered = allSpecs.filter((item) => {
+        return (
+          item.bbCode.split("-")[0] === currentSpec.bbCode.split("-")[0] &&
+          item.cbCode === currentSpec.cbCode &&
+          item.bWidth === currentSpec.bWidth &&
+          item.cWidth === currentSpec.cWidth &&
+          item.bladeThickness === currentSpec.bladeThickness
+        );
+      });
+
+      console.log('필터된 spec 리스트:', filtered);
+      setSpecOptions(filtered);
     } catch (e) {
       console.error('사양코드 목록 로드 실패:', e);
+      setSpecOptions([]);
     }
   };
 
@@ -862,7 +886,7 @@ const Start = () => {
   };
 
   const [selectedTopRightId, setSelectedTopRightId] = useState(null);
-
+  const [selectedSpecRow, setSelectedSpecRow] = useState(null);
   return (
     <PageContainer title="절단 계획 생성">
       <br />
@@ -939,7 +963,18 @@ const Start = () => {
                 rowHeight={25}
                 loading={loadingTopRight}
                 onRowSelectionModelChange={(newModel) => {
-                  setSelectedTopRightId(newModel[0]);
+                  const id = newModel[0];
+                  setSelectedTopRightId(id);
+
+                  // 선택된 행 객체 찾기
+                  const row = topRightData.find((r) => r.groupNumber === id);
+                  if (row) {
+                    setSelectedSpecRow(row);
+                    setSelectedSpecCode(row.specCode); // 여기서 specCode를 꺼내서 저장
+                  } else {
+                    setSelectedSpecRow(null);
+                    setSelectedSpecCode('');
+                  }
                 }}
                 rowSelectionModel={selectedTopRightId ? [selectedTopRightId] : []}
                 selectedOrderId={selectedOrderId}
