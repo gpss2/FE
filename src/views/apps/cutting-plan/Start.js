@@ -770,18 +770,18 @@ const Start = () => {
                             </div>
                             <div class="header-details">
                               <h2>BB: ${
-                                specCodeDetailsMap.bbCode
-                                  ? transformCode(specCodeDetailsMap.bbCode)
+                                selectedGroup.bbCode
+                                  ? transformCode(selectedGroup.bbCode)
                                   : 'N/A'
                               }</h2>
-                              <h2>길이: ${specCodeDetailsMap.length || 'N/A'}</h2>
-                              <h2>BP: ${specCodeDetailsMap.bWidth || 'N/A'}</h2>
+                              <h2>길이: ${selectedGroup.bbCode.split("-")[1] || 'N/A'}</h2>
+                              <h2>BP: ${selectedGroup.result.bWidth || 'N/A'}</h2>
                               <h2>CB: ${
-                                specCodeDetailsMap.cbCode
-                                  ? transformCode(specCodeDetailsMap.cbCode)
+                                selectedGroup.cbCode
+                                  ? transformCode(selectedGroup.cbCode)
                                   : 'N/A'
                               }</h2>
-                              <h2>CP: ${specCodeDetailsMap.cWidth || 'N/A'}</h2>
+                              <h2>CP: ${selectedGroup.result.cWidth || 'N/A'}</h2>
                               <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
                             </div>
                           </div>
