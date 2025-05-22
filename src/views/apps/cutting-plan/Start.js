@@ -91,7 +91,7 @@ const bottomColumns = [
 ];
 
 const Start = () => {
-  // refs for modal fields (순서: 압전본 설정 -> +L -> -L -> +W -> -W)
+  // refs for modal fields (순서: 압접본 설정 -> +L -> -L -> +W -> -W)
   const compressionSettingRef = useRef(null);
   const plusLAdjustmentRef = useRef(null);
   const minusLAdjustmentRef = useRef(null);
@@ -218,7 +218,7 @@ const Start = () => {
       // 2) currentSpec의 필드를 기준으로 allSpecs 필터링
       const filtered = allSpecs.filter((item) => {
         return (
-          item.bbCode.split("-")[0] === currentSpec.bbCode.split("-")[0] &&
+          item.bbCode.split('-')[0] === currentSpec.bbCode.split('-')[0] &&
           item.cbCode === currentSpec.cbCode &&
           item.bWidth === currentSpec.bWidth &&
           item.cWidth === currentSpec.cWidth &&
@@ -721,8 +721,8 @@ const Start = () => {
                               <td>${row.id}</td>
                               <td>${row.width_mm}</td>
                               <td>${row.length_mm}</td>
-                              <td>${row.lep_mm}</td>
-                              <td>${row.rep_mm}</td>
+                              <td>${Math.round(row.lep_mm)}</td>
+                              <td>${Math.round(row.rep_mm)}</td>
                               <td>${lCuttingQtyValue}</td>
                               <td>${row.item_qty}</td>
                             </tr>
@@ -760,7 +760,7 @@ const Start = () => {
                               selectedGroup.groupNumber
                             })</h2>
                             <div class="header-details">
-                              <h2>압전본수: ${selectedGroup.compressionSetting || '2'}</h2>
+                              <h2>압접본수: ${selectedGroup.compressionSetting || '2'}</h2>
                               <h2>총중량: ${selectedGroup.result.totalWeight || '3'}</h2>
                               <h2>공차(+L: ${selectedGroup.plusLAdjustment || '3'} -L: ${
                       selectedGroup.minusLAdjustment || '-3'
@@ -770,16 +770,12 @@ const Start = () => {
                             </div>
                             <div class="header-details">
                               <h2>BB: ${
-                                selectedGroup.bbCode
-                                  ? transformCode(selectedGroup.bbCode)
-                                  : 'N/A'
+                                selectedGroup.bbCode ? transformCode(selectedGroup.bbCode) : 'N/A'
                               }</h2>
-                              <h2>길이: ${selectedGroup.bbCode.split("-")[1] || 'N/A'}</h2>
+                              <h2>길이: ${selectedGroup.bbCode.split('-')[1] || 'N/A'}</h2>
                               <h2>BP: ${selectedGroup.result.bWidth || 'N/A'}</h2>
                               <h2>CB: ${
-                                selectedGroup.cbCode
-                                  ? transformCode(selectedGroup.cbCode)
-                                  : 'N/A'
+                                selectedGroup.cbCode ? transformCode(selectedGroup.cbCode) : 'N/A'
                               }</h2>
                               <h2>CP: ${selectedGroup.result.cWidth || 'N/A'}</h2>
                               <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
@@ -1081,9 +1077,9 @@ const Start = () => {
         <DialogTitle>설정 변경</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 2 }}>
-            {/* 압전본 설정 Select */}
+            {/* 압접본 설정 Select */}
             <Select
-              label="압전본 설정"
+              label="압접본 설정"
               value={compressionSetting}
               onChange={(e) => setCompressionSetting(e.target.value)}
               fullWidth
