@@ -345,6 +345,7 @@ const bottomColumns = [
 ];
 
 const recalcValues = (newData, oldData, C_PITCH) => {
+  // 어떤 필드가 변경되었는지 판별
   let source = '';
   if (newData.length_mm !== oldData.length_mm) {
     source = 'length_mm';
@@ -358,99 +359,170 @@ const recalcValues = (newData, oldData, C_PITCH) => {
     source = 'none';
   }
   console.log(source, C_PITCH);
+
+  // 중간 계산에 사용할 변수들
   let length_mm, cbCount, lep, rep;
   let errorFlag = false;
 
+  // **소수점 첫째 자리까지 사사오입(반올림)**을 위한 헬퍼 함수
+  const roundToOne = (value) => {
+    // value가 양수라고 가정할 때 Math.round는 반올림(사사오입) 동작을 수행한다.
+    return Math.round(value * 10) / 10;
+  };
+
   if (source === 'length_mm') {
-    console.log('길이 수정함');
+    console.log('길이(length_mm) 수정됨');
+
+    // 1) length_mm 계산 → 소수점 첫째 자리까지 반올림
     length_mm = Number(newData.length_mm);
+    length_mm = roundToOne(length_mm);
+
+    // 2) cbCount 재계산 (소수점 없는 정수)
     cbCount = Math.floor(length_mm / C_PITCH) + 1;
 
+    // 3) lep, rep 계산
     let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
+
+    // lep/rep가 최소값(40mm)보다 작아질 때까지 CB 수 조정
     while ((lep < 40 || rep < 40) && cbCount > 1) {
       cbCount--;
       total = length_mm - (cbCount - 1) * C_PITCH;
       lep = total / 2;
       rep = total / 2;
     }
+
+    // total이 200 이상이면 에러 플래그
     if (total >= 200) {
       errorFlag = true;
     }
-    console.log('CB수 :', cbCount);
+    console.log('CB 수:', cbCount);
+
+    // 4) lep, rep도 소수점 첫째 자리까지 반올림
+    lep = roundToOne(lep);
+    rep = roundToOne(rep);
+
   } else if (source === 'cbCount') {
+    // 1) length_mm는 이전(oldData)을 그대로 사용 → 소수점 첫째 자리까지 반올림
     length_mm = Number(oldData.length_mm);
+    length_mm = roundToOne(length_mm);
+
+    // 2) 새로운 cbCount 값
     cbCount = Number(newData.cbCount);
+
+    // 3) lep, rep 계산
     let total = length_mm - (cbCount - 1) * C_PITCH;
     lep = total / 2;
     rep = total / 2;
 
+    // total이 200 이상이면 에러 플래그
     if (total >= 200) {
       errorFlag = true;
     }
+
+    // lep, rep 값 반올림
+    lep = roundToOne(lep);
+    rep = roundToOne(rep);
+
   } else if (source === 'lep_mm') {
+    // 1) length_mm는 이전(oldData)을 그대로 사용 → 반올림
     length_mm = Number(oldData.length_mm);
+    length_mm = roundToOne(length_mm);
+
+    // 2) cbCount도 이전 값을 가져옴
     cbCount = Number(oldData.cbCount);
+
+    // 3) total 계산
     let total = length_mm - (cbCount - 1) * C_PITCH;
+
+    // 4) 새로운 lep 값 (사용자가 입력한 값)
     let newLep = Number(newData.lep_mm);
+    newLep = roundToOne(newLep);
 
-    // 새로운 요구사항: rep 또는 lep가 C_PITCH를 넘기는 경우 CB 수를 조절
+    // 5) 새로운 rep 계산 및 CB 조정 로직
     let newRep = total - newLep;
+
+    // lep가 C_PITCH를 넘어갈 경우 CB 감소
     if (newLep > C_PITCH || newLep > total) {
       cbCount -= 1;
       total = length_mm - (cbCount - 1) * C_PITCH;
       newRep = total - newLep;
     }
+    // rep가 C_PITCH를 넘어갈 경우 CB 증가
     if (newRep > C_PITCH || newRep > total) {
       cbCount += 1;
       total = length_mm - (cbCount - 1) * C_PITCH;
       newRep = total - newLep;
     }
+
+    // total이 200 이상이면 에러 플래그
     if (total >= 200) {
       errorFlag = true;
     }
 
-    lep = newLep;
-    rep = newRep;
+    // lep, rep 반올림
+    lep = roundToOne(newLep);
+    rep = roundToOne(newRep);
+
   } else if (source === 'rep_mm') {
+    // 1) length_mm는 이전(oldData)을 그대로 사용 → 반올림
     length_mm = Number(oldData.length_mm);
-    cbCount = Number(oldData.cbCount);
-    let total = length_mm - (cbCount - 1) * C_PITCH;
-    let newRep = Number(newData.rep_mm);
+    length_mm = roundToOne(length_mm);
 
-    // 새로운 요구사항: lep 또는 rep가 C_PITCH를 넘기는 경우 CB 수를 조절
+    // 2) cbCount도 이전 값
+    cbCount = Number(oldData.cbCount);
+
+    // 3) total 계산
+    let total = length_mm - (cbCount - 1) * C_PITCH;
+
+    // 4) 새로운 rep 값 (사용자 입력)
+    let newRep = Number(newData.rep_mm);
+    newRep = roundToOne(newRep);
+
+    // 5) lep 계산 및 CB 조정 로직
     let newLep = total - newRep;
+
+    // rep이 C_PITCH를 넘어갈 경우 CB 감소
     if (newRep > C_PITCH || newRep > total) {
       cbCount -= 1;
       total = length_mm - (cbCount - 1) * C_PITCH;
       newLep = total - newRep;
     }
+    // lep이 C_PITCH를 넘어갈 경우 CB 증가
     if (newLep > C_PITCH || newLep > total) {
       cbCount += 1;
       total = length_mm - (cbCount - 1) * C_PITCH;
       newLep = total - newRep;
     }
-    // 최소값 검사
+
+    // total이 200 이상이면 에러 플래그
     if (total >= 200) {
       errorFlag = true;
     }
 
-    lep = newLep;
-    rep = newRep;
+    // lep, rep 반올림
+    lep = roundToOne(newLep);
+    rep = roundToOne(newRep);
+
   } else {
+    // 아무 변경사항이 없으면 단순 병합 후 반환
     return { ...oldData, ...newData };
   }
 
+  // 최종 객체 반환 시에도 length_mm, lep_mm, rep_mm을 소수점 첫째 자리까지 반올림한 값으로 채워서 리턴
   return {
     ...newData,
-    length_mm,
+    length_mm: roundToOne(length_mm),
     cbCount: cbCount,
-    lep_mm: lep,
-    rep_mm: rep,
+    lep_mm: roundToOne(lep),
+    rep_mm: roundToOne(rep),
     error: errorFlag,
   };
 };
+
+
+
 // Add imports and existing code...
 
 const Condition = () => {
