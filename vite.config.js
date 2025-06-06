@@ -40,16 +40,12 @@ export default defineConfig({
     proxy: {
       // 프록시 설정
       '/api': {
-        target: 'https://gpss.taewonkim.store',
+        target: 'https://gpss.taewonkim.com',
         changeOrigin: true,
         // rewrite: (path) => path.replace(/^\/api/, ''), // 제거
       },
-
     },
   },
 
-  plugins: [
-    svgr(),
-    react(),
-  ],
+  plugins: [svgr(), react()],
 });

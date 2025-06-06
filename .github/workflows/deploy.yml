@@ -2,7 +2,7 @@ name: React.js Deployment
 
 on:
   push:
-    branches: ["main"]
+    branches: ['main']
 
 permissions:
   contents: read
@@ -51,9 +51,9 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            sudo rm -rf /var/www/gpss.taewonkim.store/html
-            sudo mkdir -p /var/www/gpss.taewonkim.store/html
-            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} /var/www/gpss.taewonkim.store/html
+            sudo rm -rf /var/www/gpss.taewonkim.com/html
+            sudo mkdir -p /var/www/gpss.taewonkim.com/html
+            sudo chown -R ${{ secrets.SSH_USER }}:${{ secrets.SSH_USER }} /var/www/gpss.taewonkim.com/html
 
       - name: Transfer built files via rsync
-        run: rsync -avz -e 'ssh -p ${{ secrets.SERVER_PORT }}' ./dist/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/var/www/gpss.taewonkim.store/html
+        run: rsync -avz -e 'ssh -p ${{ secrets.SERVER_PORT }}' ./dist/ ${{ secrets.SSH_USER }}@${{ secrets.SERVER_IP }}:/var/www/gpss.taewonkim.com/html
