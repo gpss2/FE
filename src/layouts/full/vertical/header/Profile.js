@@ -19,11 +19,17 @@ const Profile = () => {
     setAnchorEl2(null);
   };
 
+  // 로그아웃 함수: token 지우고 페이지 새로고침
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.reload();
+  };
+
   return (
     <Box>
       <IconButton
         size="large"
-        aria-label="show 11 new notifications"
+        aria-label="show user menu"
         color="inherit"
         aria-controls="msgs-menu"
         aria-haspopup="true"
@@ -36,16 +42,14 @@ const Profile = () => {
       >
         <Avatar
           src={ProfileImg}
-          alt={ProfileImg}
+          alt="user-avatar"
           sx={{
             width: 35,
             height: 35,
           }}
         />
       </IconButton>
-      {/* ------------------------------------------- */}
-      {/* Message Dropdown */}
-      {/* ------------------------------------------- */}
+
       <Menu
         id="msgs-menu"
         anchorEl={anchorEl2}
@@ -64,7 +68,7 @@ const Profile = () => {
           <Box p={3}>
             <Typography variant="h5">User Profile</Typography>
             <Stack direction="row" py={3} spacing={2} alignItems="center">
-              <Avatar src={ProfileImg} alt={ProfileImg} sx={{ width: 95, height: 95 }} />
+              <Avatar src={ProfileImg} alt="user-avatar" sx={{ width: 95, height: 95 }} />
               <Box>
                 <Typography variant="subtitle2" color="textPrimary" fontWeight={600}>
                   관리자
@@ -84,7 +88,10 @@ const Profile = () => {
                 </Typography>
               </Box>
             </Stack>
+
             <Divider />
+
+            {/* 프로필 메뉴 항목 반복 렌더링 */}
             {dropdownData.profile.map((profile) => (
               <Box key={profile.title}>
                 <Box sx={{ py: 2, px: 0 }} className="hover-text-primary">
@@ -137,7 +144,21 @@ const Profile = () => {
                 </Box>
               </Box>
             ))}
+            <br/>
+            {/* 로그아웃 버튼 */}
+            <Box textAlign="center" pb={2}>
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleLogout}
+                sx={{ width: '100%' }}
+              >
+                로그아웃
+              </Button>
+            </Box>
+          
           </Box>
+          
         </Scrollbar>
       </Menu>
     </Box>
