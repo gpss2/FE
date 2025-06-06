@@ -719,8 +719,8 @@ const Start = () => {
                               <td>${customerValue}</td>
                               <td>${row.drawingNumber}</td>
                               <td>${row.id}</td>
-                              <td>${row.width_mm}</td>
-                              <td>${row.length_mm}</td>
+                              <td>${Math.round(row.width_mm)}</td>
+                              <td>${Math.round(row.length_mm)}</td>
                               <td>${Math.round(row.lep_mm)}</td>
                               <td>${Math.round(row.rep_mm)}</td>
                               <td>${lCuttingQtyValue}</td>
