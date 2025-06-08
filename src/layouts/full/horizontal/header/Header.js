@@ -116,7 +116,7 @@ const Header = () => {
           <Navigation />
           <Box flexGrow={1} />
           <Stack spacing={1} direction="row" alignItems="center">
-            <Language />
+            {/* <Language /> */}
             <IconButton color="inherit" onClick={handleOpenModal}>
               <IconSettings />
             </IconButton>
