@@ -755,31 +755,23 @@ const Start = () => {
                         : '';
                     return `
                         <div class="page">
-                          <div class="header">
-                            <h2 style="text-decoration: underline">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                          <div class="header" style="">
+                            <h2 style="text-decoration: underline; text-align: center;">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
                               selectedGroup.groupNumber
                             })</h2>
-                            <div class="header-details">
-                              <h2>압접본수: ${selectedGroup.compressionSetting || '2'}</h2>
-                              <h2>총중량: ${selectedGroup.result.totalWeight || '3'}</h2>
-                              <h2>공차(+L: ${selectedGroup.plusLAdjustment || '3'} -L: ${
-                      selectedGroup.minusLAdjustment || '-3'
-                    } +W: ${selectedGroup.plusWAdjustment || '3'} -W: ${
-                      selectedGroup.minusWAdjustment || '-3'
-                    })</h2>
-                            </div>
-                            <div class="header-details">
-                              <h2>BB: ${
-                                selectedGroup.bbCode ? transformCode(selectedGroup.bbCode) : 'N/A'
-                              }</h2>
-                              <h2>길이: ${selectedGroup.bbCode.split('-')[1] || 'N/A'}</h2>
-                              <h2>BP: ${selectedGroup.result.bWidth || 'N/A'}</h2>
-                              <h2>CB: ${
-                                selectedGroup.cbCode ? transformCode(selectedGroup.cbCode) : 'N/A'
-                              }</h2>
-                              <h2>CP: ${selectedGroup.result.cWidth || 'N/A'}</h2>
-                              <h2>EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
-                            </div>
+                           <div class="header-details" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+  <h2 style="font-size: 1.4em; margin: 0;">압접본수: ${selectedGroup.compressionSetting || '2'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">총중량: ${selectedGroup.result.totalWeight || '3'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">공차(+L: ${selectedGroup.plusLAdjustment || '3'} -L: ${selectedGroup.minusLAdjustment || '-3'} +W: ${selectedGroup.plusWAdjustment || '3'} -W: ${selectedGroup.minusWAdjustment || '-3'})</h2>
+</div>
+<div class="header-details" style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+  <h2 style="font-size: 1.4em; margin: 0;">BB: ${selectedGroup.bbCode ? transformCode(selectedGroup.bbCode) : 'N/A'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">길이: ${selectedGroup.bbCode.split('-')[1] || 'N/A'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">BP: ${selectedGroup.result.bWidth || 'N/A'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">CB: ${selectedGroup.cbCode ? transformCode(selectedGroup.cbCode) : 'N/A'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">CP: ${selectedGroup.result.cWidth || 'N/A'}</h2>
+  <h2 style="font-size: 1.4em; margin: 0;">EB: ${transformCode(selectedGroup.result.ebCode) || 'SQ6*6'}</h2>
+</div>
                           </div>
                           <table>
                             <thead>
