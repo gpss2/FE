@@ -105,6 +105,9 @@ const Items = () => {
   const [applyLoading, setApplyLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const navigate = useNavigate();
+  
+  // ✨ 새 행을 위한 임시 음수 ID 카운터
+  const [tempIdCounter, setTempIdCounter] = useState(-1);
 
   // 모달 관련 상태 (사양코드, End-bar, 품목종류 선택용)
   const [modalData, setModalData] = useState(null);
@@ -168,10 +171,10 @@ const Items = () => {
     return newRow;
   };
 
-  // 새 행 추가 (+ 버튼 클릭 시)
+  // ✨ 새 행 추가 (+ 버튼 클릭 시) - 'new_' 대신 음수 ID 사용
   const handleAddRow = () => {
     const newRow = {
-      id: 'new_' + new Date().getTime(),
+      id: tempIdCounter, // 임시 음수 ID 할당
       itemName: '',
       systemCode: '',
       endBar: '',
@@ -183,12 +186,12 @@ const Items = () => {
       rep: '',
       weight: '',
       neWeight: '',
-      error: false,
     };
     setData((prev) => [...prev, newRow]);
+    setTempIdCounter((prev) => prev - 1); // 다음 ID를 위해 카운터 1 감소
   };
 
-  // 변경사항 적용 (적용 버튼 클릭)
+  // ✨ 변경사항 적용 (적용 버튼 클릭) - ID가 음수인지 확인하여 신규/수정 구분
   const handleBulkSave = async () => {
     setApplyLoading(true);
     const invalidMessages = [];
@@ -202,7 +205,7 @@ const Items = () => {
           hasError = true;
         }
       });
-      return { ...row, error: hasError };
+      return { ...row };
     });
     if (invalidMessages.length > 0) {
       setData(updatedData);
@@ -213,14 +216,17 @@ const Items = () => {
     try {
       const updates = Object.values(pendingUpdates);
       const updatePromises = updates.map((row) => {
-        if (String(row.id).startsWith('new_')) {
-          return axios.post('/api/item/standard', row);
+        // ID가 음수이면 신규 행성이므로 POST, 양수이면 기존 행성이므로 PUT
+        if (row.id < 0) {
+          // POST 요청 시에는 백엔드에서 ID를 생성하므로, 프론트에서 만든 임시 id는 제거
+          const { id, ...newRowData } = row;
+          return axios.post('/api/item/standard', newRowData);
         } else {
           return axios.put(`/api/item/standard/${row.id}`, row);
         }
       });
       await Promise.all(updatePromises);
-      await fetchData();
+      await fetchData(); // 데이터 다시 불러오기
       setPendingUpdates({});
       alert('적용되었습니다.');
     } catch (error) {
@@ -231,6 +237,20 @@ const Items = () => {
 
   // 선택한 행 삭제 (삭제 버튼 클릭)
   const handleDelete = async () => {
+    // 임시로 추가된 행(음수 ID)은 DB에 없으므로 바로 화면에서만 제거
+    if (selectedItemId < 0) {
+      setData((prevData) => prevData.filter((row) => row.id !== selectedItemId));
+      setSelectedItemId(null);
+      // pendingUpdates에서도 해당 항목 제거
+      setPendingUpdates((prev) => {
+        const newUpdates = { ...prev };
+        delete newUpdates[selectedItemId];
+        return newUpdates;
+      });
+      return;
+    }
+    
+    // DB에 저장된 행 삭제
     if (!selectedItemId) return;
     try {
       await axios.delete(`/api/item/standard/${selectedItemId}`);
