@@ -74,38 +74,15 @@ const columns = [
 // 품목종류 선택 옵션
 const itemTypeOptions = ['R', 'C', 'Angle 대', 'Angle 소', 'EndBar', 'GB', '각 Pipe', '특수 Type'];
 
-// 폭, 길이, 사양코드 변경 시 자동으로 CB수, LEP, REP를 계산하는 함수
-const calculateValues = (row, specificCodes) => {
-  const length = Number(row.length) || 0;
-  const spec = specificCodes.find((item) => item.systemCode === row.systemCode);
-  const C_PITCH = spec ? Number(spec.cWidth) : 100; // 사양코드에 해당하는 cWidth, 없으면 기본 100
-  let cbCount = Math.floor(length / C_PITCH) + 1;
-  let total = length - (cbCount - 1) * C_PITCH;
-  let lep = total / 2;
-  let rep = total / 2;
-  // LEP나 REP가 40 미만이면 CB수를 줄여 재계산
-  while ((lep < 40 || rep < 40) && cbCount > 1) {
-    cbCount--;
-    total = length - (cbCount - 1) * C_PITCH;
-    lep = total / 2;
-    rep = total / 2;
-  }
-  return {
-    cbCount,
-    lep: Number(lep.toFixed(2)),
-    rep: Number(rep.toFixed(2)),
-  };
-};
-
 const Items = () => {
   const [data, setData] = useState([]); // 규격품목 데이터
-  const [specificCodes, setSpecificCodes] = useState([]); // 사양코드 데이터
+  const [storeMaterials, setStoreMaterials] = useState([]); // materialCode 데이터
   const [endBars, setEndBars] = useState([]); // End-bar 데이터
   const [pendingUpdates, setPendingUpdates] = useState({});
   const [applyLoading, setApplyLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const navigate = useNavigate();
-  
+
   // ✨ 새 행을 위한 임시 음수 ID 카운터
   const [tempIdCounter, setTempIdCounter] = useState(-1);
 
@@ -120,7 +97,7 @@ const Items = () => {
       return;
     }
     fetchData();
-    fetchSpecificCodes();
+    fetchStoreMaterials();
     fetchEndBars();
   }, [navigate]);
 
@@ -134,13 +111,13 @@ const Items = () => {
     }
   };
 
-  // API 호출: 사양코드 데이터
-  const fetchSpecificCodes = async () => {
+  // API 호출: /api/item/store의 materialCode 데이터
+  const fetchStoreMaterials = async () => {
     try {
-      const response = await axios.get('/api/item/specific');
-      setSpecificCodes(response.data.table);
+      const response = await axios.get('/api/item/store');
+      setStoreMaterials(response.data.table);
     } catch (error) {
-      console.error('Error fetching specific codes:', error);
+      console.error('Error fetching store materials:', error);
     }
   };
 
@@ -154,21 +131,216 @@ const Items = () => {
     }
   };
 
+  const recalcValues = (newData, oldData, C_PITCH) => {
+    // 어떤 필드가 변경되었는지 판별
+    let source = '';
+    if (newData.length !== oldData.length) {
+      source = 'length';
+    } else if (newData.cbCount !== oldData.cbCount) {
+      source = 'cbCount';
+    } else if (newData.lep !== oldData.lep) {
+      source = 'lep';
+    } else if (newData.rep !== oldData.rep) {
+      source = 'rep';
+    } else {
+      source = 'none';
+    }
+    console.log(source, C_PITCH);
+
+    // 중간 계산에 사용할 변수들
+    let length, cbCount, lep, rep;
+    let errorFlag = false;
+
+    // **소수점 첫째 자리까지 사사오입(반올림)**을 위한 헬퍼 함수
+    const roundToOne = (value) => {
+      // value가 양수라고 가정할 때 Math.round는 반올림(사사오입) 동작을 수행한다.
+      return Math.round(value * 10) / 10;
+    };
+
+    if (source === 'length') {
+      console.log('길이(length) 수정됨');
+
+      // 1) length 계산 → 소수점 첫째 자리까지 반올림
+      length = Number(newData.length);
+      length = roundToOne(length);
+
+      // 2) cbCount 재계산 (소수점 없는 정수)
+      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === newData.systemCode)?.cWidth || 100;
+      cbCount = Math.floor(length / C_PITCH_FROM_SPEC) + 1;
+
+      // 3) lep, rep 계산
+      let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+      lep = total / 2;
+      rep = total / 2;
+
+      // lep/rep가 최소값(40mm)보다 작아질 때까지 CB 수 조정
+      while ((lep < 40 || rep < 40) && cbCount > 1) {
+        cbCount--;
+        total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+        lep = total / 2;
+        rep = total / 2;
+      }
+
+      // total이 200 이상이면 에러 플래그
+      if (total >= 200) {
+        errorFlag = true;
+      }
+      console.log('CB 수:', cbCount);
+
+      // 4) lep, rep도 소수점 첫째 자리까지 반올림
+      lep = roundToOne(lep);
+      rep = roundToOne(rep);
+
+    } else if (source === 'cbCount') {
+      // 1) length는 이전(oldData)을 그대로 사용 → 소수점 첫째 자리까지 반올림
+      length = Number(oldData.length);
+      length = roundToOne(length);
+
+      // 2) 새로운 cbCount 값
+      cbCount = Number(newData.cbCount);
+      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+
+      // 3) lep, rep 계산
+      let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+      lep = total / 2;
+      rep = total / 2;
+
+      // total이 200 이상이면 에러 플래그
+      if (total >= 200) {
+        errorFlag = true;
+      }
+
+      // lep, rep 값 반올림
+      lep = roundToOne(lep);
+      rep = roundToOne(rep);
+
+    } else if (source === 'lep') {
+      // 1) length는 이전(oldData)을 그대로 사용 → 반올림
+      length = Number(oldData.length);
+      length = roundToOne(length);
+
+      // 2) cbCount도 이전 값을 가져옴
+      cbCount = Number(oldData.cbCount);
+      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+
+      // 3) total 계산
+      let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+
+      // 4) 새로운 lep 값 (사용자가 입력한 값)
+      let newLep = Number(newData.lep);
+      newLep = roundToOne(newLep);
+
+      // 5) 새로운 rep 계산 및 CB 조정 로직
+      let newRep = total - newLep;
+
+      // lep가 C_PITCH를 넘어갈 경우 CB 감소
+      if (newLep > C_PITCH_FROM_SPEC || newLep > total) {
+        cbCount -= 1;
+        total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+        newRep = total - newLep;
+      }
+      // rep가 C_PITCH를 넘어갈 경우 CB 증가
+      if (newRep > C_PITCH_FROM_SPEC || newRep > total) {
+        cbCount += 1;
+        total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+        newRep = total - newLep;
+      }
+
+      // total이 200 이상이면 에러 플래그
+      if (total >= 200) {
+        errorFlag = true;
+      }
+
+      // lep, rep 반올림
+      lep = roundToOne(newLep);
+      rep = roundToOne(newRep);
+
+    } else if (source === 'rep') {
+      // 1) length는 이전(oldData)을 그대로 사용 → 반올림
+      length = Number(oldData.length);
+      length = roundToOne(length);
+
+      // 2) cbCount도 이전 값
+      cbCount = Number(oldData.cbCount);
+      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+
+      // 3) total 계산
+      let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+
+      // 4) 새로운 rep 값 (사용자 입력)
+      let newRep = Number(newData.rep);
+      newRep = roundToOne(newRep);
+
+      // 5) lep 계산 및 CB 조정 로직
+      let newLep = total - newRep;
+
+      // rep이 C_PITCH를 넘어갈 경우 CB 감소
+      if (newRep > C_PITCH_FROM_SPEC || newRep > total) {
+        cbCount -= 1;
+        total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+        newLep = total - newRep;
+      }
+      // lep이 C_PITCH를 넘어갈 경우 CB 증가
+      if (newLep > C_PITCH_FROM_SPEC || newLep > total) {
+        cbCount += 1;
+        total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
+        newLep = total - newRep;
+      }
+
+      // total이 200 이상이면 에러 플래그
+      if (total >= 200) {
+        errorFlag = true;
+      }
+
+      // lep, rep 반올림
+      lep = roundToOne(newLep);
+      rep = roundToOne(newRep);
+
+    } else {
+      // 아무 변경사항이 없으면 단순 병합 후 반환
+      return { ...oldData, ...newData };
+    }
+
+    // 최종 객체 반환 시에도 length, lep, rep을 소수점 첫째 자리까지 반올림한 값으로 채워서 리턴
+    return {
+      ...newData,
+      length: roundToOne(length),
+      cbCount: cbCount,
+      lep: roundToOne(lep),
+      rep: roundToOne(rep),
+      error: errorFlag,
+    };
+  };
+
   // 인라인 편집으로 행 업데이트 시 처리 (폭, 길이, 사양코드 변경 시 자동 계산)
   const handleProcessRowUpdate = (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-    if (
-      newRow.width !== oldRow.width ||
-      newRow.length !== oldRow.length ||
-      newRow.systemCode !== oldRow.systemCode
-    ) {
-      const calc = calculateValues(newRow, specificCodes);
-      newRow.cbCount = calc.cbCount;
-      newRow.lep = calc.lep;
-      newRow.rep = calc.rep;
+    const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === newRow.systemCode)?.cWidth || 100;
+
+    const updatedRow = recalcValues(
+      {
+        length: newRow.length,
+        cbCount: newRow.cbCount,
+        lep: newRow.lep,
+        rep: newRow.rep,
+      },
+      {
+        length: oldRow.length,
+        cbCount: oldRow.cbCount,
+        lep: oldRow.lep,
+        rep: oldRow.rep,
+      },
+      C_PITCH_FROM_SPEC,
+    );
+    newRow.cbCount = updatedRow.cbCount;
+    newRow.lep = updatedRow.lep;
+    newRow.rep = updatedRow.rep;
+    if (updatedRow.error) {
+      // 에러가 발생한 셀에 클래스 추가 (임의의 필드 선택)
+      return { ...newRow, __error__: true };
     }
     setPendingUpdates((prev) => ({ ...prev, [newRow.id]: newRow }));
-    return newRow;
+    return { ...newRow, __error__: updatedRow.error };
   };
 
   // ✨ 새 행 추가 (+ 버튼 클릭 시) - 'new_' 대신 음수 ID 사용
@@ -197,6 +369,7 @@ const Items = () => {
     const invalidMessages = [];
     // 각 행에 대해 필수 값 체크 (예: 품명, 사양코드, End-bar, 품목종류)
     const updatedData = data.map((row, index) => {
+      console.log('Row being validated:', row); // Add this line
       let hasError = false;
       const requiredFields = ['itemName', 'systemCode', 'endBar', 'itemType'];
       requiredFields.forEach((field) => {
@@ -249,7 +422,7 @@ const Items = () => {
       });
       return;
     }
-    
+
     // DB에 저장된 행 삭제
     if (!selectedItemId) return;
     try {
@@ -302,6 +475,7 @@ const Items = () => {
                   experimentalFeatures={{ newEditingApi: true }}
                   columnHeaderHeight={30}
                   rowHeight={25}
+                  getRowClassName={(params) => (params.row.__error__ ? 'error-cell' : '')}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
@@ -360,7 +534,7 @@ const Items = () => {
             <Stack spacing={2}>
               <SearchableSelect
                 label="사양코드"
-                options={specificCodes.map((row) => row.systemCode)}
+                options={storeMaterials.map((row) => row.materialCode)}
                 value={modalData.systemCode || ''}
                 onChange={(e) => setModalData((prev) => ({ ...prev, systemCode: e.target.value }))}
               />
