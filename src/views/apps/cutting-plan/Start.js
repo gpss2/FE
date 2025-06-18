@@ -756,7 +756,7 @@ const Start = () => {
                     return `
                         <div class="page">
                           <div class="header" style="">
-                            <h2 style="font-size: 1.4em; text-decoration: underline; text-align: center;">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
+                            <h2 style="font-size: 1.4em; text-decoration: underline; text-align: left;">절단계획 상세 - 품목배치 리스트 (그룹번호: ${
                               selectedGroup.groupNumber
                             })</h2>
 <div class="header-details" style="display: flex; justify-content: flex-start; align-items: center; gap: 30px;">
@@ -765,7 +765,7 @@ const Start = () => {
   <h2 style="font-size: 1.4em; margin: 0;">공차(+L: ${Number(selectedGroup.plusLAdjustment || '3.00').toFixed(2)} -L: ${Number(selectedGroup.minusLAdjustment || '-3.00').toFixed(2)} +W: ${Number(selectedGroup.plusWAdjustment || '3.00').toFixed(2)} -W: ${Number(selectedGroup.minusWAdjustment || '-3.00').toFixed(2)})</h2>
 </div>
 
-<div class="header-details" style="display: flex; justify-content: flex-start; align-items: center; gap: 45px;">
+<div class="header-details" style="display: flex; justify-content: flex-start; align-items: center; gap: 45px; padding-bottom: 8px">
   <h2 style="font-size: 1.4em; margin: 0;">BB: ${selectedGroup.bbCode ? transformCode(selectedGroup.bbCode) : 'N/A'}</h2>
   <h2 style="font-size: 1.4em; margin: 0;">길이: ${selectedGroup.bbCode.split('-')[1] || 'N/A'}</h2>
   <h2 style="font-size: 1.4em; margin: 0;">BP: ${selectedGroup.result.bWidth || 'N/A'}</h2>
