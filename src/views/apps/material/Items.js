@@ -76,14 +76,14 @@ const itemTypeOptions = ['R', 'C', 'Angle 대', 'Angle 소', 'EndBar', 'GB', '�
 
 const Items = () => {
   const [data, setData] = useState([]); // 규격품목 데이터
-  const [storeMaterials, setStoreMaterials] = useState([]); // materialCode 데이터
+  const [specCodes, setSpecCodes] = useState([]); // ✨ 사양코드 데이터 (API 변경)
   const [endBars, setEndBars] = useState([]); // End-bar 데이터
   const [pendingUpdates, setPendingUpdates] = useState({});
   const [applyLoading, setApplyLoading] = useState(false);
   const [selectedItemId, setSelectedItemId] = useState(null);
   const navigate = useNavigate();
 
-  // ✨ 새 행을 위한 임시 음수 ID 카운터
+  // 새 행을 위한 임시 음수 ID 카운터
   const [tempIdCounter, setTempIdCounter] = useState(-1);
 
   // 모달 관련 상태 (사양코드, End-bar, 품목종류 선택용)
@@ -97,7 +97,7 @@ const Items = () => {
       return;
     }
     fetchData();
-    fetchStoreMaterials();
+    fetchSpecCodes(); // ✨ API 호출 함수 변경
     fetchEndBars();
   }, [navigate]);
 
@@ -111,13 +111,13 @@ const Items = () => {
     }
   };
 
-  // API 호출: /api/item/store의 materialCode 데이터
-  const fetchStoreMaterials = async () => {
+  // ✨ API 호출: /api/item/specific의 사양코드 데이터 (테이블 형태)
+  const fetchSpecCodes = async () => {
     try {
-      const response = await axios.get('/api/item/store');
-      setStoreMaterials(response.data.table);
+      const response = await axios.get('/api/item/specific');
+      setSpecCodes(response.data.table);
     } catch (error) {
-      console.error('Error fetching store materials:', error);
+      console.error('Error fetching spec codes:', error);
     }
   };
 
@@ -165,7 +165,8 @@ const Items = () => {
       length = roundToOne(length);
 
       // 2) cbCount 재계산 (소수점 없는 정수)
-      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === newData.systemCode)?.cWidth || 100;
+      // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
+      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === newData.systemCode)?.cWidth || 100;
       cbCount = Math.floor(length / C_PITCH_FROM_SPEC) + 1;
 
       // 3) lep, rep 계산
@@ -198,7 +199,8 @@ const Items = () => {
 
       // 2) 새로운 cbCount 값
       cbCount = Number(newData.cbCount);
-      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+      // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
+      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) lep, rep 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -221,7 +223,8 @@ const Items = () => {
 
       // 2) cbCount도 이전 값을 가져옴
       cbCount = Number(oldData.cbCount);
-      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+      // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
+      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) total 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -262,7 +265,8 @@ const Items = () => {
 
       // 2) cbCount도 이전 값
       cbCount = Number(oldData.cbCount);
-      const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === oldData.systemCode)?.cWidth || 100;
+      // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
+      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) total 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -315,7 +319,8 @@ const Items = () => {
   // 인라인 편집으로 행 업데이트 시 처리 (폭, 길이, 사양코드 변경 시 자동 계산)
   const handleProcessRowUpdate = (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
-    const C_PITCH_FROM_SPEC = storeMaterials.find((item) => item.materialCode === newRow.systemCode)?.cWidth || 100;
+    // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
+    const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === newRow.systemCode)?.cWidth || 100;
 
     const updatedRow = recalcValues(
       {
@@ -343,7 +348,7 @@ const Items = () => {
     return { ...newRow, __error__: updatedRow.error };
   };
 
-  // ✨ 새 행 추가 (+ 버튼 클릭 시) - 'new_' 대신 음수 ID 사용
+  // 새 행 추가 (+ 버튼 클릭 시) - 'new_' 대신 음수 ID 사용
   const handleAddRow = () => {
     const newRow = {
       id: tempIdCounter, // 임시 음수 ID 할당
@@ -363,7 +368,7 @@ const Items = () => {
     setTempIdCounter((prev) => prev - 1); // 다음 ID를 위해 카운터 1 감소
   };
 
-  // ✨ 변경사항 적용 (적용 버튼 클릭) - ID가 음수인지 확인하여 신규/수정 구분
+  // 변경사항 적용 (적용 버튼 클릭) - ID가 음수인지 확인하여 신규/수정 구분
   const handleBulkSave = async () => {
     setApplyLoading(true);
     const invalidMessages = [];
@@ -531,10 +536,11 @@ const Items = () => {
         <Dialog open={isModalOpen} onClose={handleModalClose} fullWidth maxWidth="sm">
           <DialogTitle>값 선택</DialogTitle>
           <DialogContent>
-            <Stack spacing={2}>
+            <Stack spacing={2} pt={1}>
+              {/* ✨ SearchableSelect에 테이블 형태의 데이터를 직접 전달 */}
               <SearchableSelect
                 label="사양코드"
-                options={storeMaterials.map((row) => row.materialCode)}
+                options={specCodes}
                 value={modalData.systemCode || ''}
                 onChange={(e) => setModalData((prev) => ({ ...prev, systemCode: e.target.value }))}
               />
