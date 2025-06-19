@@ -145,13 +145,30 @@ const StartDataGrid = ({
     }
     return row[column.field];
   };
+
+  // ✨ 수정된 부분: 컬럼 합계 또는 평균 계산
   const calculateColumnSum = (field) => {
+    // 합계/평균 계산에서 제외할 컬럼
     if (['index', 'groupNumber', 'bbCode', 'cbCode'].includes(field)) return '';
+    
+    const validRows = rows.filter(row => row[field] != null && !isNaN(Number(row[field])));
+
+    if (validRows.length === 0) return '';
+
+    // 'bbLossRate'와 'cbLossRate' 컬럼은 평균을 계산
+    if (['bbLossRate', 'cbLossRate'].includes(field)) {
+      const sum = validRows.reduce((acc, row) => acc + Number(row[field]), 0);
+      const avg = sum / validRows.length;
+      return avg.toFixed(2); // 소수점 둘째 자리까지 표시
+    }
+
+    // 그 외 다른 숫자 컬럼들은 합계를 계산
     let sum = 0;
-    rows.forEach((row) => {
-      const v = Number(row[field]);
-      if (!isNaN(v)) sum += v;
+    validRows.forEach((row) => {
+      sum += Number(row[field]);
     });
+    
+    // 합계가 정수이면 그대로, 소수이면 소수점 둘째 자리까지 표시
     return Number.isInteger(sum) ? sum : sum.toFixed(2);
   };
 
