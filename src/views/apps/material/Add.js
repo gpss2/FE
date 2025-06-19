@@ -35,7 +35,7 @@ const indexColumn = {
 const columns = [
   indexColumn,
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
-  { field: 'pcs', headerName: '입고수량 (PCS)', flex: 1 },
+  { field: 'pcs', headerName: '투입중량 (Kg)', flex: 1 },
   { field: 'kg', headerName: '입고중량 (Kg)', flex: 1 },
 ];
 
@@ -206,7 +206,7 @@ const Add = () => {
 
           <TextField
             margin="dense"
-            label="입고수량 (PCS)"
+            label="투입중량(Kg)"
             type="number"
             fullWidth
             value={currentRow.pcs || ''}
