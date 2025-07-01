@@ -914,6 +914,7 @@ const Condition = () => {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       await fetchBottomData(selectedOrderId);
+      await fetchTopData();
       setTemplateDownloaded(false);
       setTemplateModalOpen(false);
     } catch (error) {
@@ -995,12 +996,29 @@ const Condition = () => {
     try {
       const updates = Object.values(pendingUpdates);
       const updatePromises = updates.map((row) => {
+        // POST 요청일 경우 (신규 항목)
         if (String(row.id).startsWith('new_')) {
-          return axios.post(`/api/plan/order-details/${selectedOrderId}`, row);
-        } else {
+          // 1. row 객체에서 id와 error를 제외한 나머지만 payload 객체로 복사합니다.
+          const { id, error, ...payload } = row;
+    
+          // 2. payload 객체의 값들을 순회하며 숫자형 문자열을 실제 숫자로 변환합니다.
+          Object.keys(payload).forEach(key => {
+            const value = payload[key];
+            // 값이 비어있지 않은 문자열이고, 숫자로 변환했을 때 NaN이 아니면 변환합니다.
+            if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+              payload[key] = Number(value);
+            }
+          });
+          
+          // 3. 가공된 payload를 전송합니다.
+          return axios.post(`/api/plan/order-details/${selectedOrderId}`, payload);
+        } 
+        // PUT 요청일 경우 (기존 항목 수정)
+        else {
           return axios.put(`/api/plan/order-details/${selectedOrderId}/${row.id}`, row);
         }
       });
+    
       await Promise.all(updatePromises);
       await fetchBottomData(selectedOrderId);
       setPendingUpdates({});
