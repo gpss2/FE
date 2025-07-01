@@ -798,6 +798,7 @@ const Condition = () => {
       .delete(`/api/plan/order-details/${selectedOrderId}/${selectedDetailId}`)
       .then(() => {
         fetchBottomData(selectedOrderId);
+        fetchTopData();
         setBottomData((prev) => prev.filter((row) => row.id !== selectedDetailId));
         setSelectedDetailId(null);
       })
