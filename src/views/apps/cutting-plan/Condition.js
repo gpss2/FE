@@ -1021,6 +1021,7 @@ const Condition = () => {
     
       await Promise.all(updatePromises);
       await fetchBottomData(selectedOrderId);
+      await fetchTopData();
       setPendingUpdates({});
       alert('적용되었습니다.');
     } catch (error) {
