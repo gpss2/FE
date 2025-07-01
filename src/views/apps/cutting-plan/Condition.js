@@ -1005,7 +1005,7 @@ const Condition = () => {
           Object.keys(payload).forEach(key => {
             const value = payload[key];
             // 값이 비어있지 않은 문자열이고, 숫자로 변환했을 때 NaN이 아니면 변환합니다.
-            if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+            if (key !== 'drawingNumber' && typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
               payload[key] = Number(value);
             }
           });
