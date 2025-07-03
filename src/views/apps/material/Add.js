@@ -12,13 +12,12 @@ import {
   DialogTitle,
   Button,
   TextField,
-  Select,
-  MenuItem,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
+
 const indexColumn = {
   field: 'index',
   headerName: '',
@@ -32,11 +31,23 @@ const indexColumn = {
     return sortedRowIds.indexOf(params.id) + 1;
   },
 };
+
 const columns = [
   indexColumn,
   { field: 'materialCode', headerName: '자재코드', flex: 1 },
-  { field: 'pcs', headerName: '투입중량 (Kg)', flex: 1 },
   { field: 'kg', headerName: '입고중량 (Kg)', flex: 1 },
+  { field: 'pcs', headerName: '투입중량 (Kg)', flex: 1 },
+  {
+    field: 'stock',
+    headerName: '재고중량 (Kg)',
+    flex: 1,
+    renderCell: (params) => {
+      if (!params.row) return '0.0';
+      const kg = parseFloat(params.row.kg) || 0;
+      const pcs = parseFloat(params.row.pcs) || 0;
+      return (kg - pcs).toFixed(1);
+    },
+  },
 ];
 
 const Add = () => {
@@ -60,6 +71,7 @@ const Add = () => {
       return Promise.reject(error);
     },
   );
+
   const [data, setData] = useState([]);
   const [materialCodes, setMaterialCodes] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -128,6 +140,13 @@ const Add = () => {
     setCurrentRow({ ...currentRow, [field]: value });
   };
 
+  // 재고중량 계산 함수
+  const calculateStock = (kg, pcs) => {
+    const kgValue = parseFloat(kg) || 0;
+    const pcsValue = parseFloat(pcs) || 0;
+    return (kgValue - pcsValue).toFixed(1);
+  };
+
   useEffect(() => {
     fetchData();
     fetchMaterialCodes();
@@ -152,8 +171,8 @@ const Add = () => {
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
-                      paddingTop: '2px', // 위쪽 패딩 조정
-                      paddingBottom: '2px', // 아래쪽 패딩 조정
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
@@ -193,7 +212,6 @@ const Add = () => {
         </Grid>
       </PageContainer>
 
-      {/* Modal */}
       <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
         <DialogTitle>{isEditing ? 'Edit Row' : 'Add Row'}</DialogTitle>
         <DialogContent>
@@ -203,15 +221,6 @@ const Add = () => {
             value={currentRow.materialCode || ''}
             onChange={(e) => handleInputChange('materialCode', e.target.value)}
           />
-
-          <TextField
-            margin="dense"
-            label="투입중량(Kg)"
-            type="number"
-            fullWidth
-            value={currentRow.pcs || ''}
-            onChange={(e) => handleInputChange('pcs', e.target.value)}
-          />
           <TextField
             margin="dense"
             label="입고중량 (Kg)"
@@ -219,6 +228,22 @@ const Add = () => {
             fullWidth
             value={currentRow.kg || ''}
             onChange={(e) => handleInputChange('kg', e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="투입중량 (Kg)"
+            type="number"
+            fullWidth
+            value={currentRow.pcs || ''}
+            onChange={(e) => handleInputChange('pcs', e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="재고중량 (Kg)"
+            type="number"
+            fullWidth
+            value={calculateStock(currentRow.kg, currentRow.pcs)}
+            InputProps={{ readOnly: true }}
           />
         </DialogContent>
         <DialogActions>
