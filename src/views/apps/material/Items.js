@@ -18,7 +18,7 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
-
+import MyDataGrid from '../cutting-plan/MyDataGrid';
 // axios 인터셉터 설정
 axios.interceptors.request.use(
   (config) => {

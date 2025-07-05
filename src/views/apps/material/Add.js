@@ -18,37 +18,23 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 
-const indexColumn = {
-  field: 'index',
-  headerName: '',
-  width: 20,
-  sortable: false,
-  filterable: false,
-  disableColumnMenu: true,
-  cellClassName: 'index-cell',
-  renderCell: (params) => {
-    const sortedRowIds = params.api.getSortedRowIds();
-    return sortedRowIds.indexOf(params.id) + 1;
-  },
+// Helper for number formatting
+const formatNumber = (value) => {
+  const num = parseFloat(value);
+  if (isNaN(num)) return '';
+  return num.toLocaleString('en-US');
 };
 
-const columns = [
-  indexColumn,
-  { field: 'materialCode', headerName: '자재코드', flex: 1 },
-  { field: 'kg', headerName: '입고중량 (Kg)', flex: 1 },
-  { field: 'pcs', headerName: '투입중량 (Kg)', flex: 1 },
-  {
-    field: 'stock',
-    headerName: '재고중량 (Kg)',
-    flex: 1,
-    renderCell: (params) => {
-      if (!params.row) return '0.0';
-      const kg = parseFloat(params.row.kg) || 0;
-      const pcs = parseFloat(params.row.pcs) || 0;
-      return (kg - pcs).toFixed(1);
-    },
-  },
-];
+// Helper for formatting with one decimal place
+const formatNumberWithOneDecimal = (value) => {
+  const num = parseFloat(value);
+  if (isNaN(num)) return '0.0';
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+};
+
 
 const Add = () => {
   axios.interceptors.request.use(
@@ -71,6 +57,54 @@ const Add = () => {
       return Promise.reject(error);
     },
   );
+  
+  // Columns definition with valueFormatter for number formatting
+  const columns = [
+    {
+      field: 'index',
+      headerName: '',
+      width: 20,
+      sortable: false,
+      filterable: false,
+      disableColumnMenu: true,
+      cellClassName: 'index-cell',
+      renderCell: (params) => {
+        const sortedRowIds = params.api.getSortedRowIds();
+        return sortedRowIds.indexOf(params.id) + 1;
+      },
+    },
+    { field: 'materialCode', headerName: '자재코드', flex: 1 },
+    {
+      field: 'kg',
+      headerName: '입고중량 (Kg)',
+      flex: 1,
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value) => formatNumber(value),
+    },
+    {
+      field: 'pcs',
+      headerName: '투입중량 (Kg)',
+      flex: 1,
+      align: 'right',
+      headerAlign: 'right',
+      valueFormatter: (value) => formatNumber(value),
+    },
+    {
+      field: 'stock',
+      headerName: '재고중량 (Kg)',
+      flex: 1,
+      align: 'right',
+      headerAlign: 'right',
+      renderCell: (params) => {
+        if (!params.row) return '0.0';
+        const kg = parseFloat(params.row.kg) || 0;
+        const pcs = parseFloat(params.row.pcs) || 0;
+        return formatNumberWithOneDecimal(kg - pcs);
+      },
+    },
+  ];
+
 
   const [data, setData] = useState([]);
   const [materialCodes, setMaterialCodes] = useState([]);
@@ -135,17 +169,22 @@ const Add = () => {
       console.error('Error deleting data:', error);
     }
   };
-
-  const handleInputChange = (field, value) => {
-    setCurrentRow({ ...currentRow, [field]: value });
+  
+  // Handles changes from numeric text fields
+  const handleNumberChange = (e) => {
+    const { name, value } = e.target;
+    // Remove commas to store raw number, and allow only numeric input
+    const rawValue = value.replace(/,/g, '');
+    if (rawValue === '' || /^\d*\.?\d*$/.test(rawValue)) {
+      setCurrentRow({ ...currentRow, [name]: rawValue });
+    }
+  };
+  
+  // Handles changes from the searchable select
+  const handleSelectChange = (value) => {
+      setCurrentRow({ ...currentRow, materialCode: value });
   };
 
-  // 재고중량 계산 함수
-  const calculateStock = (kg, pcs) => {
-    const kgValue = parseFloat(kg) || 0;
-    const pcsValue = parseFloat(pcs) || 0;
-    return (kgValue - pcsValue).toFixed(1);
-  };
 
   useEffect(() => {
     fetchData();
@@ -179,13 +218,8 @@ const Add = () => {
                       backgroundColor: '#B2B2B2',
                       border: '1px solid black',
                     },
-                    '& .group0': { backgroundColor: '#ffffff' },
-                    '& .group1': { backgroundColor: '#f5f5f5' },
-                    '& .error-cell': { backgroundColor: 'red', color: 'white' },
-                    '& .MuiDataGrid-columnHeaderTitle': {
-                      whiteSpace: 'pre-wrap',
-                      textAlign: 'center',
-                      lineHeight: '1.2',
+                    '& .MuiDataGrid-columnHeaderTitleContainer': {
+                        justifyContent: 'center',
                     },
                     '& .MuiDataGrid-footerContainer': { display: '' },
                     '& .index-cell': { backgroundColor: '#B2B2B2' },
@@ -213,37 +247,40 @@ const Add = () => {
       </PageContainer>
 
       <Dialog open={modalOpen} onClose={handleCloseModal} fullWidth maxWidth="sm">
-        <DialogTitle>{isEditing ? 'Edit Row' : 'Add Row'}</DialogTitle>
+        <DialogTitle>{isEditing ? '자재 정보 수정' : '신규 자재 입고'}</DialogTitle>
         <DialogContent>
           <SearchableSelect
             label="자재코드 선택"
             options={materialCodes.map((row) => row.materialCode)}
             value={currentRow.materialCode || ''}
-            onChange={(e) => handleInputChange('materialCode', e.target.value)}
+            onChange={(e) => handleSelectChange(e.target.value)}
           />
           <TextField
             margin="dense"
             label="입고중량 (Kg)"
-            type="number"
+            type="text" // Use text type to show commas
             fullWidth
-            value={currentRow.kg || ''}
-            onChange={(e) => handleInputChange('kg', e.target.value)}
+            name="kg"
+            value={formatNumber(currentRow.kg)}
+            onChange={handleNumberChange}
           />
           <TextField
             margin="dense"
             label="투입중량 (Kg)"
-            type="number"
+            type="text" // Use text type to show commas
             fullWidth
-            value={currentRow.pcs || ''}
-            onChange={(e) => handleInputChange('pcs', e.target.value)}
+            name="pcs"
+            value={formatNumber(currentRow.pcs)}
+            onChange={handleNumberChange}
           />
           <TextField
             margin="dense"
             label="재고중량 (Kg)"
-            type="number"
+            type="text"
             fullWidth
-            value={calculateStock(currentRow.kg, currentRow.pcs)}
+            value={formatNumberWithOneDecimal((parseFloat(currentRow.kg) || 0) - (parseFloat(currentRow.pcs) || 0))}
             InputProps={{ readOnly: true }}
+            disabled
           />
         </DialogContent>
         <DialogActions>
