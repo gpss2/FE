@@ -1,51 +1,28 @@
-import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
-import { Modal, Box, Typography, Autocomplete, TextField } from '@mui/material';
-
-// Helper function to create a global stylesheet for the grid
-const createGridStyles = () => {
-  const style = document.createElement('style');
-  style.textContent = `
-    .grid-error-row > td {
-      background-color: #ffcccc !important; /* Light red for error rows */
-    }
-  `;
-  document.head.appendChild(style);
-  return () => document.head.removeChild(style); // Cleanup function
-};
+import { useState, useEffect, useRef } from 'react';
 
 const ItemDataGrid = ({
   rows = [],
   columns = [],
   processRowUpdate, // (newRow, oldRow) => updatedRow
-  onRowUpdateCommitted, // (updatedRow) => void (to update parent state)
   onRowClick,
+  onCellDoubleClick,
+  onRowUpdate, // 부모의 주 데이터(data)를 업데이트하는 콜백
+  getRowId,
   getRowClassName,
+  columnHeaderHeight = 30,
+  rowHeight = 25,
+  sx = {},
 }) => {
   const [editingCell, setEditingCell] = useState(null); // { rowId, field }
   const [editingValue, setEditingValue] = useState('');
-  const inputRef = useRef(null);
-  const [selectedRowIndex, setSelectedRowIndex] = useState(null);
-
-  // Modal state for 'systemCode' selection
-  const [systemCodeModalOpen, setSystemCodeModalOpen] = useState(false);
-  const [systemCodeOptions, setSystemCodeOptions] = useState([]);
-  const [currentSystemCodeEditing, setCurrentSystemCodeEditing] = useState(null); // { row, col }
-  const [systemCodeSearch, setSystemCodeSearch] = useState('');
-
-  // Options for Autocomplete editors
-  const [itemNameOptions, setItemNameOptions] = useState([]);
-  const [endBarOptions, setEndBarOptions] = useState([]);
-  const itemTypeOptions = ['R', 'C', 'Angle 대', 'Angle 소', 'EndBar', 'GB', '각 Pipe', '특수 Type'];
-
-  // Helper to get initial value for editor, applying defaults if necessary
-  const getInitialEditingValue = (row, field) => {
-    return row[field] ?? '';
-  };
-
-  // 1. Column Width Management (with localStorage)
+  const [selectedCoords, setSelectedCoords] = useState({ rowIndex: null, colIndex: null });
   const [columnWidths, setColumnWidths] = useState({});
+  const [resizing, setResizing] = useState({ active: false, field: '', startX: 0, startWidth: 0 });
+  const inputRef = useRef(null);
 
+  const editableFields = columns.filter((c) => c.editable).map((c) => c.field);
+
+  // 1. 컬럼 너비 관리 (로컬 스토리지 연동)
   useEffect(() => {
     const savedWidths = localStorage.getItem('itemDataGridColumnWidths');
     if (savedWidths) {
@@ -54,7 +31,7 @@ const ItemDataGrid = ({
       const initialWidths = {};
       columns.forEach((col) => {
         if (col.field) {
-          initialWidths[col.field] = col.width || 150; // Default width
+          initialWidths[col.field] = col.width ? col.width : 120; // flex 대신 기본 너비 설정
         }
       });
       setColumnWidths(initialWidths);
@@ -65,31 +42,27 @@ const ItemDataGrid = ({
     localStorage.setItem('itemDataGridColumnWidths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
-  // 2. Column Resizing Logic
-  const [resizing, setResizing] = useState({ active: false, startX: 0, field: '', startWidth: 0 });
-
-  const handleResizeMouseDown = (e, colField) => {
+  // 2. 컬럼 리사이징 이벤트 핸들러
+  const handleResizeMouseDown = (e, field) => {
     e.preventDefault();
     setResizing({
       active: true,
+      field,
       startX: e.clientX,
-      field: colField,
-      startWidth: columnWidths[colField],
+      startWidth: columnWidths[field],
     });
   };
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!resizing.active) return;
-      const deltaX = e.clientX - resizing.startX;
-      const newWidth = Math.max(50, resizing.startWidth + deltaX); // Min width 50px
+      const newWidth = Math.max(50, resizing.startWidth + (e.clientX - resizing.startX));
       setColumnWidths((prev) => ({ ...prev, [resizing.field]: newWidth }));
     };
     const handleMouseUp = () => {
-      if (resizing.active) {
-        setResizing((prev) => ({ ...prev, active: false }));
-      }
+      if (resizing.active) setResizing((prev) => ({ ...prev, active: false }));
     };
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
     return () => {
@@ -98,188 +71,172 @@ const ItemDataGrid = ({
     };
   }, [resizing]);
 
-  // 3. Data Fetching for Editors
-  useEffect(() => {
-    axios.get('/api/item/specific').then((res) => setSystemCodeOptions(res.data?.table || []));
-    axios.get('/api/item/standard').then((res) => setItemNameOptions(res.data?.table.map(item => item.itemName) || []));
-    axios.get('/api/item/material').then((res) => setEndBarOptions(res.data?.table.map(item => item.materialCode) || []));
-    
-    // Inject global styles for the grid
-    const cleanupStyles = createGridStyles();
-    return cleanupStyles;
-  }, []);
-
-
-  // 4. Cell Editing & Commit Logic
+  // 3. 셀 편집 로직
   useEffect(() => {
     if (editingCell && inputRef.current) {
       inputRef.current.focus();
       inputRef.current.select();
     }
   }, [editingCell]);
-  
-  const commitEdit = (row, col) => {
-    const newRow = { ...row, [col.field]: editingValue };
-    let processedRow = newRow;
-    
-    // Call the parent's processing logic (for calculations, etc.)
-    if (processRowUpdate) {
-        processedRow = processRowUpdate(newRow, row);
+
+  const startEditing = (row, col) => {
+    const rowId = getRowId(row);
+    setEditingCell({ rowId, field: col.field });
+    setEditingValue(row[col.field] ?? '');
+  };
+
+  const commitEdit = async () => {
+    if (!editingCell) return;
+
+    const { rowId, field } = editingCell;
+    const oldRow = rows.find((r) => getRowId(r) === rowId);
+    const newRow = { ...oldRow, [field]: editingValue };
+
+    // processRowUpdate가 있으면 실행하고 결과값으로 최종 행 결정
+    const processedRow = processRowUpdate ? await Promise.resolve(processRowUpdate(newRow, oldRow)) : newRow;
+
+    // 부모의 주 데이터(data) 업데이트
+    if (onRowUpdate) {
+      onRowUpdate(processedRow);
     }
 
-    // Notify the parent component to update its master data state
-    if (onRowUpdateCommitted) {
-        onRowUpdateCommitted(processedRow);
-    }
-    
-    setEditingCell(null);
+    return processedRow; // 다음 셀 이동 로직에서 사용하기 위해 반환
   };
-  
-  const handleInputBlur = (row, col) => {
-    if (editingCell && editingCell.rowId === row.id && editingCell.field === col.field) {
-      commitEdit(row, col);
+
+  const moveToNextCell = (committedRow, currentColField) => {
+    const currentIndex = editableFields.indexOf(currentColField);
+    if (currentIndex > -1 && currentIndex < editableFields.length - 1) {
+      const nextField = editableFields[currentIndex + 1];
+      startEditing(committedRow, { field: nextField });
+    } else {
+      setEditingCell(null); // 마지막 셀이면 편집 종료
     }
   };
-  
+
+  // 4. 키보드 & 마우스 이벤트 핸들러
   const handleCellDoubleClick = (row, col) => {
-    if (!col.editable) return;
+    // onCellDoubleClick prop이 있으면 우선적으로 실행 (모달 띄우기용)
+    if (onCellDoubleClick) {
+      onCellDoubleClick({ row, field: col.field, id: getRowId(row) });
+      return;
+    }
+    if (col.editable) {
+      startEditing(row, col);
+    }
+  };
 
-    if (col.field === 'systemCode') {
-      openSystemCodeModal(row, col);
+  const handleInputBlur = () => {
+    commitEdit().then(() => setEditingCell(null));
+  };
+
+  const handleKeyDown = async (e, row, col, rowIndex, colIndex) => {
+    const rowId = getRowId(row);
+
+    // 방향키 탐색
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !editingCell) {
+      e.preventDefault();
+      let nextRow = rowIndex, nextCol = colIndex;
+      if (e.key === 'ArrowUp') nextRow = Math.max(0, rowIndex - 1);
+      if (e.key === 'ArrowDown') nextRow = Math.min(rows.length - 1, rowIndex + 1);
+      if (e.key === 'ArrowLeft') nextCol = Math.max(1, colIndex - 1); // 0은 인덱스 컬럼
+      if (e.key === 'ArrowRight') nextCol = Math.min(columns.length, colIndex + 1);
+      
+      const nextCell = document.querySelector(`[data-row-index="${nextRow}"][data-col-index="${nextCol}"]`);
+      if (nextCell) nextCell.focus();
       return;
     }
 
-    setEditingCell({ rowId: row.id, field: col.field });
-    setEditingValue(getInitialEditingValue(row, col.field));
-  };
-  
-  const handleCellKeyDown = (e, row, col) => {
-    if (e.key === 'Enter' && col.editable) {
+    // Enter 키 처리
+    if (e.key === 'Enter') {
       e.preventDefault();
-      if (editingCell && editingCell.rowId === row.id && editingCell.field === col.field) {
-        commitEdit(row, col);
-      } else {
-        handleCellDoubleClick(row, col); // Enter to start editing
+      if (editingCell) {
+        const committedRow = await commitEdit();
+        moveToNextCell(committedRow, col.field);
+      } else if (col.editable) {
+        startEditing(row, col);
       }
+    }
+
+    // Escape 키 처리
+    if (e.key === 'Escape' && editingCell) {
+      setEditingCell(null);
     }
   };
 
-
-  // 5. 'systemCode' Modal Logic
-  const openSystemCodeModal = (row, col) => {
-    setCurrentSystemCodeEditing({ row, col });
-    setSystemCodeModalOpen(true);
-    setSystemCodeSearch('');
-  };
-
-  const handleSystemCodeSelect = (specRow) => {
-    if (currentSystemCodeEditing) {
-      const { row } = currentSystemCodeEditing;
-      const newRow = { ...row, systemCode: specRow.systemCode };
-      
-      let processedRow = newRow;
-      if (processRowUpdate) {
-        processedRow = processRowUpdate(newRow, row);
-      }
-      if (onRowUpdateCommitted) {
-        onRowUpdateCommitted(processedRow);
-      }
+  const handleRowClick = (row, rowIndex) => {
+    if (onRowClick) {
+        onRowClick({ id: getRowId(row) });
     }
-    setSystemCodeModalOpen(false);
-    setCurrentSystemCodeEditing(null);
-  };
+    setSelectedCoords({ rowIndex, colIndex: selectedCoords.colIndex });
+  }
 
-  const filteredSystemCodeOptions = systemCodeOptions.filter((spec) => {
-    const searchStr = systemCodeSearch.toLowerCase().replace(/0/g, '');
-    return (
-      (spec.systemCode || '').toLowerCase().replace(/0/g, '').includes(searchStr) ||
-      (spec.bbCode || '').toLowerCase().replace(/0/g, '').includes(searchStr) ||
-      (spec.cbCode || '').toLowerCase().replace(/0/g, '').includes(searchStr)
-    );
-  });
-  
-  // 6. Rendering
-  const dataColumns = columns.filter(c => c.field !== 'index'); // Exclude index column from mapping
+  // 5. 렌더링
+  const getSxStyle = (key) => sx[key] || {};
 
   return (
-    <div style={{ height: '100%', overflow: 'auto', border: '1px solid black' }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
-        <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-          <tr>
-            {/* Index Column Header */}
-            <th style={{ width: 50, padding: '4px', borderRight: '1px solid black', backgroundColor: '#B2B2B2', textAlign: 'center', fontSize: '14px' }}></th>
-            {dataColumns.map((col) => (
-              <th key={col.field} style={{ width: columnWidths[col.field], textAlign: 'center', borderRight: '1px solid black', backgroundColor: '#B2B2B2', fontSize: '14px', padding: '4px', position: 'relative' }}>
+    <div style={{ height: '100%', width: '100%', overflow: 'auto', border: '1px solid black' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead style={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: 'white' }}>
+          <tr style={{ height: `${columnHeaderHeight}px` }}>
+            {columns.map((col, index) => (
+              <th
+                key={col.field}
+                style={{
+                  ...getSxStyle('& .MuiDataGrid-columnHeader'),
+                  width: `${columnWidths[col.field] || 120}px`,
+                  textAlign: 'center',
+                  position: 'relative',
+                }}
+              >
                 {col.headerName}
-                <div onMouseDown={(e) => handleResizeMouseDown(e, col.field)} style={{ position: 'absolute', top: 0, right: 0, width: '5px', cursor: 'col-resize', userSelect: 'none', height: '100%' }} />
+                <div
+                  onMouseDown={(e) => handleResizeMouseDown(e, col.field)}
+                  style={{ position: 'absolute', top: 0, right: 0, width: '5px', height: '100%', cursor: 'col-resize', userSelect: 'none' }}
+                />
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => {
-            const isEditingThisRow = editingCell && editingCell.rowId === row.id;
-            const rowClassName = getRowClassName ? getRowClassName({ row }) : '';
+            const rowId = getRowId(row);
+            const rowClassName = getRowClassName ? getRowClassName({ row, id: rowId }) : '';
+
             return (
-              <tr 
-                key={row.id} 
+              <tr
+                key={rowId}
                 className={rowClassName}
-                style={{ backgroundColor: selectedRowIndex === rowIndex ? '#e3f2fd' : 'inherit' }}
-                onClick={() => {
-                  if (onRowClick) onRowClick({ id: row.id, row: row });
-                  setSelectedRowIndex(rowIndex);
-                }}
+                style={{ height: `${rowHeight}px`, backgroundColor: selectedCoords.rowIndex === rowIndex ? '#e0e0e0' : undefined }}
+                onClick={() => handleRowClick(row, rowIndex)}
               >
-                {/* Index Cell */}
-                <td style={{ width: 50, textAlign: 'center', border: '1px solid #e0e0e0', padding: '2px 4px', fontSize: '12px', backgroundColor: '#B2B2B2' }}>
-                  {rowIndex + 1}
-                </td>
-                {dataColumns.map((col) => {
-                  const isEditing = isEditingThisRow && editingCell.field === col.field;
+                {columns.map((col, colIndex) => {
+                  const isEditing = editingCell?.rowId === rowId && editingCell?.field === col.field;
+                  const cellClassName = col.cellClassName || '';
+                  
                   return (
                     <td
                       key={col.field}
-                      style={{ border: '1px solid #e0e0e0', padding: 0, textAlign: 'center', fontSize: '12px', verticalAlign: 'middle' }}
+                      data-row-index={rowIndex}
+                      data-col-index={colIndex + 1} // 인덱스 컬럼을 0으로 가정하지 않고 실제 컬럼 인덱스 사용
+                      tabIndex={0}
+                      className={cellClassName}
+                      style={{ ...getSxStyle('& .MuiDataGrid-cell'), textAlign: col.align || 'center', padding: '0 4px' }}
+                      onFocus={() => setSelectedCoords({ rowIndex, colIndex })}
                       onDoubleClick={() => handleCellDoubleClick(row, col)}
-                      onKeyDown={(e) => handleCellKeyDown(e, row, col)}
+                      onKeyDown={(e) => handleKeyDown(e, row, col, rowIndex, colIndex)}
                     >
                       {isEditing ? (
-                        col.field === 'itemType' || col.field === 'itemName' || col.field === 'endBar' ? (
-                          <Autocomplete
-                            options={
-                              col.field === 'itemType' ? itemTypeOptions :
-                              col.field === 'itemName' ? itemNameOptions : endBarOptions
-                            }
-                            freeSolo={col.field === 'itemName'} // Allow free text for itemName
-                            value={editingValue}
-                            onChange={(event, newValue) => {
-                              setEditingValue(newValue);
-                              // Commit immediately on change for Autocomplete
-                              const tempNewRow = { ...row, [col.field]: newValue };
-                              const processed = processRowUpdate ? processRowUpdate(tempNewRow, row) : tempNewRow;
-                              if (onRowUpdateCommitted) onRowUpdateCommitted(processed);
-                              setEditingCell(null);
-                            }}
-                            onBlur={() => handleInputBlur(row, col)}
-                            renderInput={(params) => (
-                              <TextField {...params} autoFocus size="small" variant="standard" style={{ padding: '2px 4px' }} />
-                            )}
-                            style={{ width: '100%', backgroundColor: 'white' }}
-                          />
-                        ) : (
-                          <input
-                            ref={inputRef}
-                            value={editingValue}
-                            onChange={(e) => setEditingValue(e.target.value)}
-                            onBlur={() => handleInputBlur(row, col)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') commitEdit(row, col); }}
-                            style={{ width: '100%', height: '100%', boxSizing: 'border-box', border: '2px solid #1976d2', outline: 'none', fontSize: '12px', textAlign: 'center' }}
-                          />
-                        )
+                        <input
+                          ref={inputRef}
+                          value={editingValue}
+                          onChange={(e) => setEditingValue(e.target.value)}
+                          onBlur={handleInputBlur}
+                          style={{ width: '100%', boxSizing: 'border-box', height: '100%', border: '1px solid #1976d2', outline: 'none', textAlign: 'center' }}
+                        />
+                      ) : col.renderCell ? (
+                        col.renderCell({ api: { getSortedRowIds: () => rows.map(getRowId) }, id: rowId })
                       ) : (
-                        <div style={{ padding: '4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                           {row[col.field]}
-                        </div>
+                        row[col.field]
                       )}
                     </td>
                   );
@@ -289,36 +246,6 @@ const ItemDataGrid = ({
           })}
         </tbody>
       </table>
-
-      {/* systemCode Selection Modal */}
-      <Modal open={systemCodeModalOpen} onClose={() => setSystemCodeModalOpen(false)}>
-        <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 800, height: 600, bgcolor: 'background.paper', border: '2px solid #000', boxShadow: 24, p: 4, overflowY: 'auto' }}>
-          <Typography variant="h6" mb={2}>사양코드 선택</Typography>
-          <TextField fullWidth value={systemCodeSearch} onChange={(e) => setSystemCodeSearch(e.target.value)} placeholder="검색..." style={{ marginBottom: '10px' }} />
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr>
-                {['번호', 'SystemCode', 'BB 코드', 'CB 코드', 'B 피치', 'C 피치', '톱날 두께'].map(header => (
-                  <th key={header} style={{ border: '1px solid black', padding: '4px', backgroundColor: '#f0f0f0' }}>{header}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredSystemCodeOptions.map((spec, index) => (
-                <tr key={index} style={{ cursor: 'pointer' }} onClick={() => handleSystemCodeSelect(spec)} hover>
-                  <td style={{ border: '1px solid black', padding: '4px', textAlign: 'center' }}>{index + 1}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.systemCode}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.bbCode}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.cbCode}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.bWidth}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.cWidth}</td>
-                  <td style={{ border: '1px solid black', padding: '4px' }}>{spec.bladeThickness}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Box>
-      </Modal>
     </div>
   );
 };

@@ -20,6 +20,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import { width } from '@mui/system';
+import MyDataGrid from './MyDataGrid';
 
 axios.interceptors.request.use(
   (config) => {
@@ -44,7 +45,7 @@ axios.interceptors.response.use(
 const indexColumn = {
   field: 'index',
   headerName: '',
-  width: 20,
+  width: 40,
   sortable: false,
   filterable: false,
   disableColumnMenu: true,
@@ -262,7 +263,7 @@ const Setup = () => {
           <Grid item lg={5} xs={12} mt={3}>
             <ParentCard title="자재개요 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                <DataGrid
+                <MyDataGrid
                   columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
@@ -315,7 +316,7 @@ const Setup = () => {
           <Grid item lg={7} xs={12} mt={3}>
             <ParentCard title="제작사양 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                <DataGrid
+                <MyDataGrid
                   rows={rightTableData}
                   columns={columnsRight}
                   pageSize={5}

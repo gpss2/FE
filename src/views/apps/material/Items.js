@@ -19,6 +19,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import MyDataGrid from '../cutting-plan/MyDataGrid';
+import ItemDataGrid from './ItemDataGrid';
 // axios 인터셉터 설정
 axios.interceptors.request.use(
   (config) => {
@@ -44,7 +45,7 @@ axios.interceptors.response.use(
 const indexColumn = {
   field: 'index',
   headerName: '',
-  width: 50,
+  width: 40,
   sortable: false,
   filterable: false,
   disableColumnMenu: true,
@@ -166,7 +167,8 @@ const Items = () => {
 
       // 2) cbCount 재계산 (소수점 없는 정수)
       // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
-      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === newData.systemCode)?.cWidth || 100;
+      const C_PITCH_FROM_SPEC =
+        specCodes.find((item) => item.systemCode === newData.systemCode)?.cWidth || 100;
       cbCount = Math.floor(length / C_PITCH_FROM_SPEC) + 1;
 
       // 3) lep, rep 계산
@@ -191,7 +193,6 @@ const Items = () => {
       // 4) lep, rep도 소수점 첫째 자리까지 반올림
       lep = roundToOne(lep);
       rep = roundToOne(rep);
-
     } else if (source === 'cbCount') {
       // 1) length는 이전(oldData)을 그대로 사용 → 소수점 첫째 자리까지 반올림
       length = Number(oldData.length);
@@ -200,7 +201,8 @@ const Items = () => {
       // 2) 새로운 cbCount 값
       cbCount = Number(newData.cbCount);
       // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
-      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
+      const C_PITCH_FROM_SPEC =
+        specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) lep, rep 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -215,7 +217,6 @@ const Items = () => {
       // lep, rep 값 반올림
       lep = roundToOne(lep);
       rep = roundToOne(rep);
-
     } else if (source === 'lep') {
       // 1) length는 이전(oldData)을 그대로 사용 → 반올림
       length = Number(oldData.length);
@@ -224,7 +225,8 @@ const Items = () => {
       // 2) cbCount도 이전 값을 가져옴
       cbCount = Number(oldData.cbCount);
       // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
-      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
+      const C_PITCH_FROM_SPEC =
+        specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) total 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -257,7 +259,6 @@ const Items = () => {
       // lep, rep 반올림
       lep = roundToOne(newLep);
       rep = roundToOne(newRep);
-
     } else if (source === 'rep') {
       // 1) length는 이전(oldData)을 그대로 사용 → 반올림
       length = Number(oldData.length);
@@ -266,7 +267,8 @@ const Items = () => {
       // 2) cbCount도 이전 값
       cbCount = Number(oldData.cbCount);
       // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
-      const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
+      const C_PITCH_FROM_SPEC =
+        specCodes.find((item) => item.systemCode === oldData.systemCode)?.cWidth || 100;
 
       // 3) total 계산
       let total = length - (cbCount - 1) * C_PITCH_FROM_SPEC;
@@ -299,7 +301,6 @@ const Items = () => {
       // lep, rep 반올림
       lep = roundToOne(newLep);
       rep = roundToOne(newRep);
-
     } else {
       // 아무 변경사항이 없으면 단순 병합 후 반환
       return { ...oldData, ...newData };
@@ -320,7 +321,8 @@ const Items = () => {
   const handleProcessRowUpdate = (newRow, oldRow) => {
     if (JSON.stringify(newRow) === JSON.stringify(oldRow)) return oldRow;
     // ✨ 사양코드 데이터(specCodes)에서 cWidth 값 찾기
-    const C_PITCH_FROM_SPEC = specCodes.find((item) => item.systemCode === newRow.systemCode)?.cWidth || 100;
+    const C_PITCH_FROM_SPEC =
+      specCodes.find((item) => item.systemCode === newRow.systemCode)?.cWidth || 100;
 
     const updatedRow = recalcValues(
       {
@@ -461,7 +463,10 @@ const Items = () => {
     }
     handleModalClose();
   };
-
+  // Items.js 컴포넌트 내부에 추가
+  const handleRowUpdate = (updatedRow) => {
+    setData((prevData) => prevData.map((row) => (row.id === updatedRow.id ? updatedRow : row)));
+  };
   return (
     <div>
       <PageContainer title="규격품목 셋업">
@@ -469,39 +474,28 @@ const Items = () => {
           <Grid item xs={12} mt={3}>
             <ParentCard title="규격품목 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                <DataGrid
+                <ItemDataGrid
                   rows={data}
                   columns={columns}
                   processRowUpdate={handleProcessRowUpdate}
-                  disableSelectionOnClick
+                  onRowUpdate={handleRowUpdate} // ✨ 부모 상태 업데이트용 콜백 추가
                   getRowId={(row) => row.id}
                   onRowClick={(params) => setSelectedItemId(params.id)}
                   onCellDoubleClick={handleCellDoubleClick}
-                  experimentalFeatures={{ newEditingApi: true }}
+                  getRowClassName={(params) => (params.row.__error__ ? 'error-cell' : '')}
                   columnHeaderHeight={30}
                   rowHeight={25}
-                  getRowClassName={(params) => (params.row.__error__ ? 'error-cell' : '')}
                   sx={{
                     '& .MuiDataGrid-cell': {
                       border: '1px solid black',
                       fontSize: '12px',
-                      paddingTop: '2px', // 위쪽 패딩 조정
-                      paddingBottom: '2px', // 아래쪽 패딩 조정
                     },
                     '& .MuiDataGrid-columnHeader': {
                       fontSize: '14px',
                       backgroundColor: '#B2B2B2',
                       border: '1px solid black',
                     },
-                    '& .group0': { backgroundColor: '#ffffff' },
-                    '& .group1': { backgroundColor: '#f5f5f5' },
                     '& .error-cell': { backgroundColor: 'red', color: 'white' },
-                    '& .MuiDataGrid-columnHeaderTitle': {
-                      whiteSpace: 'pre-wrap',
-                      textAlign: 'center',
-                      lineHeight: '1.2',
-                    },
-                    '& .MuiDataGrid-footerContainer': { display: '' },
                     '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                 />

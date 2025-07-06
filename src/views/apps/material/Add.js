@@ -17,6 +17,7 @@ import AddIcon from '@mui/icons-material/Add';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
+import MyDataGrid from './MyDataGrid';
 
 // Helper for number formatting
 const formatNumber = (value) => {
@@ -63,7 +64,7 @@ const Add = () => {
     {
       field: 'index',
       headerName: '',
-      width: 20,
+      width: 40,
       sortable: false,
       filterable: false,
       disableColumnMenu: true,
@@ -198,7 +199,7 @@ const Add = () => {
           <Grid item xs={12} mt={3}>
             <ParentCard title="자재정보 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                <DataGrid
+                <MyDataGrid
                   rows={data}
                   columns={columns}
                   pageSize={10}

@@ -19,6 +19,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
+import MyDataGrid from '../material/MyDataGrid';
 
 axios.interceptors.request.use(
   (config) => {
@@ -42,7 +43,7 @@ axios.interceptors.response.use(
 const indexColumn = {
   field: 'index',
   headerName: '',
-  width: 20,
+  width: 40,
   sortable: false,
   filterable: false,
   disableColumnMenu: true,
@@ -187,7 +188,7 @@ const Orders = () => {
           <Grid item xs={12} mt={3}>
             <ParentCard title="수주 목록 관리">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
-                <DataGrid
+                <MyDataGrid
                   rows={data}
                   columns={columns}
                   pageSize={10}
