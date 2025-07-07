@@ -397,6 +397,7 @@ const Items = () => {
       const updates = Object.values(pendingUpdates);
       const updatePromises = updates.map((row) => {
         // ID가 음수이면 신규 행성이므로 POST, 양수이면 기존 행성이므로 PUT
+        const { __error__, ...payload } = row;
         if (row.id < 0) {
           // POST 요청 시에는 백엔드에서 ID를 생성하므로, 프론트에서 만든 임시 id는 제거
           const { id, ...newRowData } = row;
