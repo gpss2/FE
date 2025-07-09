@@ -1129,7 +1129,7 @@ useEffect(() => {
                 disabled={!bottomData.length || isInputComplete || inputLoading}
                 onClick={handleInputComplete}
               >
-                {inputLoading ? <CircularProgress size={24} /> : (isInputComplete ? '처리 완료' : '투입 완료')}
+                {inputLoading ? <CircularProgress size={24} /> : (isInputComplete ? '추가됨' : '투입 완료')}
               </Button>
               <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
                 상세 품목배치(작업지시폼)
