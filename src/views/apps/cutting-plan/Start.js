@@ -97,6 +97,8 @@ const Start = () => {
   const minusLAdjustmentRef = useRef(null);
   const plusWAdjustmentRef = useRef(null);
   const minusWAdjustmentRef = useRef(null);
+  const [isInputComplete, setIsInputComplete] = useState(false);
+  const [inputLoading, setInputLoading] = useState(false);
 
   const [topLeftData, setTopLeftData] = useState([]);
   const [topRightData, setTopRightData] = useState([]);
@@ -198,6 +200,15 @@ const Start = () => {
       }
     }
   }, [topLeftData]);
+useEffect(() => {
+    if (selectedOrderId) {
+      const completedInputs = JSON.parse(localStorage.getItem('completedMaterialInputs') || '[]');
+      setIsInputComplete(completedInputs.includes(selectedOrderId));
+    } else {
+      // 선택된 수주가 없으면 비활성화
+      setIsInputComplete(false);
+    }
+  }, [selectedOrderId]);
 
   const handleOpenSpecModal = async () => {
     if (!selectedSpecCode) return; // specCode가 있어야 로직 실행
@@ -233,7 +244,86 @@ const Start = () => {
       setSpecOptions([]);
     }
   };
+// Start.js 내에 다른 핸들러 함수들 옆에 추가하세요.
 
+  /**
+   * "투입 완료" 버튼 클릭 시 실행되는 함수
+   */
+  const handleInputComplete = async () => {
+    if (!selectedOrderId || bottomData.length === 0) {
+      alert('처리할 절단 계획 결과가 없습니다.');
+      return;
+    }
+    setInputLoading(true);
+
+    try {
+      // 1. 하단 테이블 데이터를 기반으로 자재 코드별 총 투입량 계산
+      const totalUsageByCode = bottomData.reduce((accumulator, row) => {
+        const bbTotal = (parseFloat(row.bbUsage) || 0) + (parseFloat(row.bbLoss) || 0);
+        const cbTotal = (parseFloat(row.cbUsage) || 0) + (parseFloat(row.cbLoss) || 0);
+
+        if (row.bbCode && bbTotal > 0) {
+          accumulator[row.bbCode] = (accumulator[row.bbCode] || 0) + bbTotal;
+        }
+        if (row.cbCode && cbTotal > 0) {
+          accumulator[row.cbCode] = (accumulator[row.cbCode] || 0) + cbTotal;
+        }
+        return accumulator;
+      }, {});
+
+      if (Object.keys(totalUsageByCode).length === 0) {
+        alert('투입할 자재 사용량이 없습니다.');
+        setInputLoading(false);
+        return;
+      }
+
+      // 2. 현재 자재 재고 데이터 가져오기 (Add.js의 데이터 소스)
+      const { data: storeResponse } = await axios.get('/api/item/store');
+      const currentMaterialStore = storeResponse.table;
+      
+      const updatePromises = [];
+
+      // 3. 업데이트할 자재 목록 생성 (재고에 존재하는 자재만)
+      for (const materialCode in totalUsageByCode) {
+        const itemToUpdate = currentMaterialStore.find(item => item.materialCode === materialCode);
+        
+        // 자재가 재고에 존재할 경우에만 업데이트 Promise 추가
+        if (itemToUpdate) {
+          const usageToAdd = totalUsageByCode[materialCode];
+          const newPcs = (parseFloat(itemToUpdate.pcs) || 0) + usageToAdd;
+          const updatedItemPayload = { ...itemToUpdate, pcs: newPcs };
+          
+          updatePromises.push(axios.put(`/api/item/store/${itemToUpdate.id}`, updatedItemPayload));
+        }
+      }
+      
+      if (updatePromises.length === 0) {
+        alert('재고 목록에 투입 대상 자재가 존재하지 않습니다.');
+        setInputLoading(false);
+        return;
+      }
+
+      // 4. 모든 재고 업데이트 동시 실행
+      await Promise.all(updatePromises);
+
+      // 5. 성공 시 로컬 스토리지에 처리된 orderId 기록 (중복 방지)
+      const completedInputs = JSON.parse(localStorage.getItem('completedMaterialInputs') || '[]');
+      if (!completedInputs.includes(selectedOrderId)) {
+        completedInputs.push(selectedOrderId);
+        localStorage.setItem('completedMaterialInputs', JSON.stringify(completedInputs));
+      }
+
+      // 6. 상태 업데이트 및 알림
+      setIsInputComplete(true);
+      alert('자재 투입이 완료 처리되었습니다.');
+
+    } catch (error) {
+      console.error('자재 투입 처리 중 오류 발생:', error);
+      alert('처리 중 오류가 발생했습니다. 다시 시도해 주세요.');
+    } finally {
+      setInputLoading(false);
+    }
+  };
   const handleSpecSave = async () => {
     if (!selectedOrderId || !selectedTopRightId || !selectedSpecCode) return;
     setSpecSaveLoading(true);
@@ -1033,6 +1123,14 @@ const Start = () => {
               />
             </Box>
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
+            <Button
+                variant="contained"
+                color="primary"
+                disabled={!bottomData.length || isInputComplete || inputLoading}
+                onClick={handleInputComplete}
+              >
+                {inputLoading ? <CircularProgress size={24} /> : (isInputComplete ? '처리 완료' : '투입 완료')}
+              </Button>
               <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
                 상세 품목배치(작업지시폼)
               </Button>
