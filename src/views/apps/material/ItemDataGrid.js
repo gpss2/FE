@@ -3,17 +3,19 @@ import { useState, useEffect, useRef } from 'react';
 const ItemDataGrid = ({
   rows = [],
   columns = [],
-  processRowUpdate, // (newRow, oldRow) => updatedRow
+  processRowUpdate,
   onRowClick,
   onCellDoubleClick,
-  onRowUpdate, // 부모의 주 데이터(data)를 업데이트하는 콜백
+  onRowUpdate,
   getRowId,
   getRowClassName,
+  // highlight-next-line
+  modalEditFields = [], // modal을 사용할 필드 목록을 prop으로 받음
   columnHeaderHeight = 30,
   rowHeight = 25,
   sx = {},
 }) => {
-  const [editingCell, setEditingCell] = useState(null); // { rowId, field }
+  const [editingCell, setEditingCell] = useState(null);
   const [editingValue, setEditingValue] = useState('');
   const [selectedCoords, setSelectedCoords] = useState({ rowIndex: null, colIndex: null });
   const [columnWidths, setColumnWidths] = useState({});
@@ -22,7 +24,6 @@ const ItemDataGrid = ({
 
   const editableFields = columns.filter((c) => c.editable).map((c) => c.field);
 
-  // 1. 컬럼 너비 관리 (로컬 스토리지 연동)
   useEffect(() => {
     const savedWidths = localStorage.getItem('itemDataGridColumnWidths');
     if (savedWidths) {
@@ -31,7 +32,7 @@ const ItemDataGrid = ({
       const initialWidths = {};
       columns.forEach((col) => {
         if (col.field) {
-          initialWidths[col.field] = col.width ? col.width : 120; // flex 대신 기본 너비 설정
+          initialWidths[col.field] = col.width ? col.width : 120;
         }
       });
       setColumnWidths(initialWidths);
@@ -42,7 +43,13 @@ const ItemDataGrid = ({
     localStorage.setItem('itemDataGridColumnWidths', JSON.stringify(columnWidths));
   }, [columnWidths]);
 
-  // 2. 컬럼 리사이징 이벤트 핸들러
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editingCell]);
+
   const handleResizeMouseDown = (e, field) => {
     e.preventDefault();
     setResizing({
@@ -71,14 +78,6 @@ const ItemDataGrid = ({
     };
   }, [resizing]);
 
-  // 3. 셀 편집 로직
-  useEffect(() => {
-    if (editingCell && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editingCell]);
-
   const startEditing = (row, col) => {
     const rowId = getRowId(row);
     setEditingCell({ rowId, field: col.field });
@@ -87,20 +86,14 @@ const ItemDataGrid = ({
 
   const commitEdit = async () => {
     if (!editingCell) return;
-
     const { rowId, field } = editingCell;
     const oldRow = rows.find((r) => getRowId(r) === rowId);
     const newRow = { ...oldRow, [field]: editingValue };
-
-    // processRowUpdate가 있으면 실행하고 결과값으로 최종 행 결정
     const processedRow = processRowUpdate ? await Promise.resolve(processRowUpdate(newRow, oldRow)) : newRow;
-
-    // 부모의 주 데이터(data) 업데이트
     if (onRowUpdate) {
       onRowUpdate(processedRow);
     }
-
-    return processedRow; // 다음 셀 이동 로직에서 사용하기 위해 반환
+    return processedRow;
   };
 
   const moveToNextCell = (committedRow, currentColField) => {
@@ -109,55 +102,52 @@ const ItemDataGrid = ({
       const nextField = editableFields[currentIndex + 1];
       startEditing(committedRow, { field: nextField });
     } else {
-      setEditingCell(null); // 마지막 셀이면 편집 종료
+      setEditingCell(null);
     }
   };
 
-  // 4. 키보드 & 마우스 이벤트 핸들러
+  // highlight-start
   const handleCellDoubleClick = (row, col) => {
-    // onCellDoubleClick prop이 있으면 우선적으로 실행 (모달 띄우기용)
-    if (onCellDoubleClick) {
+    // 1. modalEditFields 목록에 포함된 필드이고, onCellDoubleClick prop이 존재하면 모달을 호출
+    if (modalEditFields.includes(col.field) && onCellDoubleClick) {
       onCellDoubleClick({ row, field: col.field, id: getRowId(row) });
-      return;
     }
-    if (col.editable) {
+    // 2. 그 외의 수정 가능한(editable) 필드는 인라인 편집 시작
+    else if (col.editable) {
       startEditing(row, col);
     }
   };
+  // highlight-end
 
   const handleInputBlur = () => {
     commitEdit().then(() => setEditingCell(null));
   };
 
   const handleKeyDown = async (e, row, col, rowIndex, colIndex) => {
-    const rowId = getRowId(row);
-
-    // 방향키 탐색
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !editingCell) {
       e.preventDefault();
-      let nextRow = rowIndex, nextCol = colIndex;
+      let nextRow = rowIndex,
+        nextCol = colIndex;
       if (e.key === 'ArrowUp') nextRow = Math.max(0, rowIndex - 1);
       if (e.key === 'ArrowDown') nextRow = Math.min(rows.length - 1, rowIndex + 1);
-      if (e.key === 'ArrowLeft') nextCol = Math.max(1, colIndex - 1); // 0은 인덱스 컬럼
-      if (e.key === 'ArrowRight') nextCol = Math.min(columns.length, colIndex + 1);
-      
+      if (e.key === 'ArrowLeft') nextCol = Math.max(1, colIndex - 1);
+      if (e.key === 'ArrowRight') nextCol = Math.min(columns.length - 1, colIndex + 1);
       const nextCell = document.querySelector(`[data-row-index="${nextRow}"][data-col-index="${nextCol}"]`);
       if (nextCell) nextCell.focus();
       return;
     }
 
-    // Enter 키 처리
     if (e.key === 'Enter') {
       e.preventDefault();
       if (editingCell) {
         const committedRow = await commitEdit();
         moveToNextCell(committedRow, col.field);
-      } else if (col.editable) {
-        startEditing(row, col);
+      } else {
+        // 엔터 키를 눌렀을 때도 더블클릭과 동일한 로직으로 처리
+        handleCellDoubleClick(row, col);
       }
     }
 
-    // Escape 키 처리
     if (e.key === 'Escape' && editingCell) {
       setEditingCell(null);
     }
@@ -165,12 +155,11 @@ const ItemDataGrid = ({
 
   const handleRowClick = (row, rowIndex) => {
     if (onRowClick) {
-        onRowClick({ id: getRowId(row) });
+      onRowClick({ id: getRowId(row) });
     }
     setSelectedCoords({ rowIndex, colIndex: selectedCoords.colIndex });
-  }
+  };
 
-  // 5. 렌더링
   const getSxStyle = (key) => sx[key] || {};
 
   return (
@@ -178,7 +167,7 @@ const ItemDataGrid = ({
       <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
         <thead style={{ position: 'sticky', top: 0, zIndex: 2, backgroundColor: 'white' }}>
           <tr style={{ height: `${columnHeaderHeight}px` }}>
-            {columns.map((col, index) => (
+            {columns.map((col) => (
               <th
                 key={col.field}
                 style={{
@@ -201,7 +190,6 @@ const ItemDataGrid = ({
           {rows.map((row, rowIndex) => {
             const rowId = getRowId(row);
             const rowClassName = getRowClassName ? getRowClassName({ row, id: rowId }) : '';
-
             return (
               <tr
                 key={rowId}
@@ -212,12 +200,11 @@ const ItemDataGrid = ({
                 {columns.map((col, colIndex) => {
                   const isEditing = editingCell?.rowId === rowId && editingCell?.field === col.field;
                   const cellClassName = col.cellClassName || '';
-                  
                   return (
                     <td
                       key={col.field}
                       data-row-index={rowIndex}
-                      data-col-index={colIndex + 1} // 인덱스 컬럼을 0으로 가정하지 않고 실제 컬럼 인덱스 사용
+                      data-col-index={colIndex}
                       tabIndex={0}
                       className={cellClassName}
                       style={{ ...getSxStyle('& .MuiDataGrid-cell'), textAlign: col.align || 'center', padding: '0 4px' }}
