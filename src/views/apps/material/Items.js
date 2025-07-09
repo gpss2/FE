@@ -333,7 +333,11 @@ const Items = () => {
     try {
       const updates = Object.values(pendingUpdates);
       const updatePromises = updates.map((row) => {
-        const { __error__, ...payload } = row;
+        // highlight-start
+        // 서버 전송 전, 프론트엔드에서만 사용되는 error, __error__ 키를 페이로드에서 제거
+        const { error, __error__, ...payload } = row;
+        // highlight-end
+
         if (row.id < 0) {
           const { id, isNew, ...newRowData } = payload;
           return axios.post('/api/item/standard', newRowData);
@@ -344,10 +348,10 @@ const Items = () => {
       await Promise.all(updatePromises);
       await fetchData();
       setPendingUpdates({});
-      alert('Changes applied successfully.');
+      alert('적용되었습니다.');
     } catch (error) {
       console.error('Error saving updates:', error);
-      alert('Failed to save changes.');
+      alert('저장에 실패했습니다.');
     }
     setApplyLoading(false);
   };
@@ -469,7 +473,7 @@ const Items = () => {
             <Stack spacing={2} pt={1}>
               <SearchableSelect
                 label="사양코드"
-                options={specCodes.map((row) => row.systemCode)} // Provide simple array of strings
+                options={specCodes} 
                 value={modalData.systemCode || ''}
                 onChange={(e) => setModalData((prev) => ({ ...prev, systemCode: e.target.value }))}
               />
