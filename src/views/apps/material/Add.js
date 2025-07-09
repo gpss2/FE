@@ -147,14 +147,48 @@ const Add = () => {
 
   const handleSave = async () => {
     try {
-      if (isEditing) {
-        await axios.put(`/api/item/store/${currentRow.id}`, currentRow);
+      const { id, materialCode, kg, pcs } = currentRow;
+      const parsedKg = parseFloat(kg) || 0;
+      const parsedPcs = parseFloat(pcs) || 0;
+
+      // Find an item with the same materialCode, excluding the item being edited
+      const existingItem = data.find(
+        (item) => item.materialCode === materialCode && item.id !== id
+      );
+
+      if (existingItem) {
+        // --- DUPLICATE MATERIAL CODE FOUND ---
+
+        // 1. Prepare the updated data by summing the values
+        const updatedItem = {
+          ...existingItem,
+          kg: (parseFloat(existingItem.kg) || 0) + parsedKg,
+          pcs: (parseFloat(existingItem.pcs) || 0) + parsedPcs,
+        };
+
+        // 2. Update the existing item with the new, combined values
+        await axios.put(`/api/item/store/${existingItem.id}`, updatedItem);
+
+        if (isEditing) {
+          // 3. If we were in "edit mode," the original item is now redundant, so delete it
+          await axios.delete(`/api/item/store/${id}`);
+        }
       } else {
-        await axios.post('/api/item/store', currentRow);
+        // --- NO DUPLICATE FOUND ---
+        // Proceed with the standard save operation
+        if (isEditing) {
+          // Update the current item
+          await axios.put(`/api/item/store/${id}`, currentRow);
+        } else {
+          // Create a new item
+          await axios.post('/api/item/store', currentRow);
+        }
       }
+
+      // Refresh data and close the modal
       fetchData();
       handleCloseModal();
-    } catch (error) {
+    } catch (error){
       console.error('Error saving data:', error);
     }
   };
