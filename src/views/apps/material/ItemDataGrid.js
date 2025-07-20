@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 
 const ItemDataGrid = ({
   rows = [],
@@ -9,8 +9,7 @@ const ItemDataGrid = ({
   onRowUpdate,
   getRowId,
   getRowClassName,
-  // highlight-next-line
-  modalEditFields = [], // modal을 사용할 필드 목록을 prop으로 받음
+  modalEditFields = [],
   columnHeaderHeight = 30,
   rowHeight = 25,
   sx = {},
@@ -22,7 +21,47 @@ const ItemDataGrid = ({
   const [resizing, setResizing] = useState({ active: false, field: '', startX: 0, startWidth: 0 });
   const inputRef = useRef(null);
 
+  // 1. 정렬 상태 추가
+  const [sortConfig, setSortConfig] = useState(null);
+  
   const editableFields = columns.filter((c) => c.editable).map((c) => c.field);
+
+  // 2. 정렬 로직 추가 (useMemo로 성능 최적화)
+  const sortedRows = useMemo(() => {
+    let sortableRows = [...rows];
+    if (sortConfig !== null) {
+      sortableRows.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        if (aValue < bValue) {
+          return sortConfig.direction === 'ascending' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'ascending' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableRows;
+  }, [rows, sortConfig]);
+
+  // 3. 헤더 클릭 시 정렬 상태를 변경하는 함수
+  const handleSort = (key) => {
+    let direction = 'ascending';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
+      direction = 'descending';
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'descending') {
+      setSortConfig(null);
+      return;
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  // 4. 현재 정렬 상태를 표시할 아이콘을 반환하는 함수
+  const getSortIndicator = (columnField) => {
+    if (!sortConfig || sortConfig.key !== columnField) return null;
+    return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
+  };
 
   useEffect(() => {
     const savedWidths = localStorage.getItem('itemDataGridColumnWidths');
@@ -106,18 +145,14 @@ const ItemDataGrid = ({
     }
   };
 
-  // highlight-start
   const handleCellDoubleClick = (row, col) => {
-    // 1. modalEditFields 목록에 포함된 필드이고, onCellDoubleClick prop이 존재하면 모달을 호출
     if (modalEditFields.includes(col.field) && onCellDoubleClick) {
       onCellDoubleClick({ row, field: col.field, id: getRowId(row) });
     }
-    // 2. 그 외의 수정 가능한(editable) 필드는 인라인 편집 시작
     else if (col.editable) {
       startEditing(row, col);
     }
   };
-  // highlight-end
 
   const handleInputBlur = () => {
     commitEdit().then(() => setEditingCell(null));
@@ -126,11 +161,11 @@ const ItemDataGrid = ({
   const handleKeyDown = async (e, row, col, rowIndex, colIndex) => {
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key) && !editingCell) {
       e.preventDefault();
-      let nextRow = rowIndex,
-        nextCol = colIndex;
+      let nextRow = rowIndex, nextCol = colIndex;
       if (e.key === 'ArrowUp') nextRow = Math.max(0, rowIndex - 1);
-      if (e.key === 'ArrowDown') nextRow = Math.min(rows.length - 1, rowIndex + 1);
-      if (e.key === 'ArrowLeft') nextCol = Math.max(1, colIndex - 1);
+      // 5. rows.length 대신 sortedRows.length 사용
+      if (e.key === 'ArrowDown') nextRow = Math.min(sortedRows.length - 1, rowIndex + 1);
+      if (e.key === 'ArrowLeft') nextCol = Math.max(0, colIndex - 1); // 첫 컬럼(index 0)으로 이동 가능하도록 수정
       if (e.key === 'ArrowRight') nextCol = Math.min(columns.length - 1, colIndex + 1);
       const nextCell = document.querySelector(`[data-row-index="${nextRow}"][data-col-index="${nextCol}"]`);
       if (nextCell) nextCell.focus();
@@ -143,7 +178,6 @@ const ItemDataGrid = ({
         const committedRow = await commitEdit();
         moveToNextCell(committedRow, col.field);
       } else {
-        // 엔터 키를 눌렀을 때도 더블클릭과 동일한 로직으로 처리
         handleCellDoubleClick(row, col);
       }
     }
@@ -155,7 +189,7 @@ const ItemDataGrid = ({
 
   const handleRowClick = (row, rowIndex) => {
     if (onRowClick) {
-      onRowClick({ id: getRowId(row) });
+      onRowClick({ id: getRowId(row), row });
     }
     setSelectedCoords({ rowIndex, colIndex: selectedCoords.colIndex });
   };
@@ -170,16 +204,26 @@ const ItemDataGrid = ({
             {columns.map((col) => (
               <th
                 key={col.field}
+                // 6. 리사이즈 핸들이 아닌 헤더 영역 클릭 시 정렬되도록 onClick 추가
+                onClick={() => col.sortable !== false && handleSort(col.field)}
                 style={{
                   ...getSxStyle('& .MuiDataGrid-columnHeader'),
                   width: `${columnWidths[col.field] || 120}px`,
                   textAlign: 'center',
                   position: 'relative',
+                  // 7. 정렬 가능 컬럼에 커서 변경
+                  cursor: col.sortable !== false ? 'pointer' : 'default',
                 }}
               >
+                {/* 헤더 텍스트와 정렬 아이콘을 함께 표시 */}
                 {col.headerName}
+                {getSortIndicator(col.field)}
+
+                {/* 리사이즈 핸들은 그대로 유지 */}
                 <div
                   onMouseDown={(e) => handleResizeMouseDown(e, col.field)}
+                  // 클릭 이벤트가 th로 전파되는 것을 막아 정렬과 리사이즈가 동시에 실행되지 않도록 함
+                  onClick={(e) => e.stopPropagation()} 
                   style={{ position: 'absolute', top: 0, right: 0, width: '5px', height: '100%', cursor: 'col-resize', userSelect: 'none' }}
                 />
               </th>
@@ -187,7 +231,8 @@ const ItemDataGrid = ({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, rowIndex) => {
+          {/* 8. 원본 rows 대신 정렬된 sortedRows를 사용 */}
+          {sortedRows.map((row, rowIndex) => {
             const rowId = getRowId(row);
             const rowClassName = getRowClassName ? getRowClassName({ row, id: rowId }) : '';
             return (
@@ -221,7 +266,7 @@ const ItemDataGrid = ({
                           style={{ width: '100%', boxSizing: 'border-box', height: '100%', border: '1px solid #1976d2', outline: 'none', textAlign: 'center' }}
                         />
                       ) : col.renderCell ? (
-                        col.renderCell({ api: { getSortedRowIds: () => rows.map(getRowId) }, id: rowId })
+                        col.renderCell({ api: { getSortedRowIds: () => sortedRows.map(getRowId) }, id: rowId, row })
                       ) : (
                         row[col.field]
                       )}
