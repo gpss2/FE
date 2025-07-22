@@ -1123,19 +1123,20 @@ useEffect(() => {
               />
             </Box>
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
-            <Button
+           
+              <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
+                상세 품목배치(작업지시폼)
+              </Button>
+              <Button disabled={!selectedGroup} onClick={handleViewDrawing}>
+                상세보기
+              </Button>
+              <Button
                 variant="contained"
                 color="primary"
                 disabled={!bottomData.length || isInputComplete || inputLoading}
                 onClick={handleInputComplete}
               >
                 {inputLoading ? <CircularProgress size={24} /> : (isInputComplete ? '추가됨' : '투입 완료')}
-              </Button>
-              <Button disabled={!selectedGroup} onClick={handlePrintInNewWindow}>
-                상세 품목배치(작업지시폼)
-              </Button>
-              <Button disabled={!selectedGroup} onClick={handleViewDrawing}>
-                상세보기
               </Button>
             </Stack>
           </ParentCard>
