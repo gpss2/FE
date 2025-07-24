@@ -271,49 +271,50 @@ useEffect(() => {
         return accumulator;
       }, {});
 
-      if (Object.keys(totalUsageByCode).length === 0) {
+      const requiredMaterialCodes = Object.keys(totalUsageByCode);
+
+      if (requiredMaterialCodes.length === 0) {
         alert('투입할 자재 사용량이 없습니다.');
         setInputLoading(false);
         return;
       }
 
-      // 2. 현재 자재 재고 데이터 가져오기 (Add.js의 데이터 소스)
+      // 2. 현재 자재 재고 데이터 가져오기
       const { data: storeResponse } = await axios.get('/api/item/store');
       const currentMaterialStore = storeResponse.table;
       
-      const updatePromises = [];
+      // 3. (추가된 로직) 모든 필수 자재가 재고에 존재하는지 확인
+      const availableMaterialCodes = new Set(currentMaterialStore.map(item => item.materialCode));
+      const missingMaterials = requiredMaterialCodes.filter(code => !availableMaterialCodes.has(code));
 
-      // 3. 업데이트할 자재 목록 생성 (재고에 존재하는 자재만)
-      for (const materialCode in totalUsageByCode) {
-        const itemToUpdate = currentMaterialStore.find(item => item.materialCode === materialCode);
-        
-        // 자재가 재고에 존재할 경우에만 업데이트 Promise 추가
-        if (itemToUpdate) {
-          const usageToAdd = totalUsageByCode[materialCode];
-          const newPcs = (parseFloat(itemToUpdate.pcs) || 0) + usageToAdd;
-          const updatedItemPayload = { ...itemToUpdate, pcs: newPcs };
-          
-          updatePromises.push(axios.put(`/api/item/store/${itemToUpdate.id}`, updatedItemPayload));
-        }
-      }
-      
-      if (updatePromises.length === 0) {
-        alert('재고 목록에 투입 대상 자재가 존재하지 않습니다.');
+      if (missingMaterials.length > 0) {
+        // 하나라도 없는 자재가 있으면 에러 메시지를 표시하고 함수 종료
+        alert(`재고에 없는 자재가 포함되어 있습니다: ${missingMaterials.join(', ')}. 처리를 중단합니다.`);
         setInputLoading(false);
         return;
       }
 
-      // 4. 모든 재고 업데이트 동시 실행
+      // 4. 모든 자재가 존재하므로, 업데이트할 Promise 배열 생성
+      const updatePromises = requiredMaterialCodes.map(materialCode => {
+        const itemToUpdate = currentMaterialStore.find(item => item.materialCode === materialCode);
+        const usageToAdd = totalUsageByCode[materialCode];
+        const newPcs = (parseFloat(itemToUpdate.pcs) || 0) + usageToAdd;
+        const updatedItemPayload = { ...itemToUpdate, pcs: newPcs };
+        
+        return axios.put(`/api/item/store/${itemToUpdate.id}`, updatedItemPayload);
+      });
+      
+      // 5. 모든 재고 업데이트 동시 실행
       await Promise.all(updatePromises);
 
-      // 5. 성공 시 로컬 스토리지에 처리된 orderId 기록 (중복 방지)
+      // 6. 성공 시 로컬 스토리지에 처리된 orderId 기록 (중복 방지)
       const completedInputs = JSON.parse(localStorage.getItem('completedMaterialInputs') || '[]');
       if (!completedInputs.includes(selectedOrderId)) {
         completedInputs.push(selectedOrderId);
         localStorage.setItem('completedMaterialInputs', JSON.stringify(completedInputs));
       }
 
-      // 6. 상태 업데이트 및 알림
+      // 7. 상태 업데이트 및 알림
       setIsInputComplete(true);
       alert('자재 투입이 완료 처리되었습니다.');
 
