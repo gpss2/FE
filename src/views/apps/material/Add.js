@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef 추가
 import axios from 'axios';
-import { DataGrid } from '@mui/x-data-grid';
+// 사용하지 않는 DataGrid import 제거
 import {
   Box,
   Grid,
@@ -18,6 +18,7 @@ import PageContainer from '../../../components/container/PageContainer';
 import ParentCard from '../../../components/shared/ParentCard';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import MyDataGrid from './MyDataGrid';
+import PrintButton from './PrintButton'; // PrintButton 임포트
 
 // Helper for number formatting
 const formatNumber = (value) => {
@@ -113,6 +114,9 @@ const Add = () => {
   const [currentRow, setCurrentRow] = useState({});
   const [isEditing, setIsEditing] = useState(false);
 
+  // 1. MyDataGrid를 참조하기 위한 ref 생성
+  const gridRef = useRef(null);
+
   const fetchData = async () => {
     try {
       const response = await axios.get('/api/item/store');
@@ -151,41 +155,28 @@ const Add = () => {
       const parsedKg = parseFloat(kg) || 0;
       const parsedPcs = parseFloat(pcs) || 0;
 
-      // Find an item with the same materialCode, excluding the item being edited
       const existingItem = data.find(
         (item) => item.materialCode === materialCode && item.id !== id
       );
 
       if (existingItem) {
-        // --- DUPLICATE MATERIAL CODE FOUND ---
-
-        // 1. Prepare the updated data by summing the values
         const updatedItem = {
           ...existingItem,
           kg: (parseFloat(existingItem.kg) || 0) + parsedKg,
           pcs: (parseFloat(existingItem.pcs) || 0) + parsedPcs,
         };
-
-        // 2. Update the existing item with the new, combined values
         await axios.put(`/api/item/store/${existingItem.id}`, updatedItem);
-
         if (isEditing) {
-          // 3. If we were in "edit mode," the original item is now redundant, so delete it
           await axios.delete(`/api/item/store/${id}`);
         }
       } else {
-        // --- NO DUPLICATE FOUND ---
-        // Proceed with the standard save operation
         if (isEditing) {
-          // Update the current item
           await axios.put(`/api/item/store/${id}`, currentRow);
         } else {
-          // Create a new item
           await axios.post('/api/item/store', currentRow);
         }
       }
 
-      // Refresh data and close the modal
       fetchData();
       handleCloseModal();
     } catch (error){
@@ -205,17 +196,14 @@ const Add = () => {
     }
   };
   
-  // Handles changes from numeric text fields
   const handleNumberChange = (e) => {
     const { name, value } = e.target;
-    // Remove commas to store raw number, and allow only numeric input
     const rawValue = value.replace(/,/g, '');
     if (rawValue === '' || /^\d*\.?\d*$/.test(rawValue)) {
       setCurrentRow({ ...currentRow, [name]: rawValue });
     }
   };
   
-  // Handles changes from the searchable select
   const handleSelectChange = (value) => {
       setCurrentRow({ ...currentRow, materialCode: value });
   };
@@ -234,6 +222,7 @@ const Add = () => {
             <ParentCard title="자재정보 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                 <MyDataGrid
+                  ref={gridRef} // 2. ref를 MyDataGrid에 전달
                   rows={data}
                   columns={columns}
                   pageSize={10}
@@ -262,7 +251,9 @@ const Add = () => {
                   onRowClick={(params) => handleOpenModal(params.row)}
                 />
               </Box>
-              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2}>
+              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2} spacing={1}>
+                {/* 3. PrintButton 추가 */}
+                <PrintButton targetRef={gridRef} title="자재 입고 현황" />
                 <IconButton
                   color="primary"
                   aria-label="add"
@@ -293,7 +284,7 @@ const Add = () => {
           <TextField
             margin="dense"
             label="입고중량 (Kg)"
-            type="text" // Use text type to show commas
+            type="text"
             fullWidth
             name="kg"
             value={formatNumber(currentRow.kg)}
@@ -302,7 +293,7 @@ const Add = () => {
           <TextField
             margin="dense"
             label="투입중량 (Kg)"
-            type="text" // Use text type to show commas
+            type="text"
             fullWidth
             name="pcs"
             value={formatNumber(currentRow.pcs)}

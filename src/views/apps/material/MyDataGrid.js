@@ -1,30 +1,28 @@
 import React from 'react';
 
-const MyDataGrid = ({
-  rows = [],
-  columns = [],
-  onRowClick,
-  columnHeaderHeight = 40,
-  rowHeight = 25,
-  sx = {}, // MUI-like styling prop
-}) => {
+// React.forwardRef를 사용하여 ref를 props로 받을 수 있도록 수정합니다.
+const MyDataGrid = React.forwardRef((
+  {
+    rows = [],
+    columns = [],
+    onRowClick,
+    columnHeaderHeight = 40,
+    rowHeight = 25,
+    sx = {}, // MUI-like styling prop
+  },
+  ref // 부모로부터 전달받은 ref
+) => {
   const [selectedRowIndex, setSelectedRowIndex] = React.useState(null);
-  // 1. 정렬 상태 추가 (어떤 컬럼을, 어떤 방향으로 정렬할지)
-  // { key: 'calories', direction: 'ascending' } 와 같은 형태
   const [sortConfig, setSortConfig] = React.useState(null);
 
-  // Helper to get nested sx styles safely
   const getSxStyle = (key) => sx[key] || {};
 
-  // 2. 정렬 로직 추가 (useMemo로 성능 최적화)
-  // rows나 sortConfig가 변경될 때만 정렬을 다시 수행
   const sortedRows = React.useMemo(() => {
-    let sortableRows = [...rows]; // 원본 배열 수정을 피하기 위해 복사
+    let sortableRows = [...rows];
     if (sortConfig !== null) {
       sortableRows.sort((a, b) => {
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
-
         if (aValue < bValue) {
           return sortConfig.direction === 'ascending' ? -1 : 1;
         }
@@ -37,30 +35,17 @@ const MyDataGrid = ({
     return sortableRows;
   }, [rows, sortConfig]);
 
-  // 3. 헤더 클릭 시 정렬 상태를 변경하는 함수
   const handleSort = (key) => {
     let direction = 'ascending';
-    // 만약 같은 컬럼을 다시 클릭했다면, 정렬 방향을 변경
-    if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === 'ascending'
-    ) {
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
       direction = 'descending';
-    } 
-    // 만약 내림차순 상태에서 같은 컬럼을 다시 클릭했다면, 정렬 해제
-    else if (
-      sortConfig &&
-      sortConfig.key === key &&
-      sortConfig.direction === 'descending'
-    ) {
-        setSortConfig(null);
-        return;
+    } else if (sortConfig && sortConfig.key === key && sortConfig.direction === 'descending') {
+      setSortConfig(null);
+      return;
     }
     setSortConfig({ key, direction });
   };
-  
-  // 4. 현재 정렬 상태를 표시할 아이콘을 반환하는 함수
+
   const getSortIndicator = (columnField) => {
     if (!sortConfig || sortConfig.key !== columnField) {
       return null;
@@ -69,7 +54,8 @@ const MyDataGrid = ({
   };
 
   return (
-    <div style={{ height: '100%', overflow: 'auto', border: '1px solid black' }}>
+    // 전달받은 ref를 최상위 div에 연결합니다.
+    <div ref={ref} style={{ height: '100%', overflow: 'auto', border: '1px solid black' }}>
       <table
         style={{
           width: '100%',
@@ -85,7 +71,6 @@ const MyDataGrid = ({
             {columns.map((col, index) => (
               <th
                 key={col.field || index}
-                // 5. 헤더 클릭 이벤트 핸들러 추가
                 onClick={() => col.sortable !== false && handleSort(col.field)}
                 style={{
                   ...getSxStyle('& .MuiDataGrid-columnHeader'),
@@ -95,7 +80,6 @@ const MyDataGrid = ({
                   zIndex: 1,
                   padding: '0 8px',
                   textAlign: col.headerAlign || 'center',
-                  // 6. 정렬 가능한 컬럼에 커서 변경
                   cursor: col.sortable !== false ? 'pointer' : 'default',
                 }}
               >
@@ -109,7 +93,6 @@ const MyDataGrid = ({
                   }}
                 >
                   {col.headerName}
-                  {/* 7. 정렬 방향 아이콘 표시 */}
                   {getSortIndicator(col.field)}
                 </div>
               </th>
@@ -121,7 +104,6 @@ const MyDataGrid = ({
          * Table Body
          **********************/}
         <tbody>
-          {/* 8. 원본 rows 대신 정렬된 sortedRows를 사용 */}
           {sortedRows.map((row, rowIndex) => (
             <tr
               key={row.id || rowIndex}
@@ -131,7 +113,6 @@ const MyDataGrid = ({
                 cursor: 'pointer',
               }}
               onClick={() => {
-                // 원본 배열에서의 인덱스를 찾아서 선택 상태를 관리해야 합니다.
                 const originalIndex = rows.findIndex(originalRow => originalRow.id === row.id);
                 setSelectedRowIndex(originalIndex);
                 if (onRowClick) {
@@ -179,6 +160,6 @@ const MyDataGrid = ({
       </table>
     </div>
   );
-};
+});
 
 export default MyDataGrid;
