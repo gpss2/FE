@@ -19,31 +19,29 @@ import SearchableSelect from '../../../components/shared/SearchableSelect';
 import MyDataGrid from './MyDataGrid';
 import PrintButton from './PrintButton';
 
-// --- Helper Functions ---
+// --- Helper Functions for localStorage ---
 
-const getCorrectionWeights = () => {
+const getLocalStorageObject = (key) => {
   try {
-    const weights = localStorage.getItem('correctionWeights');
-    return weights ? JSON.parse(weights) : {};
+    const data = localStorage.getItem(key);
+    return data ? JSON.parse(data) : {};
   } catch (error) {
-    console.error('Error reading correction weights from localStorage', error);
+    console.error(`Error reading ${key} from localStorage`, error);
     return {};
   }
 };
 
-const saveCorrectionWeights = (weights) => {
+const saveLocalStorageObject = (key, data) => {
   try {
-    localStorage.setItem('correctionWeights', JSON.stringify(weights));
+    localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
-    console.error('Error saving correction weights to localStorage', error);
+    console.error(`Error saving ${key} to localStorage`, error);
   }
 };
 
-// **수정된 formatNumber 함수**
+// --- Formatting Functions ---
 const formatNumber = (value) => {
-  // 사용자가 '-'를 입력한 경우, 그대로 '-'를 반환하여 입력을 유지함
   if (String(value).trim() === '-') return '-';
-
   const num = parseFloat(value);
   if (isNaN(num)) return '';
   return num.toLocaleString('en-US');
@@ -64,9 +62,7 @@ const Add = () => {
   axios.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('token');
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
+      if (token) config.headers.Authorization = `Bearer ${token}`;
       return config;
     },
     (error) => Promise.reject(error),
@@ -97,43 +93,29 @@ const Add = () => {
         return sortedRowIds.indexOf(params.id) + 1;
       },
     },
-    { field: 'materialCode', headerName: '자재코드', flex: 1 },
-    {
-      field: 'kg',
-      headerName: '입고중량 (Kg)',
-      flex: 1,
-      align: 'right',
-      headerAlign: 'right',
-      valueFormatter: (value) => formatNumber(value),
-    },
-    {
-      field: 'pcs',
-      headerName: '투입중량 (Kg)',
-      flex: 1,
-      align: 'right',
-      headerAlign: 'right',
-      valueFormatter: (value) => formatNumber(value),
-    },
-    {
-      field: 'correctionWeight',
-      headerName: '보정중량 (Kg)',
-      flex: 1,
-      align: 'right',
-      headerAlign: 'right',
-      valueFormatter: (value) => formatNumber(value),
-    },
+    { field: 'materialCode', headerName: '자재코드', flex: 1.2 },
+    { field: 'kg', headerName: '입고(Kg)', flex: 1, align: 'right', headerAlign: 'right', valueFormatter: (value) => formatNumber(value) },
+    // **입고 보정 칼럼 추가**
+    { field: 'inboundCorrection', headerName: '입고보정(Kg)', flex: 1, align: 'right', headerAlign: 'right', valueFormatter: (value) => formatNumber(value) },
+    { field: 'pcs', headerName: '투입(Kg)', flex: 1, align: 'right', headerAlign: 'right', valueFormatter: (value) => formatNumber(value) },
+    // **투입 보정 칼럼 추가**
+    { field: 'outboundCorrection', headerName: '투입보정(Kg)', flex: 1, align: 'right', headerAlign: 'right', valueFormatter: (value) => formatNumber(value) },
+    // **재고 중량 계산 로직 수정**
     {
       field: 'stock',
-      headerName: '재고중량 (Kg)',
+      headerName: '재고(Kg)',
       flex: 1,
       align: 'right',
       headerAlign: 'right',
       renderCell: (params) => {
         if (!params.row) return '0.0';
         const kg = parseFloat(params.row.kg) || 0;
+        const inboundCorr = parseFloat(params.row.inboundCorrection) || 0;
         const pcs = parseFloat(params.row.pcs) || 0;
-        const correction = parseFloat(params.row.correctionWeight) || 0;
-        return formatNumberWithOneDecimal(kg - pcs + correction);
+        const outboundCorr = parseFloat(params.row.outboundCorrection) || 0;
+        
+        const stock = (kg + inboundCorr) - (pcs + outboundCorr);
+        return formatNumberWithOneDecimal(stock);
       },
     },
   ];
@@ -150,10 +132,13 @@ const Add = () => {
   const fetchData = async () => {
     try {
       const response = await axios.get('/api/item/store');
-      const correctionWeights = getCorrectionWeights();
+      const inboundCorrections = getLocalStorageObject('inboundCorrectionWeights');
+      const outboundCorrections = getLocalStorageObject('outboundCorrectionWeights');
+      
       const mergedData = response.data.table.map(item => ({
         ...item,
-        correctionWeight: correctionWeights[item.id] || 0
+        inboundCorrection: inboundCorrections[item.id] || 0,
+        outboundCorrection: outboundCorrections[item.id] || 0,
       }));
       setData(mergedData);
     } catch (error) {
@@ -172,14 +157,11 @@ const Add = () => {
 
   const handleSave = async () => {
     try {
-      const { id, materialCode, kg, pcs, correctionWeight } = currentRow;
-      
+      const { id, materialCode, kg, pcs, inboundCorrection, outboundCorrection } = currentRow;
       const dataToSave = { id, materialCode, kg, pcs };
 
-      const existingItem = data.find(
-        (item) => item.materialCode === materialCode && item.id !== id,
-      );
-
+      // ... (기존 저장 로직) ...
+      const existingItem = data.find((item) => item.materialCode === materialCode && item.id !== id);
       if (existingItem) {
         const updatedItem = {
           ...existingItem,
@@ -187,21 +169,21 @@ const Add = () => {
           pcs: (parseFloat(existingItem.pcs) || 0) + (parseFloat(pcs) || 0),
         };
         await axios.put(`/api/item/store/${existingItem.id}`, updatedItem);
-        if (isEditing) {
-          await axios.delete(`/api/item/store/${id}`);
-        }
+        if (isEditing) await axios.delete(`/api/item/store/${id}`);
       } else {
-        if (isEditing) {
-          await axios.put(`/api/item/store/${id}`, dataToSave);
-        } else {
-          await axios.post('/api/item/store', dataToSave);
-        }
+        if (isEditing) await axios.put(`/api/item/store/${id}`, dataToSave);
+        else await axios.post('/api/item/store', dataToSave);
       }
 
       if (isEditing && id) {
-        const allWeights = getCorrectionWeights();
-        allWeights[id] = parseFloat(correctionWeight) || 0;
-        saveCorrectionWeights(allWeights);
+        const inboundCorrections = getLocalStorageObject('inboundCorrectionWeights');
+        const outboundCorrections = getLocalStorageObject('outboundCorrectionWeights');
+        
+        inboundCorrections[id] = parseFloat(inboundCorrection) || 0;
+        outboundCorrections[id] = parseFloat(outboundCorrection) || 0;
+
+        saveLocalStorageObject('inboundCorrectionWeights', inboundCorrections);
+        saveLocalStorageObject('outboundCorrectionWeights', outboundCorrections);
       }
 
       fetchData();
@@ -216,9 +198,14 @@ const Add = () => {
       if (currentRow.id) {
         await axios.delete(`/api/item/store/${currentRow.id}`);
         
-        const allWeights = getCorrectionWeights();
-        delete allWeights[currentRow.id];
-        saveCorrectionWeights(allWeights);
+        const inboundCorrections = getLocalStorageObject('inboundCorrectionWeights');
+        const outboundCorrections = getLocalStorageObject('outboundCorrectionWeights');
+
+        delete inboundCorrections[currentRow.id];
+        delete outboundCorrections[currentRow.id];
+        
+        saveLocalStorageObject('inboundCorrectionWeights', inboundCorrections);
+        saveLocalStorageObject('outboundCorrectionWeights', outboundCorrections);
 
         fetchData();
         handleCloseModal();
@@ -256,11 +243,6 @@ const Add = () => {
       setCurrentRow({ ...currentRow, [name]: rawValue });
     }
   };
-  
-  const handleSelectChange = (value) => {
-    setCurrentRow({ ...currentRow, materialCode: value });
-  };
-
 
   useEffect(() => {
     fetchData();
@@ -296,12 +278,7 @@ const Add = () => {
               </Box>
               <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2} spacing={1}>
                 <PrintButton targetRef={gridRef} title="자재 입고 현황" />
-                <IconButton
-                  color="primary"
-                  aria-label="add"
-                  onClick={() => handleOpenModal()}
-                  sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1 }}
-                >
+                <IconButton color="primary" aria-label="add" onClick={() => handleOpenModal()} sx={{ border: '1px solid', borderColor: 'primary.main', borderRadius: 1 }}>
                   <AddIcon />
                 </IconButton>
               </Stack>
@@ -317,44 +294,42 @@ const Add = () => {
             label="자재코드 선택"
             options={materialCodes.map((row) => row.materialCode)}
             value={currentRow.materialCode || ''}
-            onChange={(e) => handleSelectChange(e.target.value)}
+            onChange={(e) => setCurrentRow({...currentRow, materialCode: e.target.value})}
           />
+          <TextField margin="dense" label="입고중량 (Kg)" type="text" fullWidth name="kg" value={formatNumber(currentRow.kg)} onChange={handleNumberChange} />
           <TextField
-            margin="dense" label="입고중량 (Kg)" type="text" fullWidth
-            name="kg"
-            value={formatNumber(currentRow.kg)}
-            onChange={handleNumberChange}
-          />
-          <TextField
-            margin="dense" label="투입중량 (Kg)" type="text" fullWidth
-            name="pcs"
-            value={formatNumber(currentRow.pcs)}
-            onChange={handleNumberChange}
-          />
-          <TextField
-            margin="dense" label="보정중량 (Kg)" type="text" fullWidth
-            name="correctionWeight"
-            value={formatNumber(currentRow.correctionWeight)}
+            margin="dense" label="입고 보정량 (Kg)" type="text" fullWidth
+            name="inboundCorrection"
+            value={formatNumber(currentRow.inboundCorrection)}
             onChange={handleCorrectionChange}
             disabled={!isEditing}
-            helperText={!isEditing ? "자재를 등록한 후 수정 화면에서 입력 가능합니다." : "증감분을 양수 또는 음수로 입력하세요."}
+            helperText={!isEditing ? "수정 시에만 입력 가능" : "증감분을 +/-로 입력"}
+          />
+          <TextField margin="dense" label="투입중량 (Kg)" type="text" fullWidth name="pcs" value={formatNumber(currentRow.pcs)} onChange={handleNumberChange} />
+          <TextField
+            margin="dense" label="투입 보정량 (Kg)" type="text" fullWidth
+            name="outboundCorrection"
+            value={formatNumber(currentRow.outboundCorrection)}
+            onChange={handleCorrectionChange}
+            disabled={!isEditing}
+            helperText={!isEditing ? "수정 시에만 입력 가능" : "증감분을 +/-로 입력"}
           />
           <TextField
-            margin="dense" label="재고중량 (Kg)" type="text"
-            fullWidth
-            value={formatNumberWithOneDecimal(
-              (parseFloat(currentRow.kg) || 0) - 
-              (parseFloat(currentRow.pcs) || 0) +
-              (parseFloat(currentRow.correctionWeight) || 0)
-            )}
+            margin="dense" label="재고중량 (Kg)" type="text" fullWidth
+            value={(() => {
+                const kg = parseFloat(currentRow.kg) || 0;
+                const inboundCorr = parseFloat(currentRow.inboundCorrection) || 0;
+                const pcs = parseFloat(currentRow.pcs) || 0;
+                const outboundCorr = parseFloat(currentRow.outboundCorrection) || 0;
+                const stock = (kg + inboundCorr) - (pcs + outboundCorr);
+                return formatNumberWithOneDecimal(stock);
+            })()}
             InputProps={{ readOnly: true }}
             disabled
           />
         </DialogContent>
         <DialogActions>
-          {isEditing && (
-            <Button onClick={handleDelete} color="warning">삭제</Button>
-          )}
+          {isEditing && (<Button onClick={handleDelete} color="warning">삭제</Button>)}
           <Button onClick={handleCloseModal} color="secondary">취소</Button>
           <Button onClick={handleSave} color="primary">저장</Button>
         </DialogActions>
