@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react'; // useRef 임포트
 import axios from 'axios';
 import {
   Box,
@@ -18,6 +18,7 @@ import ParentCard from '../../../components/shared/ParentCard';
 import { useNavigate } from 'react-router-dom';
 import SearchableSelect from '../../../components/shared/SearchableSelect';
 import ItemDataGrid from './ItemDataGrid';
+import PrintButton from './PrintButton'; // PrintButton 임포트
 
 // axios interceptor settings
 axios.interceptors.request.use(
@@ -139,6 +140,7 @@ const Items = () => {
   const [tempIdCounter, setTempIdCounter] = useState(-1);
   const [modalData, setModalData] = useState(null);
   const [isModalOpen, setModalOpen] = useState(false);
+  const itemGridRef = useRef(null); // 그리드 참조 생성
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -396,7 +398,7 @@ const Items = () => {
   const handleSaveModal = () => {
     if (modalData) {
       // When modal values change, we need to re-run the full calculation
-      const updatedRow = handleProcessRowUpdate(modalData, data.find(d => d.id === modalData.id));
+      const updatedRow = handleProcessRowUpdate(modalData, data.find((d) => d.id === modalData.id));
       setData((prev) => prev.map((row) => (row.id === updatedRow.id ? updatedRow : row)));
       // The update is already added to pendingUpdates by handleProcessRowUpdate
     }
@@ -415,6 +417,7 @@ const Items = () => {
             <ParentCard title="규격품목 입력 화면">
               <Box sx={{ height: 'calc(100vh - 320px)', width: '100%' }}>
                 <ItemDataGrid
+                  ref={itemGridRef} // ref 전달
                   rows={data}
                   columns={columns}
                   processRowUpdate={handleProcessRowUpdate}
@@ -441,7 +444,8 @@ const Items = () => {
                   }}
                 />
               </Box>
-              <Stack direction="row" justifyContent="flex-end" mb={1} spacing={2} mt={2}>
+              <Stack direction="row" justifyContent="flex-end" mb={1} spacing={1} mt={2}>
+                <PrintButton targetRef={itemGridRef} title="규격품목" />
                 <Button
                   variant="contained"
                   onClick={handleBulkSave}
@@ -473,7 +477,7 @@ const Items = () => {
             <Stack spacing={2} pt={1}>
               <SearchableSelect
                 label="사양코드"
-                options={specCodes} 
+                options={specCodes.map((s) => s.systemCode)}
                 value={modalData.systemCode || ''}
                 onChange={(e) => setModalData((prev) => ({ ...prev, systemCode: e.target.value }))}
               />
