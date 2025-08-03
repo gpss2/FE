@@ -477,7 +477,7 @@ const Items = () => {
             <Stack spacing={2} pt={1}>
               <SearchableSelect
                 label="사양코드"
-                options={specCodes.map((s) => s.systemCode)}
+                options={specCodes}
                 value={modalData.systemCode || ''}
                 onChange={(e) => setModalData((prev) => ({ ...prev, systemCode: e.target.value }))}
               />
