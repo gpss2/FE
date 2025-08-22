@@ -1,24 +1,38 @@
 import React from 'react';
 
 const DrawingCanvas = ({ data }) => {
-  if (!data) return null;
-  const panels = data.result ? data.result.table : data.table;
-  if (!Array.isArray(panels)) return null;
+  // 데이터가 없거나 table 속성이 없으면 렌더링 중단
+  if (!data || !data.table) return null;
+
+  // --- 데이터 구조 정규화 ---
+  // 데이터가 중첩 구조(그룹)이든 단일 구조이든,
+  // 렌더링할 패널의 목록을 하나의 배열(flatListOfPanels)로 통일합니다.
+  const flatListOfPanels = [];
+  data.table.forEach(item => {
+    // 중첩된 데이터 구조인 경우 (item이 group 객체일 때)
+    if (item.result && Array.isArray(item.result.table)) {
+      item.result.table.forEach(panel => flatListOfPanels.push(panel));
+    } 
+    // 단일 데이터 구조인 경우 (item이 panel 객체일 때)
+    else if (item.panelNumber) {
+      flatListOfPanels.push(item);
+    }
+  });
+
+  // 렌더링할 패널이 없으면 여기서 중단
+  if (flatListOfPanels.length === 0) return null;
 
   const scaleFactor = 0.13;
 
-  // --- 수정된 부분 1: 수량(item_qty)을 반영한 높이 계산 ---
   const computeSlotHeight = (slot) => {
     let totalHeight = 0;
     let totalItems = 0;
     
-    // 슬롯에 있는 모든 그레이팅의 실제 개수와 높이를 합산합니다.
     slot.forEach((g) => {
       totalHeight += g.width_mm * g.item_qty;
       totalItems += g.item_qty;
     });
     
-    // 아이템들 사이의 간격(25)을 더해줍니다.
     if (totalItems > 1) {
       totalHeight += 25 * (totalItems - 1);
     }
@@ -26,7 +40,7 @@ const DrawingCanvas = ({ data }) => {
     return totalHeight;
   };
 
-  const renderPanel = (panel, panelIndex) => {
+  const renderPanel = (panel, panelIndex, copyIndex) => {
     const slotMap = {};
     let panelMaxWidth = 0;
 
@@ -50,7 +64,7 @@ const DrawingCanvas = ({ data }) => {
     });
 
     const slotElements = [];
-    slots.forEach((slot) => {
+    slots.forEach((slot, slotIdx) => {
       const first = slot[0];
       const leftCut = first.leftCut;
       const rightCut = first.rightCut;
@@ -58,11 +72,10 @@ const DrawingCanvas = ({ data }) => {
       const rightX = (50 + rightCut - 5) * scaleFactor;
       let currentOffset = 0;
       
-      slot.forEach((grating, idx) => {
+      slot.forEach((grating, gratingIdx) => {
         const w = grating.width_mm;
 
-        // --- 수정된 부분 2: item_qty 만큼 반복 렌더링 ---
-        for (let i = 0; i < grating.item_qty; i++) {
+        for (let i = 0; i < (grating.item_qty || 1); i++) {
           const rectStyle = {
             position: 'absolute',
             left: `${leftX}px`,
@@ -93,8 +106,7 @@ const DrawingCanvas = ({ data }) => {
 
           slotElements.push(
             <div
-              // React가 각 요소를 구별할 수 있도록 반복 인덱스 'i'를 key에 추가합니다.
-              key={`${panelIndex}-slot-${first.lCuttingNumber}-${idx}-${i}`}
+              key={`p-${panelIndex}-c-${copyIndex}-s-${slotIdx}-g-${gratingIdx}-i-${i}`}
               style={rectStyle}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
@@ -103,7 +115,6 @@ const DrawingCanvas = ({ data }) => {
             </div>,
           );
           
-          // 다음 아이템이 올 위치를 계산하기 위해 offset을 증가시킵니다.
           currentOffset += w + 25;
         }
       });
@@ -127,16 +138,27 @@ const DrawingCanvas = ({ data }) => {
     };
 
     return (
-      <div key={`panel-${panelIndex}`} style={containerStyle}>
-        <h1 style={{ textAlign: 'left' }}>판번호: {panel.panelNumber}</h1>
+      <div key={`panel-container-${panelIndex}-copy-${copyIndex}`} style={containerStyle}>
+        <h1 style={{ textAlign: 'left' }}>
+          판번호: {panel.panelNumber} {panel.qty > 1 ? `(${copyIndex + 1}/${panel.qty})` : ''}
+        </h1>
         <div style={panelStyle}>{slotElements}</div>
       </div>
     );
   };
 
+  const allPanelsToRender = [];
+  // 정제된 패널 목록(flatListOfPanels)을 순회하여 렌더링
+  flatListOfPanels.forEach((panel, panelIdx) => {
+      // 각 패널의 'qty' 값만큼 for문을 돌면서 렌더링할 컴포넌트를 배열에 추가
+      for (let i = 0; i < (panel.qty || 1); i++) {
+          allPanelsToRender.push(renderPanel(panel, panelIdx, i));
+      }
+  });
+
   return (
     <div style={{ width: '100%', overflowX: 'auto', padding: '100px' }}>
-      {panels.map((panel, idx) => renderPanel(panel, idx))}
+      {allPanelsToRender}
     </div>
   );
 };
