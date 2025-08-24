@@ -170,7 +170,7 @@ const Setup = () => {
       handleCloseModal();
     } catch (error) {
       if (error.response && error.response.status === 400 && error.response.data.detail) {
-        alert(error.response.data.detail);
+        alert("오류 발생");
       } else {
         console.error('Error saving row:', error);
       }
@@ -332,7 +332,7 @@ const Setup = () => {
                 alert('삭제되었습니다.');
               } catch (error) {
                 if (error.response && error.response.status === 400 && error.response.data.detail) {
-                  alert(error.response.data.detail);
+                  alert("오류 발생");
                 } else {
                   console.error('Error deleting row:', error);
                   alert('삭제 중 오류가 발생했습니다.');

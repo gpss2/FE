@@ -108,7 +108,8 @@ function calculateGratingWeightsFrontEnd(row, materialsState, specCodeState) {
   }
 
   const b_pitch = parseFloat(specItem.bWidth) || 30; // Use bWidth from spec or default
-  const bb_count = Math.floor(width / b_pitch) || 1;
+  const bb_count = parseInt(width / b_pitch) + 1 || 1;
+  console.log('bb_count:', bb_count);
   const eb_thickness = parseFloat(eb_material.maxWidth) || 0;
 
   const bb_length = (length - eb_thickness * 2) / 1000;
@@ -123,8 +124,8 @@ function calculateGratingWeightsFrontEnd(row, materialsState, specCodeState) {
   let total_weight = bb_weight + cb_weight + eb_weight;
   let ne_weight = total_weight - eb_weight;
 
-  total_weight = Math.round(total_weight * 10) / 10;
-  ne_weight = Math.round(ne_weight * 10) / 10;
+  total_weight = Math.round(total_weight * 100) / 100;
+  ne_weight = Math.round(ne_weight * 100) / 100;
 
   return { totalWeight: total_weight, neWeight: ne_weight };
 }
