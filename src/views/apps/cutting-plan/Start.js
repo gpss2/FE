@@ -792,7 +792,7 @@ useEffect(() => {
                               <td></td>
                               <td></td>
                               <td></td>
-                              <td>${row.loss}</td>
+                              <td>${Math.round(row.loss)}</td>
                               <td></td>
                               <td></td>
                               <td></td>
