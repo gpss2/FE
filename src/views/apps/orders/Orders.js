@@ -136,16 +136,53 @@ const Orders = () => {
   };
 
   const handleSave = async () => {
+    // --- ⬇️ 함수 가장 위쪽, 모든 코드 실행 전에 검사 시작 ⬇️ ---
+
+    // 1. 필수 입력 필드의 키(key) 목록을 정의합니다.
+    const requiredKeys = [
+      'taskNumber',
+      'surfaceTreatment',
+      'coatingThickness',
+      'remarks',
+      'category',
+      'orderNumber', // <-- 보내주신 데이터에 누락된 필드
+      'orderDate', // <-- 보내주신 데이터에 누락된 필드
+      'deliveryDate', // <-- 보내주신 데이터에 누락된 필드
+      'customerCode', // <-- 보내주신 데이터에 누락된 필드
+    ];
+
+    // 2. 필수 필드 중 하나라도 비어있는지 확인합니다.
+    const hasMissingValue = requiredKeys.some((key) => {
+      // currentRow에 키 자체가 없는 경우(undefined)도 감지합니다.
+      const value = currentRow[key];
+      return value === null || value === undefined || String(value).trim() === '';
+    });
+
+    // 3. 누락된 값이 있으면 여기서 함수를 반드시 중단시킵니다.
+    if (hasMissingValue) {
+      alert('필수 입력값이 누락되었습니다. 모든 항목을 확인해주세요.');
+      return; // ★★★★★ 이 부분이 없으면 API 요청을 막을 수 없습니다!
+    }
+
+    // --- ⬆️ 유효성 검사 끝. 통과해야만 아래 코드가 실행됩니다. ⬆️ ---
+
     try {
       if (isEditing) {
+        // 수정 모드일 경우 PUT 요청
         await axios.put(`/api/order/list/${currentRow.id}`, currentRow);
       } else {
+        // 추가 모드일 경우 POST 요청
         await axios.post('/api/order/list', currentRow);
+
       }
+
+      // 성공 후 데이터 새로고침 및 모달 닫기
       fetchData();
       handleCloseModal();
+      alert(isEditing ? '수정되었습니다.' : '저장되었습니다.');
     } catch (error) {
       console.error('Error saving data:', error);
+      alert('데이터 저장 중 오류가 발생했습니다.');
     }
   };
 
