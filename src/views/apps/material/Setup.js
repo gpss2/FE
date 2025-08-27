@@ -98,7 +98,9 @@ const Setup = () => {
     let materialCode = mType + size;
 
     if (fullType.length > 2) {
-      let w_OUT = (fullType[1] || '0').split('.')[0].padStart(3, '0') + ((fullType[1] || '0').split('.')[1] || '0');
+      let w_OUT =
+        (fullType[1] || '0').split('.')[0].padStart(3, '0') +
+        ((fullType[1] || '0').split('.')[1] || '0');
       let w_IN = (fullType[2] || '0').replace('.', '').padEnd(2, '0');
       materialCode = materialCode + w_OUT + w_IN + '-' + (thickness || '');
     } else if (fullType.length > 1) {
@@ -161,16 +163,62 @@ const Setup = () => {
     setIsLoading(true);
     try {
       if (currentRow.id) {
-        await axios.put(`/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${currentRow.id}`, currentRow);
+        await axios.put(
+          `/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${currentRow.id}`,
+          currentRow,
+        );
       } else {
-        await axios.post(`/api/item/${currentTable === 'left' ? 'material' : 'specific'}`, currentRow);
+        // 이 코드는 async 함수 (예: handleSave) 안에서 실행되어야 합니다.
+
+        // 1. 양쪽 테이블의 필수 필드를 하나의 규칙 객체로 정의합니다.
+        const validationRules = {
+          left: ['materialType', 'materialCode', 'length', 'weight'],
+          right: ['bbCode', 'cbCode', 'bWidth', 'cWidth', 'bladeThickness'],
+        };
+
+        // 2. 현재 테이블(currentTable)에 맞는 유효성 검사 규칙을 가져옵니다.
+        const keysToCheck = validationRules[currentTable];
+        let hasMissingValue = false;
+
+        // 3. 규칙이 정의된 테이블일 경우에만 검사를 수행합니다.
+        if (keysToCheck) {
+          // 필수 키 목록 중 하나라도 값이 비어있는지 확인합니다.
+          hasMissingValue = keysToCheck.some(
+            (key) => !currentRow[key] || String(currentRow[key]).trim() === '',
+          );
+        }
+
+        // 4. 누락된 값이 있으면 경고창을 띄우고 함수를 중단합니다.
+        if (hasMissingValue) {
+          alert('누락된 값이 있습니다. 모든 필수 필드를 입력해주세요.');
+          return; // ★★★ 이 return 구문이 API 호출을 막는 핵심입니다.
+        }
+
+        // --- 모든 유효성 검사를 통과한 경우에만 아래 코드가 실행됩니다. ---
+
+        try {
+          // 성공적으로 API에 POST 요청을 보냅니다.
+          await axios.post(
+            `/api/item/${currentTable === 'left' ? 'material' : 'specific'}`,
+            currentRow,
+          );
+
+          // 여기에 성공 후 처리할 로직을 추가하세요. (예: alert, 모달 닫기, 데이터 새로고침)
+          alert('저장이 완료되었습니다.');
+          // handleCloseModal();
+          // onDataUpdate(); // 데이터 새로고침 함수 호출
+        } catch (error) {
+          // API 요청 실패 시 에러를 처리합니다.
+          console.error('데이터 저장 실패:', error);
+          alert('저장 중 오류가 발생했습니다.');
+        }
       }
       fetchLeftTableData();
       fetchRightTableData();
       handleCloseModal();
     } catch (error) {
       if (error.response && error.response.status === 400 && error.response.data.detail) {
-        alert("오류 발생");
+        alert('오류 발생');
       } else {
         console.error('Error saving row:', error);
       }
@@ -239,15 +287,34 @@ const Setup = () => {
                   columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
-                    '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px', paddingTop: '2px', paddingBottom: '2px' },
-                    '& .MuiDataGrid-columnHeader': { fontSize: '14px', backgroundColor: '#B2B2B2', border: '1px solid black' },
-                    '& .MuiDataGrid-columnHeaderTitle': { whiteSpace: 'pre-wrap', textAlign: 'center', lineHeight: '1.2' },
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
+                    },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                    },
                     '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   onRowClick={(params) => handleOpenModal('left', params.row)}
                 />
               </Box>
-              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2} spacing={1}>
+              <Stack
+                direction="row"
+                justifyContent="flex-end"
+                alignItems="center"
+                mt={2}
+                spacing={1}
+              >
                 {/* 2. PrintButton을 사용하고, ref와 title을 전달합니다. */}
                 <PrintButton targetRef={leftGridRef} title="자재개요" />
                 <IconButton
@@ -271,15 +338,34 @@ const Setup = () => {
                   columnHeaderHeight={40}
                   rowHeight={25}
                   sx={{
-                    '& .MuiDataGrid-cell': { border: '1px solid black', fontSize: '12px', paddingTop: '2px', paddingBottom: '2px' },
-                    '& .MuiDataGrid-columnHeader': { fontSize: '14px', backgroundColor: '#B2B2B2', border: '1px solid black' },
-                    '& .MuiDataGrid-columnHeaderTitle': { whiteSpace: 'pre-wrap', textAlign: 'center', lineHeight: '1.2' },
+                    '& .MuiDataGrid-cell': {
+                      border: '1px solid black',
+                      fontSize: '12px',
+                      paddingTop: '2px',
+                      paddingBottom: '2px',
+                    },
+                    '& .MuiDataGrid-columnHeader': {
+                      fontSize: '14px',
+                      backgroundColor: '#B2B2B2',
+                      border: '1px solid black',
+                    },
+                    '& .MuiDataGrid-columnHeaderTitle': {
+                      whiteSpace: 'pre-wrap',
+                      textAlign: 'center',
+                      lineHeight: '1.2',
+                    },
                     '& .index-cell': { backgroundColor: '#B2B2B2' },
                   }}
                   onRowClick={(params) => handleOpenModal('right', params.row)}
                 />
               </Box>
-              <Stack direction="row" justifyContent="flex-end" alignItems="center" mt={2} spacing={1}>
+              <Stack
+                direction="row"
+                justifyContent="flex-end"
+                alignItems="center"
+                mt={2}
+                spacing={1}
+              >
                 <PrintButton targetRef={rightGridRef} title="제작사양" />
                 <IconButton
                   color="primary"
@@ -300,45 +386,140 @@ const Setup = () => {
         <DialogContent>
           {currentTable === 'left' ? (
             <>
-              <TextField margin="dense" label="자재코드" fullWidth disabled value={currentRow.materialCode || ''} />
-              <TextField margin="dense" label="자재타입" fullWidth value={currentRow.materialType || ''} onChange={(e) => handleInputChange('materialType', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 0)} inputRef={materialTypeRef} />
-              <TextField margin="dense" label="자재길이 (mm)" type="number" fullWidth value={currentRow.length || ''} onChange={(e) => handleInputChange('length', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 1)} inputRef={(el) => (inputRefs.current[1] = el)} />
-              <TextField margin="dense" label="단중 (Kg/m)" type="number" fullWidth value={currentRow.weight || ''} onChange={(e) => handleInputChange('weight', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 2)} inputRef={(el) => (inputRefs.current[2] = el)} />
+              <TextField
+                margin="dense"
+                label="자재코드"
+                fullWidth
+                disabled
+                value={currentRow.materialCode || ''}
+              />
+              <TextField
+                margin="dense"
+                label="자재타입"
+                fullWidth
+                value={currentRow.materialType || ''}
+                onChange={(e) => handleInputChange('materialType', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 0)}
+                inputRef={materialTypeRef}
+              />
+              <TextField
+                margin="dense"
+                label="자재길이 (mm)"
+                type="number"
+                fullWidth
+                value={currentRow.length || ''}
+                onChange={(e) => handleInputChange('length', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 1)}
+                inputRef={(el) => (inputRefs.current[1] = el)}
+              />
+              <TextField
+                margin="dense"
+                label="단중 (Kg/m)"
+                type="number"
+                fullWidth
+                value={currentRow.weight || ''}
+                onChange={(e) => handleInputChange('weight', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 2)}
+                inputRef={(el) => (inputRefs.current[2] = el)}
+              />
             </>
           ) : (
             <>
               <Grid container spacing={2}>
                 <Grid item xs={6}>
-                  <SearchableSelect label="BB 코드 선택" options={leftTableData.map((row) => row.materialCode)} value={currentRow.bbCode || ''} onChange={(e) => handleInputChange('bbCode', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 0)} inputRef={(el) => (inputRefs.current[0] = el)} />
+                  <SearchableSelect
+                    label="BB 코드 선택"
+                    options={leftTableData.map((row) => row.materialCode)}
+                    value={currentRow.bbCode || ''}
+                    onChange={(e) => handleInputChange('bbCode', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 0)}
+                    inputRef={(el) => (inputRefs.current[0] = el)}
+                  />
                 </Grid>
                 <Grid item xs={6}>
-                  <SearchableSelect label="CB 코드 선택" options={leftTableData.map((row) => row.materialCode).filter((code) => /^SQ|RQ|PI/.test(code))} value={currentRow.cbCode || ''} onChange={(e) => handleInputChange('cbCode', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 1)} inputRef={(el) => (inputRefs.current[1] = el)} required />
+                  <SearchableSelect
+                    label="CB 코드 선택"
+                    options={leftTableData
+                      .map((row) => row.materialCode)
+                      .filter((code) => /^SQ|RQ|PI/.test(code))}
+                    value={currentRow.cbCode || ''}
+                    onChange={(e) => handleInputChange('cbCode', e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, 1)}
+                    inputRef={(el) => (inputRefs.current[1] = el)}
+                    required
+                  />
                 </Grid>
               </Grid>
-              <TextField margin="dense" label="B 피치 (mm)" type="number" fullWidth value={currentRow.bWidth || ''} onChange={(e) => handleInputChange('bWidth', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 2)} inputRef={(el) => (inputRefs.current[2] = el)} />
-              <TextField margin="dense" label="C 피치 (mm)" type="number" fullWidth value={currentRow.cWidth || ''} onChange={(e) => handleInputChange('cWidth', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 3)} inputRef={(el) => (inputRefs.current[3] = el)} />
-              <TextField margin="dense" label="톱날 두께 (mm)" type="number" fullWidth value={currentRow.bladeThickness || ''} onChange={(e) => handleInputChange('bladeThickness', e.target.value)} onKeyDown={(e) => handleKeyDown(e, 4)} inputRef={(el) => (inputRefs.current[4] = el)} />
-              <TextField margin="dense" label="사양 코드" fullWidth disabled value={currentRow.systemCode || ''} />
+              <TextField
+                margin="dense"
+                label="B 피치 (mm)"
+                type="number"
+                fullWidth
+                value={currentRow.bWidth || ''}
+                onChange={(e) => handleInputChange('bWidth', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 2)}
+                inputRef={(el) => (inputRefs.current[2] = el)}
+              />
+              <TextField
+                margin="dense"
+                label="C 피치 (mm)"
+                type="number"
+                fullWidth
+                value={currentRow.cWidth || ''}
+                onChange={(e) => handleInputChange('cWidth', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 3)}
+                inputRef={(el) => (inputRefs.current[3] = el)}
+              />
+              <TextField
+                margin="dense"
+                label="톱날 두께 (mm)"
+                type="number"
+                fullWidth
+                value={currentRow.bladeThickness || ''}
+                onChange={(e) => handleInputChange('bladeThickness', e.target.value)}
+                onKeyDown={(e) => handleKeyDown(e, 4)}
+                inputRef={(el) => (inputRefs.current[4] = el)}
+              />
+              <TextField
+                margin="dense"
+                label="사양 코드"
+                fullWidth
+                disabled
+                value={currentRow.systemCode || ''}
+              />
             </>
           )}
         </DialogContent>
         <DialogActions>
           {currentRow.id && (
-            <Button onClick={async () => {
-              try {
-                await axios.delete(`/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${currentRow.id}`);
-                currentTable === 'left' ? fetchLeftTableData() : fetchRightTableData();
-                handleCloseModal();
-                alert('삭제되었습니다.');
-              } catch (error) {
-                if (error.response && error.response.status === 400 && error.response.data.detail) {
-                  alert("오류 발생");
-                } else {
-                  console.error('Error deleting row:', error);
-                  alert('삭제 중 오류가 발생했습니다.');
+            <Button
+              onClick={async () => {
+                try {
+                  await axios.delete(
+                    `/api/item/${currentTable === 'left' ? 'material' : 'specific'}/${
+                      currentRow.id
+                    }`,
+                  );
+                  currentTable === 'left' ? fetchLeftTableData() : fetchRightTableData();
+                  handleCloseModal();
+                  alert('삭제되었습니다.');
+                } catch (error) {
+                  if (
+                    error.response &&
+                    error.response.status === 400 &&
+                    error.response.data.detail
+                  ) {
+                    alert('오류 발생');
+                  } else {
+                    console.error('Error deleting row:', error);
+                    alert('삭제 중 오류가 발생했습니다.');
+                  }
                 }
-              }
-            }} color="warning">삭제</Button>
+              }}
+              color="warning"
+            >
+              삭제
+            </Button>
           )}
           <Button onClick={handleSave} color="primary" disabled={isLoading}>
             {isLoading ? <CircularProgress size={24} /> : currentRow.id ? '수정' : '추가'}
