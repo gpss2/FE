@@ -838,7 +838,7 @@ useEffect(() => {
                           <td></td>
                           <td>${selectedGroup.totalQuantity || 'N/A'}</td>
                           <td>${selectedGroup.result.table.reduce((total, item) => total + item.qty*item.numberOfCuttings, 0)}</td>
-                          <td>${selectedGroup.totalCB || 0}</td>
+                          <td>${selectedGroup.result.table.reduce((total, item) => total + item.qty*item.numberOfGratingCBs, 0)}</td>
                           <td>${selectedGroup.result.table.reduce((total, item) => total + item.qty*item.numberOfItems, 0)}</td>
                           <td colspan="8"></td>
                         </tr>
