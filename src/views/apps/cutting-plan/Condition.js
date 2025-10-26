@@ -792,17 +792,36 @@ const Condition = () => {
   };
 
   // 삭제
-  const handleDelete = () => {
+const handleDelete = () => {
     if (!selectedDetailId) return;
-    axios
-      .delete(`/api/plan/order-details/${selectedOrderId}/${selectedDetailId}`)
-      .then(() => {
-        fetchBottomData(selectedOrderId);
-        fetchTopData();
-        setBottomData((prev) => prev.filter((row) => row.id !== selectedDetailId));
-        setSelectedDetailId(null);
-      })
-      .catch((error) => console.error('Error deleting row:', error));
+
+    // 1. ID가 'new_'로 시작하는지 확인
+    if (String(selectedDetailId).startsWith('new_')) {
+      // 2. 'new_' 행인 경우 (서버에 없는 임시 행)
+      //    프론트엔드 상태에서만 즉시 제거합니다.
+      setBottomData((prev) => prev.filter((row) => row.id !== selectedDetailId));
+      setPendingUpdates((prev) => {
+        const newUpdates = { ...prev };
+        delete newUpdates[selectedDetailId];
+        return newUpdates;
+      });
+      setSelectedDetailId(null);
+    } else {
+      // 3. 'new_' 행이 아닌 경우 (서버에 저장된 실제 행)
+      //    서버에 삭제 요청을 보냅니다.
+      axios
+        .delete(`/api/plan/order-details/${selectedOrderId}/${selectedDetailId}`)
+        .then(() => {
+          // 삭제 성공 시 데이터를 다시 불러옵니다.
+          fetchBottomData(selectedOrderId);
+          fetchTopData();
+          setSelectedDetailId(null);
+        })
+        .catch((error) => {
+          console.error('Error deleting row:', error);
+          // TODO: 사용자에게 에러 알림
+        });
+    }
   };
 
   // 전체 삭제
@@ -994,40 +1013,47 @@ const Condition = () => {
       return;
     }
 
-    try {
-      const updates = Object.values(pendingUpdates);
-      const updatePromises = updates.map((row) => {
-        // POST 요청일 경우 (신규 항목)
-        if (String(row.id).startsWith('new_')) {
-          // 1. row 객체에서 id와 error를 제외한 나머지만 payload 객체로 복사합니다.
-          const { id, error, ...payload } = row;
-    
-          // 2. payload 객체의 값들을 순회하며 숫자형 문자열을 실제 숫자로 변환합니다.
-          Object.keys(payload).forEach(key => {
-            const value = payload[key];
-            // 값이 비어있지 않은 문자열이고, 숫자로 변환했을 때 NaN이 아니면 변환합니다.
-            if (key !== 'drawingNumber' && typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
-              payload[key] = Number(value);
-            }
-          });
-          
-          // 3. 가공된 payload를 전송합니다.
-          return axios.post(`/api/plan/order-details/${selectedOrderId}`, payload);
-        } 
-        // PUT 요청일 경우 (기존 항목 수정)
-        else {
-          return axios.put(`/api/plan/order-details/${selectedOrderId}/${row.id}`, row);
+  try {
+    const updates = Object.values(pendingUpdates);
+    const updatePromises = updates.map((row) => {
+      // 1. [공통] row 객체에서 id와 error를 제외한 나머지만 payload 객체로 복사합니다.
+      // 이 payload는 POST와 PUT 모두에 사용됩니다.
+      const { id, error, ...payload } = row;
+  
+      // 2. [공통] payload 객체의 값들을 순회하며 숫자형 문자열을 실제 숫자로 변환합니다.
+      Object.keys(payload).forEach(key => {
+        const value = payload[key];
+        
+        // drawingNumber와 같이 의도적으로 문자열이어야 하는 필드를 제외합니다.
+        // 값이 비어있지 않은 문자열이고, 숫자로 변환했을 때 NaN이 아니면 변환합니다.
+        if (key !== 'drawingNumber' && typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+          payload[key] = Number(value);
         }
       });
-    
-      await Promise.all(updatePromises);
-      await fetchBottomData(selectedOrderId);
-      await fetchTopData();
-      setPendingUpdates({});
-      alert('적용되었습니다.');
-    } catch (error) {
-      console.error('Error saving updates:', error);
-    }
+
+      // 3. POST 요청일 경우 (신규 항목)
+      if (String(row.id).startsWith('new_')) {
+        // 가공된 payload를 전송합니다.
+        return axios.post(`/api/plan/order-details/${selectedOrderId}`, payload);
+      } 
+      // 4. PUT 요청일 경우 (기존 항목 수정)
+      else {
+        // 동일하게 가공된 payload를 전송합니다.
+        return axios.put(`/api/plan/order-details/${selectedOrderId}/${row.id}`, payload);
+      }
+    });
+
+    await Promise.all(updatePromises);
+    await fetchBottomData(selectedOrderId);
+    await fetchTopData();
+    setPendingUpdates({});
+    // alert('적용되었습니다.'); // alert 대신 UI 피드백 사용 권장
+    console.log('적용되었습니다.'); // TODO: alert 대신 스낵바/토스트 등으로 변경
+  } catch (error) {
+    console.error('Error saving updates:', error);
+    // TODO: 사용자에게 에러 피드백 UI 표시
+  }
+
     setApplyLoading(false);
   };
 
