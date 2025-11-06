@@ -628,7 +628,7 @@ useEffect(() => {
         });
         // 페이지 나누기 (22줄씩)
         const pages = allRows.reduce((pages, row, index) => {
-          const pageIndex = Math.floor(index / 22);
+          const pageIndex = Math.floor(index / 21);
           if (!pages[pageIndex]) pages[pageIndex] = [];
           pages[pageIndex].push(row);
           return pages;
@@ -650,7 +650,7 @@ useEffect(() => {
           <style>
             @page {
               size: A4 landscape;
-              margin: 10mm 5mm 10mm 5mm;
+              margin: 10mm 0mm 10mm 5mm;
             }
             @media print {
               .print-button {
