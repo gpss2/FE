@@ -650,7 +650,7 @@ useEffect(() => {
           <style>
             @page {
               size: A4 landscape;
-              margin: 10mm 0mm 10mm 5mm;
+              margin: 10mm 10mm 10mm 5mm;
             }
             @media print {
               .print-button {
